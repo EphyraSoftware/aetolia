@@ -51,8 +51,8 @@ impl<'a> From<(&'a [u8], ErrorKind)> for Error<'a> {
     }
 }
 
-struct ContentLine<'a> {
-    property_name: &'a [u8],
+struct ContentLine {
+    property_name: Vec<u8>,
     value: Vec<u8>,
 }
 
@@ -91,6 +91,18 @@ fn name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error>
     alt((iana_token.map(|t| t.to_vec()), x_name))(input)
 }
 
+fn param_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error>
+{
+    alt((iana_token.map(|t| t.to_vec()), x_name))(input)
+}
+
+fn param(input: &[u8]) -> IResult<&[u8], (Vec<u8>, Vec<u8>), Error>
+{
+    let (input, (name, _, value)) = tuple((param_name, char('='), take_until(";")))(input)?;
+
+    Ok((input, (name, value.to_vec())))
+}
+
 fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     let (input, (parts, _)) = tuple((separated_list1(
         tuple((crlf, alt((char(' '), char('\t'))))),
@@ -108,7 +120,7 @@ fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
 
 fn parse_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
     let (input, (property_name, value)) = separated_pair(
-        alpha1,
+        name,
         char(':'),
         parse_line_content,
     )(input)?;
@@ -153,7 +165,7 @@ mod tests {
             parse_line(b"DESCRIPTION:This is a long description that exists on a long line.\r\nnext")
                 .unwrap();
         check_rem(rem, 4);
-        assert_eq!(b"DESCRIPTION", content_line.property_name);
+        assert_eq!(b"DESCRIPTION", content_line.property_name.as_slice());
         assert_eq!(b"This is a long description that exists on a long line.", content_line.value.as_slice());
     }
 
@@ -163,7 +175,7 @@ mod tests {
             parse_line(b"DESCRIPTION:This is a lo\r\n ng description\r\n  that exists on a long line.\r\nnext")
                 .unwrap();
         check_rem(rem, 4);
-        assert_eq!(b"DESCRIPTION", content_line.property_name);
+        assert_eq!(b"DESCRIPTION", content_line.property_name.as_slice());
         assert_eq!(b"This is a long description that exists on a long line.", content_line.value.as_slice(), "Got: {}", String::from_utf8(content_line.value.clone()).unwrap());
     }
 
@@ -173,7 +185,7 @@ mod tests {
             parse_line(b"DESCRIPTION:This is a lo\r\n ng description\r\n\t that exists on a long line.\r\nnext")
                 .unwrap();
         check_rem(rem, 4);
-        assert_eq!(b"DESCRIPTION", content_line.property_name);
+        assert_eq!(b"DESCRIPTION", content_line.property_name.as_slice());
         assert_eq!(b"This is a long description that exists on a long line.", content_line.value.as_slice(), "Got: {}", String::from_utf8(content_line.value.clone()).unwrap());
     }
 
