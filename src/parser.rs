@@ -1,7 +1,9 @@
-use nom::{AsChar, InputTakeAtPosition, IResult};
+use nom::{AsChar, IResult, Parser};
 use nom::branch::alt;
-use nom::bytes::complete::take_until;
-use nom::character::streaming::{char, crlf};
+use nom::bytes::complete::{take_until, take_while1};
+use nom::bytes::streaming::tag;
+use nom::character::streaming::{alpha1, alphanumeric1, char, crlf};
+use nom::combinator::opt;
 use nom::error::{ErrorKind, ParseError};
 use nom::multi::separated_list1;
 use nom::sequence::{separated_pair, tuple};
@@ -15,6 +17,7 @@ pub struct Error<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InnerError {
     Nom(ErrorKind),
+    XNameTooShort,
 }
 
 impl<'a> Error<'a> {
@@ -53,15 +56,39 @@ struct ContentLine<'a> {
     value: Vec<u8>,
 }
 
-pub fn upper_alpha1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
-where
-    T: InputTakeAtPosition,
-    <T as InputTakeAtPosition>::Item: AsChar,
+fn iana_token(input: &[u8]) -> IResult<&[u8], &[u8], Error>
 {
-    input.split_at_position(|item| {
-        let c = item.as_char();
-        !(c >= 'A' && c <= 'Z')
-    })
+    take_while1(|c: u8| c.is_alphanum() || c == b'-')(input)
+}
+
+fn vendor_id(input: &[u8]) -> IResult<&[u8], &[u8], Error>
+{
+    let (rest, id) = alphanumeric1(input)?;
+
+    if id.len() < 3 {
+        return Err(nom::Err::Failure(Error::new(rest, InnerError::XNameTooShort)))
+    }
+
+    Ok((rest, id))
+}
+
+fn x_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error>
+{
+    let (input, (prefix, maybe_vendor_id, name)) = tuple((tag("X-"), opt(tuple((vendor_id, char('-')))), take_while1(|c: u8| c.is_alphanum() || c == b'-')))(input)?;
+
+    let mut n = prefix.to_vec();
+    if let Some((vendor_id, _)) = maybe_vendor_id {
+        n.extend_from_slice(vendor_id);
+        n.push(b'-');
+    }
+    n.extend_from_slice(name);
+
+    Ok((input, n))
+}
+
+fn name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error>
+{
+    alt((iana_token.map(|t| t.to_vec()), x_name))(input)
 }
 
 fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
@@ -81,8 +108,8 @@ fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
 
 fn parse_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
     let (input, (property_name, value)) = separated_pair(
-        upper_alpha1,
-        nom::character::streaming::char(':'),
+        alpha1,
+        char(':'),
         parse_line_content,
     )(input)?;
 
@@ -98,6 +125,27 @@ fn parse_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn iana_token_desc() {
+        let (rem, token) = iana_token(b"DESCRIPTION").unwrap();
+        check_rem(rem, 0);
+        assert_eq!(b"DESCRIPTION", token);
+    }
+
+    #[test]
+    fn simple_x_name() {
+        let (rem, x_name) = x_name(b"X-TEST ").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(b"X-TEST", x_name.as_slice());
+    }
+
+    #[test]
+    fn simple_x_name_with_vendor() {
+        let (rem, x_name) = x_name(b"X-ESL-TEST ").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(b"X-ESL-TEST", x_name.as_slice());
+    }
 
     #[test]
     fn simple_content_line() {
