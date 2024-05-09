@@ -69,6 +69,12 @@ enum ParamValue {
     AltRep { uri: String },
 }
 
+/// All ASCII control characters except tab (%x09).
+#[inline]
+pub const fn is_control(b: u8) -> bool {
+    matches!(b, b'\0'..=b'\x08' | b'\x0A'..=b'\x1F' | b'\x7F')
+}
+
 fn iana_token(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     take_while1(|c: u8| c.is_alphanum() || c == b'-')(input)
 }
