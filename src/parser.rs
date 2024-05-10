@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use nom::branch::alt;
 use nom::bytes::complete::{take_until, take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
@@ -7,6 +9,8 @@ use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::separated_list1;
 use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult, Parser};
+
+mod language_tag;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
