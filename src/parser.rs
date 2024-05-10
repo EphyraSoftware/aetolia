@@ -2,7 +2,7 @@ use nom::branch::alt;
 use nom::bytes::complete::{take_until, take_while, take_while1};
 use nom::bytes::streaming::tag;
 use nom::character::streaming::{alphanumeric1, char, crlf};
-use nom::combinator::{opt, recognize, map_res};
+use nom::combinator::{map_res, opt, recognize};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::separated_list1;
 use nom::sequence::{separated_pair, tuple};
@@ -85,6 +85,8 @@ enum ParamValue {
     AltRep { uri: String },
     CommonName { name: String },
     CalendarUserType { cu_type: CalendarUserType },
+    DelegatedFrom { delegators: Vec<String> },
+    DelegatedTo { delegates: Vec<String> },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -176,8 +178,18 @@ fn param_calendar_user_type(input: &[u8]) -> IResult<&[u8], CalendarUserType, Er
         tag("RESOURCE").map(|_| CalendarUserType::Resource),
         tag("ROOM").map(|_| CalendarUserType::Room),
         tag("UNKNOWN").map(|_| CalendarUserType::Unknown),
-        map_res(x_name, |x_name| Ok(CalendarUserType::XName(read_string(x_name, "CUTYPE x-name")?))),
-        map_res(iana_token, |iana_token| Ok(CalendarUserType::IanaToken(read_string(iana_token, "CUTYPE iana-token")?))),
+        map_res(x_name, |x_name| {
+            Ok(CalendarUserType::XName(read_string(
+                x_name,
+                "CUTYPE x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(CalendarUserType::IanaToken(read_string(
+                iana_token,
+                "CUTYPE iana-token",
+            )?))
+        }),
     ))(input)?;
 
     Ok((input, cu_type))
@@ -213,6 +225,28 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             let (input, cu_type) = param_calendar_user_type(input)?;
 
             (input, Some(ParamValue::CalendarUserType { cu_type }))
+        }
+        "DELEGATED-FROM" => {
+            // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
+            let (input, delegators) = separated_list1(
+                char(','),
+                map_res(quoted_string, |d| {
+                    read_string(d, "DELEGATED-FROM cal-address")
+                }),
+            )(input)?;
+
+            (input, Some(ParamValue::DelegatedFrom { delegators }))
+        }
+        "DELEGATED-TO" => {
+            // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
+            let (input, delegates) = separated_list1(
+                char(','),
+                map_res(quoted_string, |d| {
+                    read_string(d, "DELEGATED-TO cal-address")
+                }),
+            )(input)?;
+
+            (input, Some(ParamValue::DelegatedTo { delegates }))
         }
         _ => {
             // TODO not robust! Check 3
@@ -437,6 +471,72 @@ mod tests {
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::IanaToken("other".to_string())
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_delegated_from() {
+        let (rem, param) = param(b"DELEGATED-FROM=\"mailto:jsmith@example.com\";").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("DELEGATED-FROM", param.name);
+        assert_eq!(
+            ParamValue::DelegatedFrom {
+                delegators: vec!["mailto:jsmith@example.com".to_string()],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_delegated_from_multi() {
+        let (rem, param) =
+            param(b"DELEGATED-FROM=\"mailto:jsmith@example.com\",\"mailto:danny@example.com\";")
+                .unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("DELEGATED-FROM", param.name);
+        assert_eq!(
+            ParamValue::DelegatedFrom {
+                delegators: vec![
+                    "mailto:jsmith@example.com".to_string(),
+                    "mailto:danny@example.com".to_string()
+                ],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_delegated_to() {
+        let (rem, param) = param(b"DELEGATED-TO=\"mailto:jsmith@example.com\";").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("DELEGATED-TO", param.name);
+        assert_eq!(
+            ParamValue::DelegatedTo {
+                delegates: vec!["mailto:jsmith@example.com".to_string()],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_delegated_to_multi() {
+        let (rem, param) =
+            param(b"DELEGATED-TO=\"mailto:jsmith@example.com\",\"mailto:danny@example.com\";")
+                .unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("DELEGATED-TO", param.name);
+        assert_eq!(
+            ParamValue::DelegatedTo {
+                delegates: vec![
+                    "mailto:jsmith@example.com".to_string(),
+                    "mailto:danny@example.com".to_string()
+                ],
             },
             param.value
         );
