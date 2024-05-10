@@ -108,6 +108,7 @@ enum ParamValue {
         type_name: String,
         sub_type_name: String,
     },
+    FreeBusyTimeType { fb_type: FreeBusyTimeType },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -137,6 +138,16 @@ impl Default for Encoding {
     fn default() -> Self {
         Encoding::EightBit
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum FreeBusyTimeType {
+    Free,
+    Busy,
+    BusyUnavailable,
+    BusyTentative,
+    XName(String),
+    IanaToken(String),
 }
 
 /// All ASCII control characters except tab (%x09).
@@ -237,6 +248,32 @@ fn param_encoding(input: &[u8]) -> IResult<&[u8], Encoding, Error> {
     Ok((input, encoding))
 }
 
+/// See https://www.rfc-editor.org/rfc/rfc5545 section 3.2.9
+fn param_free_busy_time_type(input: &[u8]) -> IResult<&[u8], FreeBusyTimeType, Error> {
+    let (input, fb_type) = alt((
+        tag("FREE").map(|_| FreeBusyTimeType::Free),
+        tag("BUSY-UNAVAILABLE").map(|_| FreeBusyTimeType::BusyUnavailable),
+        tag("BUSY-TENTATIVE").map(|_| FreeBusyTimeType::BusyTentative),
+        tag("BUSY").map(|_| FreeBusyTimeType::Busy),
+        map_res(x_name, |x_name| {
+            Ok(FreeBusyTimeType::XName(read_string(
+                x_name,
+                "FBTYPE x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(FreeBusyTimeType::IanaToken(read_string(
+                iana_token,
+                "FBTYPE iana-token",
+            )?))
+        }),
+    ))(input)?;
+
+    println!("fb_type: {:?}", fb_type);
+
+    Ok((input, fb_type))
+}
+
 #[inline]
 const fn is_reg_name_char(b: u8) -> bool {
     matches!(b, b'\x41'..=b'\x5A' | b'\x61'..=b'\x7A' | b'\x30'..=b'\x39' | b'\x21' | b'\x23' | b'\x24' | b'\x26' | b'\x2E' | b'\x2B' | b'\x2D' | b'\x5E' | b'\x5F')
@@ -329,6 +366,11 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
                     sub_type_name,
                 }),
             )
+        }
+        "FBTYPE" => {
+            let (input, fb_type) = param_free_busy_time_type(input)?;
+
+            (input, Some(ParamValue::FreeBusyTimeType { fb_type }))
         }
         _ => {
             // TODO not robust! Check 3
@@ -680,6 +722,62 @@ mod tests {
             ParamValue::FormatType {
                 type_name: "application".to_string(),
                 sub_type_name: "msword".to_string()
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_fb_type_free() {
+        let (rem, param) = param(b"FBTYPE=FREE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("FBTYPE", param.name);
+        assert_eq!(
+            ParamValue::FreeBusyTimeType {
+                fb_type: FreeBusyTimeType::Free
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_fb_type_busy() {
+        let (rem, param) = param(b"FBTYPE=BUSY;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("FBTYPE", param.name);
+        assert_eq!(
+            ParamValue::FreeBusyTimeType {
+                fb_type: FreeBusyTimeType::Busy
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_fb_type_busy_unavailable() {
+        let (rem, param) = param(b"FBTYPE=BUSY-UNAVAILABLE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("FBTYPE", param.name);
+        assert_eq!(
+            ParamValue::FreeBusyTimeType {
+                fb_type: FreeBusyTimeType::BusyUnavailable
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_fb_type_busy_tentative() {
+        let (rem, param) = param(b"FBTYPE=BUSY-TENTATIVE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("FBTYPE", param.name);
+        assert_eq!(
+            ParamValue::FreeBusyTimeType {
+                fb_type: FreeBusyTimeType::BusyTentative
             },
             param.value
         );
