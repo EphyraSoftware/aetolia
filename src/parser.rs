@@ -1,5 +1,5 @@
 use nom::branch::alt;
-use nom::bytes::complete::{take_until, take_while, take_while1};
+use nom::bytes::complete::{take_until, take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
 use nom::character::streaming::{alphanumeric1, char, crlf};
 use nom::combinator::{map_res, opt, recognize};
@@ -82,11 +82,32 @@ struct Param {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum ParamValue {
-    AltRep { uri: String },
-    CommonName { name: String },
-    CalendarUserType { cu_type: CalendarUserType },
-    DelegatedFrom { delegators: Vec<String> },
-    DelegatedTo { delegates: Vec<String> },
+    AltRep {
+        uri: String,
+    },
+    CommonName {
+        name: String,
+    },
+    CalendarUserType {
+        cu_type: CalendarUserType,
+    },
+    DelegatedFrom {
+        delegators: Vec<String>,
+    },
+    DelegatedTo {
+        delegates: Vec<String>,
+    },
+    Dir {
+        uri: String,
+    },
+    Encoding {
+        encoding: Encoding,
+    },
+    /// See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
+    FormatType {
+        type_name: String,
+        sub_type_name: String,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -103,6 +124,18 @@ pub enum CalendarUserType {
 impl Default for CalendarUserType {
     fn default() -> Self {
         CalendarUserType::Individual
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Encoding {
+    EightBit,
+    Base64,
+}
+
+impl Default for Encoding {
+    fn default() -> Self {
+        Encoding::EightBit
     }
 }
 
@@ -195,6 +228,25 @@ fn param_calendar_user_type(input: &[u8]) -> IResult<&[u8], CalendarUserType, Er
     Ok((input, cu_type))
 }
 
+fn param_encoding(input: &[u8]) -> IResult<&[u8], Encoding, Error> {
+    let (input, encoding) = alt((
+        tag("8BIT").map(|_| Encoding::EightBit),
+        tag("BASE64").map(|_| Encoding::Base64),
+    ))(input)?;
+
+    Ok((input, encoding))
+}
+
+#[inline]
+const fn is_reg_name_char(b: u8) -> bool {
+    matches!(b, b'\x41'..=b'\x5A' | b'\x61'..=b'\x7A' | b'\x30'..=b'\x39' | b'\x21' | b'\x23' | b'\x24' | b'\x26' | b'\x2E' | b'\x2B' | b'\x2D' | b'\x5E' | b'\x5F')
+}
+
+// See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
+fn reg_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+    take_while_m_n(1, 127, |b| is_reg_name_char(b))(input)
+}
+
 fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
     let (input, (name, _)) = tuple((param_name, char('=')))(input)?;
 
@@ -247,6 +299,36 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             )(input)?;
 
             (input, Some(ParamValue::DelegatedTo { delegates }))
+        }
+        "DIR" => {
+            let (input, uri) = quoted_string(input)?;
+
+            (
+                input,
+                Some(ParamValue::Dir {
+                    uri: read_string(&uri, "dir")?,
+                }),
+            )
+        }
+        "ENCODING" => {
+            let (input, encoding) = param_encoding(input)?;
+
+            (input, Some(ParamValue::Encoding { encoding }))
+        }
+        "FMTTYPE" => {
+            let (input, (type_name, sub_type_name)) = separated_pair(
+                map_res(reg_name, |t| read_string(t, "FMTTYPE type-name")),
+                char('/'),
+                map_res(reg_name, |t| read_string(t, "FMTTYPE subtype-name")),
+            )(input)?;
+
+            (
+                input,
+                Some(ParamValue::FormatType {
+                    type_name,
+                    sub_type_name,
+                }),
+            )
         }
         _ => {
             // TODO not robust! Check 3
@@ -537,6 +619,67 @@ mod tests {
                     "mailto:jsmith@example.com".to_string(),
                     "mailto:danny@example.com".to_string()
                 ],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_dir() {
+        let (rem, param) = param(
+            b"DIR=\"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)\";",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("DIR", param.name);
+        assert_eq!(
+            ParamValue::Dir {
+                uri: "ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
+                    .to_string()
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_encoding_8bit() {
+        let (rem, param) = param(b"ENCODING=8BIT;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("ENCODING", param.name);
+        assert_eq!(
+            ParamValue::Encoding {
+                encoding: Encoding::EightBit
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_encoding_base64() {
+        let (rem, param) = param(b"ENCODING=BASE64;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("ENCODING", param.name);
+        assert_eq!(
+            ParamValue::Encoding {
+                encoding: Encoding::Base64
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_fmt_type() {
+        let (rem, param) = param(b"FMTTYPE=application/msword;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("FMTTYPE", param.name);
+        assert_eq!(
+            ParamValue::FormatType {
+                type_name: "application".to_string(),
+                sub_type_name: "msword".to_string()
             },
             param.value
         );
