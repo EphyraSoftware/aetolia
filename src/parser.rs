@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::parser::language_tag::LanguageTag;
 use nom::branch::alt;
 use nom::bytes::complete::{take_until, take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
@@ -112,11 +113,17 @@ enum ParamValue {
         type_name: String,
         sub_type_name: String,
     },
-    FreeBusyTimeType { fb_type: FreeBusyTimeType },
+    FreeBusyTimeType {
+        fb_type: FreeBusyTimeType,
+    },
+    Language {
+        language: LanguageTag,
+    },
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum CalendarUserType {
+    #[default]
     Individual,
     Group,
     Resource,
@@ -126,22 +133,11 @@ pub enum CalendarUserType {
     IanaToken(String),
 }
 
-impl Default for CalendarUserType {
-    fn default() -> Self {
-        CalendarUserType::Individual
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum Encoding {
+    #[default]
     EightBit,
     Base64,
-}
-
-impl Default for Encoding {
-    fn default() -> Self {
-        Encoding::EightBit
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -285,7 +281,7 @@ const fn is_reg_name_char(b: u8) -> bool {
 
 // See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
 fn reg_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
-    take_while_m_n(1, 127, |b| is_reg_name_char(b))(input)
+    take_while_m_n(1, 127, is_reg_name_char)(input)
 }
 
 fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
@@ -300,7 +296,7 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             (
                 input,
                 Some(ParamValue::AltRep {
-                    uri: read_string(&uri, "uri")?,
+                    uri: read_string(uri, "uri")?,
                 }),
             )
         }
@@ -310,7 +306,7 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             (
                 input,
                 Some(ParamValue::CommonName {
-                    name: read_string(&value, "common_name")?,
+                    name: read_string(value, "common_name")?,
                 }),
             )
         }
@@ -347,7 +343,7 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             (
                 input,
                 Some(ParamValue::Dir {
-                    uri: read_string(&uri, "dir")?,
+                    uri: read_string(uri, "dir")?,
                 }),
             )
         }
@@ -376,6 +372,11 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
 
             (input, Some(ParamValue::FreeBusyTimeType { fb_type }))
         }
+        "LANGUAGE" => {
+            let (input, language) = language_tag::language_tag(input)?;
+
+            (input, Some(ParamValue::Language { language }))
+        }
         _ => {
             // TODO not robust! Check 3
             let (input, _) = take_until(";")(input)?;
@@ -386,14 +387,10 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
 
     Ok((
         input,
-        if let Some(param_value) = maybe_param_value {
-            Some(Param {
-                name: name_s,
-                value: param_value,
-            })
-        } else {
-            None
-        },
+        maybe_param_value.map(|param_value| Param {
+            name: name_s,
+            value: param_value,
+        }),
     ))
 }
 
@@ -419,7 +416,7 @@ fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
 
     Ok((
         input,
-        parts.iter().map(|c| c).fold(vec![], |mut acc, x| {
+        parts.iter().fold(vec![], |mut acc, x| {
             acc.extend_from_slice(x);
             acc
         }),
@@ -442,6 +439,7 @@ fn parse_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::check_rem;
 
     #[test]
     fn iana_token_desc() {
@@ -788,6 +786,24 @@ mod tests {
     }
 
     #[test]
+    fn param_language() {
+        let (rem, param) = param(b"LANGUAGE=en-US;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("LANGUAGE", param.name);
+        assert_eq!(
+            ParamValue::Language {
+                language: LanguageTag {
+                    language: "en".to_string(),
+                    region: Some("US".to_string()),
+                    ..Default::default()
+                }
+            },
+            param.value
+        );
+    }
+
+    #[test]
     fn simple_content_line() {
         let (rem, content_line) = parse_line(
             b"DESCRIPTION:This is a long description that exists on a long line.\r\nnext",
@@ -829,19 +845,6 @@ mod tests {
             content_line.value.as_slice(),
             "Got: {}",
             String::from_utf8(content_line.value.clone()).unwrap()
-        );
-    }
-
-    fn check_rem(rem: &[u8], expected_len: usize) {
-        if rem.len() != expected_len {
-            let str = String::from_utf8(rem.to_vec()).unwrap();
-            println!("rem: {str}");
-        }
-        assert_eq!(
-            expected_len,
-            rem.len(),
-            "Remainder length should be {expected_len} but was {}",
-            rem.len()
         );
     }
 }
