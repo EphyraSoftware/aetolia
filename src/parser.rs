@@ -119,6 +119,38 @@ enum ParamValue {
     Language {
         language: LanguageTag,
     },
+    Members {
+        members: Vec<String>,
+    },
+    ParticipationStatus {
+        // TODO convert to ParticipationStatusKind when context is available
+        status: ParticipationStatusUnknown,
+    },
+    Range {
+        range: Range
+    },
+    Related {
+        related: Related,
+    },
+    RelationshipType {
+        relationship: RelationshipType,
+    },
+    Role {
+        role: Role,
+    },
+    Rsvp {
+        rsvp: bool,
+    },
+    SentBy {
+        address: String,
+    },
+    TimeZoneId {
+        tz_id: String,
+        unique: bool,
+    },
+    Value {
+        value: Value,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -146,6 +178,117 @@ pub enum FreeBusyTimeType {
     Busy,
     BusyUnavailable,
     BusyTentative,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ParticipationStatusKind {
+    Event { status: ParticipationStatusEvent },
+    Todo { status: ParticipationStatusTodo },
+    Journal { status: ParticipationStatusJournal },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum ParticipationStatusEvent {
+    #[default]
+    NeedsAction,
+    Accepted,
+    Declined,
+    Tentative,
+    Delegated,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum ParticipationStatusTodo {
+    #[default]
+    NeedsAction,
+    Accepted,
+    Declined,
+    Tentative,
+    Delegated,
+    /// To-do completed, the COMPLETED property has DATE-TIME completed.
+    Completed,
+    InProcess,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum ParticipationStatusJournal {
+    #[default]
+    NeedsAction,
+    Accepted,
+    Declined,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum ParticipationStatusUnknown {
+    #[default]
+    NeedsAction,
+    Accepted,
+    Declined,
+    Tentative,
+    Delegated,
+    Completed,
+    InProcess,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Range {
+    ThisAndFuture,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum Related {
+    #[default]
+    Start,
+    End,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum RelationshipType {
+    #[default]
+    Parent,
+    Child,
+    Sibling,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum Role {
+    Chair,
+    #[default]
+    RequiredParticipant,
+    OptionalParticipant,
+    NonParticipant,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Value {
+    Binary,
+    Boolean,
+    CalendarAddress,
+    Date,
+    DateTime,
+    Duration,
+    Float,
+    Integer,
+    Period,
+    Recurrence,
+    Text,
+    Time,
+    Uri,
+    UtcOffset,
     XName(String),
     IanaToken(String),
 }
@@ -274,6 +417,134 @@ fn param_free_busy_time_type(input: &[u8]) -> IResult<&[u8], FreeBusyTimeType, E
     Ok((input, fb_type))
 }
 
+fn param_part_stat(input: &[u8]) -> IResult<&[u8], ParticipationStatusUnknown, Error> {
+    let (input, part_stat) = alt((
+        tag("NEEDS-ACTION").map(|_| ParticipationStatusUnknown::NeedsAction),
+        tag("ACCEPTED").map(|_| ParticipationStatusUnknown::Accepted),
+        tag("DECLINED").map(|_| ParticipationStatusUnknown::Declined),
+        tag("TENTATIVE").map(|_| ParticipationStatusUnknown::Tentative),
+        tag("DELEGATED").map(|_| ParticipationStatusUnknown::Delegated),
+        tag("COMPLETED").map(|_| ParticipationStatusUnknown::Completed),
+        tag("IN-PROCESS").map(|_| ParticipationStatusUnknown::InProcess),
+        map_res(x_name, |x_name| {
+            Ok(ParticipationStatusUnknown::XName(read_string(
+                x_name,
+                "PARTSTAT x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(ParticipationStatusUnknown::IanaToken(read_string(
+                iana_token,
+                "PARTSTAT iana-token",
+            )?))
+        }),
+    ))(input)?;
+
+    Ok((input, part_stat))
+}
+
+fn param_related(input: &[u8]) -> IResult<&[u8], Related, Error> {
+    let (input, related) = alt((
+        tag("START").map(|_| Related::Start),
+        tag("END").map(|_| Related::End),
+    ))(input)?;
+
+    Ok((input, related))
+}
+
+fn param_rel_type(input: &[u8]) -> IResult<&[u8], RelationshipType, Error> {
+    let (input, rel_type) = alt((
+        tag("PARENT").map(|_| RelationshipType::Parent),
+        tag("CHILD").map(|_| RelationshipType::Child),
+        tag("SIBLING").map(|_| RelationshipType::Sibling),
+        map_res(x_name, |x_name| {
+            Ok(RelationshipType::XName(read_string(
+                x_name,
+                "RELTYPE x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(RelationshipType::IanaToken(read_string(
+                iana_token,
+                "RELTYPE iana-token",
+            )?))
+        }),
+    ))(input)?;
+
+    Ok((input, rel_type))
+}
+
+fn param_role(input: &[u8]) -> IResult<&[u8], Role, Error> {
+    let (input, role) = alt((
+        tag("CHAIR").map(|_| Role::Chair),
+        tag("REQ-PARTICIPANT").map(|_| Role::RequiredParticipant),
+        tag("OPT-PARTICIPANT").map(|_| Role::OptionalParticipant),
+        tag("NON-PARTICIPANT").map(|_| Role::NonParticipant),
+        map_res(x_name, |x_name| {
+            Ok(Role::XName(read_string(
+                x_name,
+                "ROLE x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(Role::IanaToken(read_string(
+                iana_token,
+                "ROLE iana-token",
+            )?))
+        }),
+    ))(input)?;
+
+    Ok((input, role))
+}
+
+fn param_rsvp(input: &[u8]) -> IResult<&[u8], bool, Error> {
+    let (input, rsvp) = alt((
+        tag("TRUE").map(|_| true),
+        tag("FALSE").map(|_| false),
+    ))(input)?;
+
+    Ok((input, rsvp))
+}
+
+fn param_tz_id(input: &[u8]) -> IResult<&[u8], (String, bool), Error> {
+    let (input, (unique, tz_id)) = tuple((opt(char('/')).map(|p| p.is_some()), param_text))(input)?;
+
+    Ok((input, (read_string(tz_id, "TZID")?, unique)))
+}
+
+fn param_value_type(input: &[u8]) -> IResult<&[u8], Value, Error> {
+    let (input, value) = alt((
+        tag("BINARY").map(|_| Value::Binary),
+        tag("BOOLEAN").map(|_| Value::Boolean),
+        tag("CAL-ADDRESS").map(|_| Value::CalendarAddress),
+        tag("DATE").map(|_| Value::Date),
+        tag("DATE-TIME").map(|_| Value::DateTime),
+        tag("DURATION").map(|_| Value::Duration),
+        tag("FLOAT").map(|_| Value::Float),
+        tag("INTEGER").map(|_| Value::Integer),
+        tag("PERIOD").map(|_| Value::Period),
+        tag("RECUR").map(|_| Value::Recurrence),
+        tag("TEXT").map(|_| Value::Text),
+        tag("TIME").map(|_| Value::Time),
+        tag("URI").map(|_| Value::Uri),
+        tag("UTC-OFFSET").map(|_| Value::UtcOffset),
+        map_res(x_name, |x_name| {
+            Ok(Value::XName(read_string(
+                x_name,
+                "VALUE x-name",
+            )?))
+        }),
+        map_res(iana_token, |iana_token| {
+            Ok(Value::IanaToken(read_string(
+                iana_token,
+                "VALUE iana-token",
+            )?))
+        }),
+    ))(input)?;
+
+    Ok((input, value))
+}
+
 #[inline]
 const fn is_reg_name_char(b: u8) -> bool {
     matches!(b, b'\x41'..=b'\x5A' | b'\x61'..=b'\x7A' | b'\x30'..=b'\x39' | b'\x21' | b'\x23' | b'\x24' | b'\x26' | b'\x2E' | b'\x2B' | b'\x2D' | b'\x5E' | b'\x5F')
@@ -376,6 +647,64 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             let (input, language) = language_tag::language_tag(input)?;
 
             (input, Some(ParamValue::Language { language }))
+        }
+        "MEMBER" => {
+            let (input, members) = separated_list1(
+                char(','),
+                map_res(quoted_string, |m| read_string(m, "MEMBER cal-address")),
+            )(input)?;
+
+            (input, Some(ParamValue::Members { members }))
+        }
+        "PARTSTAT" => {
+            let (input, status) = param_part_stat(input)?;
+
+            (input, Some(ParamValue::ParticipationStatus { status }))
+        }
+        "RANGE" => {
+            let (input, _) = tag("THISANDFUTURE")(input)?;
+
+            (input, Some(ParamValue::Range { range: Range::ThisAndFuture }))
+        }
+        "RELATED" => {
+            let (input, related) = param_related(input)?;
+
+            (input, Some(ParamValue::Related { related }))
+        }
+        "RELTYPE" => {
+            let (input, relationship) = param_rel_type(input)?;
+
+            (input, Some(ParamValue::RelationshipType { relationship }))
+        }
+        "ROLE" => {
+            let (input, role) = param_role(input)?;
+
+            (input, Some(ParamValue::Role { role }))
+        }
+        "RSVP" => {
+            let (input, rsvp) = param_rsvp(input)?;
+
+            (input, Some(ParamValue::Rsvp { rsvp }))
+        }
+        "SENT-BY" => {
+            let (input, address) = quoted_string(input)?;
+
+            (
+                input,
+                Some(ParamValue::SentBy {
+                    address: read_string(address, "SENT-BY address")?,
+                }),
+            )
+        }
+        "TZID" => {
+            let (input, (tz_id, unique)) = param_tz_id(input)?;
+
+            (input, Some(ParamValue::TimeZoneId { tz_id, unique }))
+        }
+        "VALUE" => {
+            let (input, value) = param_value_type(input)?;
+
+            (input, Some(ParamValue::Value { value }))
         }
         _ => {
             // TODO not robust! Check 3
@@ -798,6 +1127,209 @@ mod tests {
                     region: Some("US".to_string()),
                     ..Default::default()
                 }
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_member() {
+        let (rem, param) = param(b"MEMBER=\"mailto:ietf-calsch@example.org\";").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("MEMBER", param.name);
+        assert_eq!(
+            ParamValue::Members {
+                members: vec!["mailto:ietf-calsch@example.org".to_string()],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_member_multi() {
+        let (rem, param) =
+            param(b"MEMBER=\"mailto:projectA@example.com\",\"mailto:projectB@example.com\";")
+                .unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("MEMBER", param.name);
+        assert_eq!(
+            ParamValue::Members {
+                members: vec![
+                    "mailto:projectA@example.com".to_string(),
+                    "mailto:projectB@example.com".to_string()
+                ],
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_part_stat_declined() {
+        let (rem, param) = param(b"PARTSTAT=DECLINED;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("PARTSTAT", param.name);
+        assert_eq!(
+            ParamValue::ParticipationStatus {
+                status: ParticipationStatusUnknown::Declined
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_range() {
+        let (rem, param) = param(b"RANGE=THISANDFUTURE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RANGE", param.name);
+        assert_eq!(
+            ParamValue::Range {
+                range: Range::ThisAndFuture
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_related_start() {
+        let (rem, param) = param(b"RELATED=START;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RELATED", param.name);
+        assert_eq!(
+            ParamValue::Related {
+                related: Related::Start
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_related_end() {
+        let (rem, param) = param(b"RELATED=END;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RELATED", param.name);
+        assert_eq!(
+            ParamValue::Related {
+                related: Related::End
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_rel_type() {
+        let (rem, param) = param(b"RELTYPE=SIBLING;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RELTYPE", param.name);
+        assert_eq!(
+            ParamValue::RelationshipType {
+                relationship: RelationshipType::Sibling
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_role() {
+        let (rem, param) = param(b"ROLE=CHAIR;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("ROLE", param.name);
+        assert_eq!(
+            ParamValue::Role {
+                role: Role::Chair
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_rsvp_true() {
+        let (rem, param) = param(b"RSVP=TRUE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RSVP", param.name);
+        assert_eq!(
+            ParamValue::Rsvp {
+                rsvp: true
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_rsvp_false() {
+        let (rem, param) = param(b"RSVP=FALSE;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("RSVP", param.name);
+        assert_eq!(
+            ParamValue::Rsvp {
+                rsvp: false
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_sent_by() {
+        let (rem, param) = param(b"SENT-BY=\"mailto:sray@example.com\";").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("SENT-BY", param.name);
+        assert_eq!(
+            ParamValue::SentBy {
+                address: "mailto:sray@example.com".to_string()
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_tz_id() {
+        let (rem, param) = param(b"TZID=America/New_York;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("TZID", param.name);
+        assert_eq!(
+            ParamValue::TimeZoneId {
+                tz_id: "America/New_York".to_string(),
+                unique: false
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_tz_id_unique() {
+        let (rem, param) = param(b"TZID=/America/New_York;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("TZID", param.name);
+        assert_eq!(
+            ParamValue::TimeZoneId {
+                tz_id: "America/New_York".to_string(),
+                unique: true
+            },
+            param.value
+        );
+    }
+
+    #[test]
+    fn param_value_binary() {
+        let (rem, param) = param(b"VALUE=BINARY;").unwrap();
+        check_rem(rem, 1);
+        let param = param.unwrap();
+        assert_eq!("VALUE", param.name);
+        assert_eq!(
+            ParamValue::Value {
+                value: Value::Binary
             },
             param.value
         );
