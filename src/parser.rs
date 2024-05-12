@@ -12,6 +12,7 @@ use nom::{AsChar, IResult};
 
 mod language_tag;
 mod param;
+mod property;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
