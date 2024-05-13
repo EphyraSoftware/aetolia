@@ -27,6 +27,8 @@ pub enum InnerError {
     EncodingError(String, std::str::Utf8Error),
     InvalidDateNum,
     InvalidDurationNum,
+    InvalidFloatNum,
+    InvalidIntegerNum,
 }
 
 impl<'a> Error<'a> {

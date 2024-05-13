@@ -1,5 +1,5 @@
 use crate::parser::property::types::Date;
-use crate::parser::property::Duration;
+use crate::parser::property::{Duration, Period, PeriodEnd};
 use crate::parser::{Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
@@ -122,18 +122,21 @@ fn duration_time(input: &[u8]) -> IResult<&[u8], u64, Error> {
     }
 }
 
-pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
-    let (input, (sign, _)) = tuple((
-        opt(alt((char('+'), char('-')))).map(|x| {
+fn opt_sign(input: &[u8]) -> IResult<&[u8], i8, Error> {
+    opt(alt((char('+'), char('-'))))
+        .map(|x| {
             match x {
                 Some('-') => -1,
                 None | Some('+') => 1,
                 // This is unreachable because of the alt combinator
                 _ => unreachable!(),
             }
-        }),
-        char('P'),
-    ))(input)?;
+        })
+        .parse(input)
+}
+
+pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
+    let (input, (sign, _)) = tuple((opt_sign, char('P')))(input)?;
 
     let (input, t) = opt(char('T'))(input)?;
 
@@ -185,6 +188,66 @@ pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
         // This is unreachable because of the one_of combinator
         _ => unreachable!(),
     }
+}
+
+pub fn prop_value_float(input: &[u8]) -> IResult<&[u8], f64, Error> {
+    let (input, (sign, num)) = tuple((
+        opt_sign,
+        recognize(tuple((
+            take_while1(is_digit),
+            opt(tuple((char('.'), take_while1(is_digit)))),
+        ))),
+    ))(input)?;
+
+    let num: f64 = std::str::from_utf8(num)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid float number text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidFloatNum)))?;
+
+    Ok((input, sign as f64 * num))
+}
+
+pub fn prop_value_integer(input: &[u8]) -> IResult<&[u8], i32, Error> {
+    let (input, (sign, num)) = tuple((opt_sign, take_while1(is_digit)))(input)?;
+
+    let num: i32 = std::str::from_utf8(num)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid integer number text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum)))?;
+
+    Ok((input, sign as i32 * num))
+}
+
+#[inline]
+const fn is_iso_8601_basic(c: u8) -> bool {
+    matches!(c, b'0'..=b'9' | b'T' | b'Z' | b'-' | b'+' | b':')
+}
+
+fn iso_8601_basic(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+    take_while_m_n(1, 21, is_iso_8601_basic)(input)
+}
+
+pub fn prop_value_period(input: &[u8]) -> IResult<&[u8], Period, Error> {
+    let (input, (start, _, end)) = tuple((
+        iso_8601_basic,
+        char('/'),
+        alt((
+            prop_value_duration.map(PeriodEnd::Duration),
+            iso_8601_basic.map(PeriodEnd::DateTime),
+        )),
+    ))(input)?;
+
+    Ok((input, Period { start, end }))
 }
 
 #[cfg(test)]
@@ -265,6 +328,63 @@ mod tests {
                 sign: -1,
                 seconds: 10 * 60 + 20,
                 ..Default::default()
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn float() {
+        let (rem, value) = prop_value_float(b"1000000.0000001;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(1000000.0000001f64, value);
+    }
+
+    #[test]
+    fn float_negative() {
+        let (rem, value) = prop_value_float(b"-1.333;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(-1.333, value);
+    }
+
+    #[test]
+    fn integer() {
+        let (rem, value) = prop_value_integer(b"1234567890;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(1234567890, value);
+    }
+
+    #[test]
+    fn integer_negative() {
+        let (rem, value) = prop_value_integer(b"-1234567890;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(-1234567890, value);
+    }
+
+    #[test]
+    fn period() {
+        let (rem, value) = prop_value_period(b"19970101T180000Z/19970102T070000Z;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            Period {
+                start: b"19970101T180000Z",
+                end: PeriodEnd::DateTime(b"19970102T070000Z")
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn period_duration() {
+        let (rem, value) = prop_value_period(b"19970101T180000Z/PT5H30M;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            Period {
+                start: b"19970101T180000Z",
+                end: PeriodEnd::Duration(Duration {
+                    seconds: 5 * 60 * 60 + 30 * 60,
+                    ..Default::default()
+                })
             },
             value
         );

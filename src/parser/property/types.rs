@@ -23,3 +23,15 @@ impl Default for Duration {
         }
     }
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Period<'a> {
+    pub start: &'a [u8],
+    pub end: PeriodEnd<'a>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum PeriodEnd<'a> {
+    DateTime(&'a [u8]),
+    Duration(Duration),
+}
