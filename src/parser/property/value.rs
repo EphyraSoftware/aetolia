@@ -43,36 +43,37 @@ pub fn prop_value_date(input: &[u8]) -> IResult<&[u8], Date, Error> {
         take_while_m_n(2, 2, is_digit),
     ))(input)?;
 
-    let year = std::str::from_utf8(year).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Invalid date year text".to_string(), e),
-        ))
-    })?.parse().map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
+    let year = std::str::from_utf8(year)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid date year text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
 
+    let month = std::str::from_utf8(month)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid date month text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
 
-    let month = std::str::from_utf8(month).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Invalid date month text".to_string(), e),
-        ))
-    })?.parse().map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
+    let day = std::str::from_utf8(day)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid date day text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
 
-    let day = std::str::from_utf8(day).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Invalid date day text".to_string(), e),
-        ))
-    })?.parse().map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
-
-    Ok((
-        input,
-        Date {
-            year,
-            month,
-            day,
-        },
-    ))
+    Ok((input, Date { year, month, day }))
 }
 
 pub fn duration_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
@@ -136,14 +137,17 @@ pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
 
     let (input, t) = opt(char('T'))(input)?;
 
-    if let Some(_) = t {
+    if t.is_some() {
         let (input, t) = duration_time(input)?;
 
-        return Ok((input, Duration {
-            sign,
-            seconds: t,
-            ..Default::default()
-        }));
+        return Ok((
+            input,
+            Duration {
+                sign,
+                seconds: t,
+                ..Default::default()
+            },
+        ));
     };
 
     let (input, num) = duration_num(input)?;
@@ -229,10 +233,13 @@ mod tests {
     fn duration_seven_weeks() {
         let (rem, value) = prop_value_duration(b"P7W;").unwrap();
         check_rem(rem, 1);
-        assert_eq!(Duration {
-            weeks: 7,
-            ..Default::default()
-        }, value);
+        assert_eq!(
+            Duration {
+                weeks: 7,
+                ..Default::default()
+            },
+            value
+        );
     }
 
     #[test]
