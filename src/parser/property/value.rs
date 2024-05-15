@@ -1,5 +1,5 @@
 use crate::parser::property::types::Date;
-use crate::parser::property::{Duration, Period, PeriodEnd};
+use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time};
 use crate::parser::{Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
@@ -74,6 +74,43 @@ pub fn prop_value_date(input: &[u8]) -> IResult<&[u8], Date, Error> {
         .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
 
     Ok((input, Date { year, month, day }))
+}
+
+pub fn prop_value_time(input: &[u8]) -> IResult<&[u8], Time, Error> {
+    let (input, (h, m, s, is_utc)) = tuple((
+        take_while_m_n(2, 2, is_digit),
+        take_while_m_n(2, 2, is_digit),
+        take_while_m_n(2, 2, is_digit),
+        opt(char('Z')).map(|x| x.is_some()),
+    ))(input)?;
+
+    let read_time = |s: &[u8]| -> Result<u8, nom::Err<Error>> {
+        std::str::from_utf8(s)
+            .map_err(|e| {
+                nom::Err::Error(Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid time text".to_string(), e),
+                ))
+            })?
+            .parse()
+            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidTimeNum)))
+    };
+
+    Ok((
+        input,
+        Time {
+            hour: read_time(h)?,
+            minute: read_time(m)?,
+            second: read_time(s)?,
+            is_utc,
+        },
+    ))
+}
+
+pub fn prop_value_date_time(input: &[u8]) -> IResult<&[u8], DateTime, Error> {
+    let (input, (date, _, time)) = tuple((prop_value_date, char('T'), prop_value_time))(input)?;
+
+    Ok((input, DateTime { date, time }))
 }
 
 pub fn duration_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
@@ -287,6 +324,58 @@ mod tests {
                 year: 1997,
                 month: 7,
                 day: 14
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn time() {
+        let (rem, value) = prop_value_time(b"230000;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            Time {
+                hour: 23,
+                minute: 0,
+                second: 0,
+                is_utc: false
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn time_utc() {
+        let (rem, value) = prop_value_time(b"133000Z;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            Time {
+                hour: 13,
+                minute: 30,
+                second: 0,
+                is_utc: true
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn date_time() {
+        let (rem, value) = prop_value_date_time(b"19980118T230000;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            DateTime {
+                date: Date {
+                    year: 1998,
+                    month: 1,
+                    day: 18
+                },
+                time: Time {
+                    hour: 23,
+                    minute: 0,
+                    second: 0,
+                    is_utc: false
+                }
             },
             value
         );
