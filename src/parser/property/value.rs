@@ -4,9 +4,8 @@ use crate::parser::{Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::{tag, tag_no_case, take_while_m_n};
-use nom::character::complete::one_of;
 use nom::character::is_digit;
-use nom::character::streaming::char;
+use nom::character::streaming::{char, one_of};
 use nom::combinator::{opt, recognize};
 use nom::multi::many0;
 use nom::sequence::tuple;
@@ -287,6 +286,24 @@ pub fn prop_value_period(input: &[u8]) -> IResult<&[u8], Period, Error> {
     Ok((input, Period { start, end }))
 }
 
+#[inline]
+const fn is_text_safe_char(c: u8) -> bool {
+    !matches!(c, b'"' | b';' | b':' | b'\\' | b',')
+}
+
+fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    let (input, r) = many0(alt((
+        tuple((
+            char('\\'),
+            alt((tag_no_case("n").map(|_| b'\n' as char), one_of(r#"\;,"#))),
+        ))
+        .map(|(_, c)| vec![c as u8]),
+        take_while1(is_text_safe_char).map(|section: &[u8]| section.to_vec()),
+    )))(input)?;
+
+    Ok((input, r.into_iter().flatten().collect()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,5 +494,14 @@ mod tests {
             },
             value
         );
+    }
+
+    #[test]
+    fn text() {
+        let (rem, value) = prop_value_text(br#"Project XYZ Final Review\nConference Room - 3B\nCome Prepared.;"#).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(br#"Project XYZ Final Review
+Conference Room - 3B
+Come Prepared."#, value.as_slice());
     }
 }
