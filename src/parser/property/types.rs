@@ -5,6 +5,20 @@ pub struct Date {
     pub day: u8,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub struct Time {
+    pub hour: u8,
+    pub minute: u8,
+    pub second: u8,
+    pub is_utc: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DateTime {
+    pub date: Date,
+    pub time: Time,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Duration {
     pub sign: i8,

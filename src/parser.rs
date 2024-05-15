@@ -26,9 +26,12 @@ pub enum InnerError {
     XNameTooShort,
     EncodingError(String, std::str::Utf8Error),
     InvalidDateNum,
+    InvalidTimeNum,
     InvalidDurationNum,
     InvalidFloatNum,
     InvalidIntegerNum,
+    InvalidRecurNum,
+    InvalidRecurPart(String),
 }
 
 impl<'a> Error<'a> {
