@@ -498,10 +498,15 @@ mod tests {
 
     #[test]
     fn text() {
-        let (rem, value) = prop_value_text(br#"Project XYZ Final Review\nConference Room - 3B\nCome Prepared.;"#).unwrap();
+        let (rem, value) =
+            prop_value_text(br#"Project XYZ Final Review\nConference Room - 3B\nCome Prepared.;"#)
+                .unwrap();
         check_rem(rem, 1);
-        assert_eq!(br#"Project XYZ Final Review
+        assert_eq!(
+            br#"Project XYZ Final Review
 Conference Room - 3B
-Come Prepared."#, value.as_slice());
+Come Prepared."#,
+            value.as_slice()
+        );
     }
 }

@@ -32,6 +32,9 @@ pub enum InnerError {
     InvalidIntegerNum,
     InvalidRecurNum,
     InvalidRecurPart(String),
+    InvalidOctet,
+    InvalidIpv6,
+    InvalidPort,
 }
 
 impl<'a> Error<'a> {
