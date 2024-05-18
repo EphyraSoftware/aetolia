@@ -34,18 +34,21 @@ pub struct Authority {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Uri<'a> {
     pub scheme: &'a [u8],
-    pub authority: Authority,
+    pub authority: Option<Authority>,
     pub path: Vec<u8>,
     pub query: Option<&'a [u8]>,
     pub fragment: Option<&'a [u8]>,
 }
 
 pub fn param_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
-    let (input, (scheme, _, authority, path, query, fragment)) = tuple((
+    let (input, (scheme, _, (authority, path), query, fragment)) = tuple((
         scheme,
-        tag("://"),
-        authority,
-        opt(alt((path_absolute_empty, path_absolute, path_rootless))),
+        char(':'),
+        alt((
+            tuple((tag("//"), authority, opt(path_absolute_empty))).map(|(_, a, b)| (Some(a), b)),
+            path_absolute.map(|p| (None, Some(p))),
+            path_rootless.map(|p| (None, Some(p))),
+            )),
         opt(tuple((char('?'), query_or_fragment)).map(|(_, v)| v)),
         opt(tuple((char('#'), query_or_fragment)).map(|(_, v)| v)),
     ))(input)?;
@@ -396,22 +399,6 @@ fn p_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     ))(input)
 }
 
-// ftp://ftp.is.co.za/rfc/rfc1808.txt
-//
-//       http://www.ietf.org/rfc/rfc2396.txt
-//
-//       ldap://[2001:db8::7]/c=GB?objectClass?one
-//
-//       mailto:John.Doe@example.com
-//
-//       news:comp.infosystems.www.servers.unix
-//
-//       tel:+1-816-555-1212
-//
-//       telnet://192.0.2.16:80/
-//
-//       urn:oasis:names:specification:docbook:dtd:xml:4.1.2
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -422,7 +409,7 @@ mod tests {
         let (input, uri) = param_value_uri(b"ftp://ftp.is.co.za/rfc/rfc1808.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ftp");
-        assert_eq!(uri.authority.host, Host::RegName(b"ftp.is.co.za".to_vec()));
+        assert_eq!(uri.authority.unwrap().host, Host::RegName(b"ftp.is.co.za".to_vec()));
         assert_eq!(uri.path, b"/rfc/rfc1808.txt");
     }
 
@@ -431,7 +418,7 @@ mod tests {
         let (input, uri) = param_value_uri(b"http://www.ietf.org/rfc/rfc2396.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"http");
-        assert_eq!(uri.authority.host, Host::RegName(b"www.ietf.org".to_vec()));
+        assert_eq!(uri.authority.unwrap().host, Host::RegName(b"www.ietf.org".to_vec()));
         assert_eq!(uri.path, b"/rfc/rfc2396.txt");
     }
 
@@ -447,8 +434,50 @@ mod tests {
         let (input, uri) = param_value_uri(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
-        assert_eq!(uri.authority.host, Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7))));
+        assert_eq!(uri.authority.unwrap().host, Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7))));
         assert_eq!(uri.path, b"/c=GB");
         assert_eq!(uri.query.unwrap(), b"objectClass?one");
+    }
+
+    #[test]
+    fn mailto() {
+        let (input, uri) = param_value_uri(b"mailto:John.Doe@example.com`").unwrap();
+        check_rem(input, 1);
+        assert_eq!(uri.scheme, b"mailto");
+        assert_eq!(uri.path, b"John.Doe@example.com".to_vec());
+    }
+
+    #[test]
+    fn news() {
+        let (input, uri) = param_value_uri(b"news:comp.infosystems.www.servers.unix`").unwrap();
+        check_rem(input, 1);
+        assert_eq!(uri.scheme, b"news");
+        assert_eq!(uri.path, b"comp.infosystems.www.servers.unix".to_vec());
+    }
+
+    #[test]
+    fn tel() {
+        let (input, uri) = param_value_uri(b"tel:+1-816-555-1212`").unwrap();
+        check_rem(input, 1);
+        assert_eq!(uri.scheme, b"tel");
+        assert_eq!(uri.path, b"+1-816-555-1212".to_vec());
+    }
+
+    #[test]
+    fn telnet() {
+        let (input, uri) = param_value_uri(b"telnet://192.0.2.16:80/`").unwrap();
+        check_rem(input, 1);
+        assert_eq!(uri.scheme, b"telnet");
+        let authority = uri.authority.unwrap();
+        assert_eq!(authority.host, Host::IpAddr(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 16))));
+        assert_eq!(authority.port.unwrap(), 80);
+    }
+
+    #[test]
+    fn urn() {
+        let (input, uri) = param_value_uri(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`").unwrap();
+        check_rem(input, 1);
+        assert_eq!(uri.scheme, b"urn");
+        assert_eq!(uri.path, b"oasis:names:specification:docbook:dtd:xml:4.1.2".to_vec());
     }
 }
