@@ -1,4 +1,5 @@
 use crate::parser::property::types::Date;
+use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time};
 use crate::parser::{Error, InnerError};
 use nom::branch::alt;
@@ -17,7 +18,7 @@ const fn is_base64(c: u8) -> bool {
     matches!(c, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/')
 }
 
-pub fn prop_value_base64(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+pub fn prop_value_binary(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     let (input, content) = recognize(tuple((
         many0(take_while_m_n(4, 4, is_base64)),
         opt(alt((tag("=="), tag("=")))),
@@ -33,6 +34,12 @@ pub fn prop_value_boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
     ))(input)?;
 
     Ok((input, value))
+}
+
+pub fn prop_value_calendar_user_address(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+    let (input, uri) = param_value_uri(input)?;
+
+    Ok((input, uri))
 }
 
 pub fn prop_value_date(input: &[u8]) -> IResult<&[u8], Date, Error> {
@@ -304,15 +311,22 @@ fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     Ok((input, r.into_iter().flatten().collect()))
 }
 
+fn prop_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+    let (input, (_, uri, _)) = tuple((char('"'), param_value_uri, char('"')))(input)?;
+
+    Ok((input, uri))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::property::uri::Host;
     use crate::test_utils::check_rem;
     use base64::Engine;
 
     #[test]
     fn base64() {
-        let (rem, value) = prop_value_base64(b"VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGluZyB0ZXh0;").unwrap();
+        let (rem, value) = prop_value_binary(b"VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGluZyB0ZXh0;").unwrap();
         check_rem(rem, 1);
         let r = base64::prelude::BASE64_STANDARD.decode(value).unwrap();
         assert_eq!(b"This is a base64 encoding text", r.as_slice());
@@ -330,6 +344,15 @@ mod tests {
         let (rem, value) = prop_value_boolean(b"true;").unwrap();
         check_rem(rem, 1);
         assert!(value);
+    }
+
+    #[test]
+    fn calendar_user_address() {
+        let (rem, value) =
+            prop_value_calendar_user_address(b"mailto:jane_doe@example.com`").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(value.scheme, b"mailto");
+        assert_eq!(value.path, b"jane_doe@example.com")
     }
 
     #[test]
@@ -508,5 +531,17 @@ Conference Room - 3B
 Come Prepared."#,
             value.as_slice()
         );
+    }
+
+    #[test]
+    fn uri() {
+        let (rem, value) = prop_value_uri(b"\"http://example.com/my-report.txt\";").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(value.scheme, b"http");
+        assert_eq!(
+            value.authority.unwrap().host,
+            Host::RegName(b"example.com".to_vec())
+        );
+        assert_eq!(value.path, b"/my-report.txt");
     }
 }

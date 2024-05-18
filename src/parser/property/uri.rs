@@ -48,7 +48,7 @@ pub fn param_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
             tuple((tag("//"), authority, opt(path_absolute_empty))).map(|(_, a, b)| (Some(a), b)),
             path_absolute.map(|p| (None, Some(p))),
             path_rootless.map(|p| (None, Some(p))),
-            )),
+        )),
         opt(tuple((char('?'), query_or_fragment)).map(|(_, v)| v)),
         opt(tuple((char('#'), query_or_fragment)).map(|(_, v)| v)),
     ))(input)?;
@@ -117,13 +117,11 @@ fn authority(input: &[u8]) -> IResult<&[u8], Authority, Error> {
         host,
         opt(tuple((char(':'), port)).map(|(_, p)| p)),
     ))
-    .map(|(user_info, host, port)|
-        Authority {
-            user_info,
-            host,
-            port,
-        }
-    )
+    .map(|(user_info, host, port)| Authority {
+        user_info,
+        host,
+        port,
+    })
     .parse(input)
 }
 
@@ -214,7 +212,8 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
 
     let mut content = [0u8; 16];
 
-    let provided_len = prefix_parts.len() * 2 + suffix_parts.len() * 2 + if ipv4_post.is_some() { 4 } else { 0 };
+    let provided_len =
+        prefix_parts.len() * 2 + suffix_parts.len() * 2 + if ipv4_post.is_some() { 4 } else { 0 };
 
     if provided_len > 16 {
         return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
@@ -251,15 +250,17 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
 }
 
 fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
-    take_while_m_n(1, 4, is_hex_digit).map(|c: &[u8]| {
-        let mut src = c.to_vec();
-        while src.len() < 4 {
-            src.insert(0, b'0');
-        }
-        let mut dst = [0, 0];
-        hex::decode_to_slice(src, &mut dst).unwrap();
-        dst
-    }).parse(input)
+    take_while_m_n(1, 4, is_hex_digit)
+        .map(|c: &[u8]| {
+            let mut src = c.to_vec();
+            while src.len() < 4 {
+                src.insert(0, b'0');
+            }
+            let mut dst = [0, 0];
+            hex::decode_to_slice(src, &mut dst).unwrap();
+            dst
+        })
+        .parse(input)
 }
 
 fn ls_32(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
@@ -409,7 +410,10 @@ mod tests {
         let (input, uri) = param_value_uri(b"ftp://ftp.is.co.za/rfc/rfc1808.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ftp");
-        assert_eq!(uri.authority.unwrap().host, Host::RegName(b"ftp.is.co.za".to_vec()));
+        assert_eq!(
+            uri.authority.unwrap().host,
+            Host::RegName(b"ftp.is.co.za".to_vec())
+        );
         assert_eq!(uri.path, b"/rfc/rfc1808.txt");
     }
 
@@ -418,7 +422,10 @@ mod tests {
         let (input, uri) = param_value_uri(b"http://www.ietf.org/rfc/rfc2396.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"http");
-        assert_eq!(uri.authority.unwrap().host, Host::RegName(b"www.ietf.org".to_vec()));
+        assert_eq!(
+            uri.authority.unwrap().host,
+            Host::RegName(b"www.ietf.org".to_vec())
+        );
         assert_eq!(uri.path, b"/rfc/rfc2396.txt");
     }
 
@@ -434,7 +441,10 @@ mod tests {
         let (input, uri) = param_value_uri(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
-        assert_eq!(uri.authority.unwrap().host, Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7))));
+        assert_eq!(
+            uri.authority.unwrap().host,
+            Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7)))
+        );
         assert_eq!(uri.path, b"/c=GB");
         assert_eq!(uri.query.unwrap(), b"objectClass?one");
     }
@@ -469,15 +479,22 @@ mod tests {
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"telnet");
         let authority = uri.authority.unwrap();
-        assert_eq!(authority.host, Host::IpAddr(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 16))));
+        assert_eq!(
+            authority.host,
+            Host::IpAddr(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 16)))
+        );
         assert_eq!(authority.port.unwrap(), 80);
     }
 
     #[test]
     fn urn() {
-        let (input, uri) = param_value_uri(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`").unwrap();
+        let (input, uri) =
+            param_value_uri(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"urn");
-        assert_eq!(uri.path, b"oasis:names:specification:docbook:dtd:xml:4.1.2".to_vec());
+        assert_eq!(
+            uri.path,
+            b"oasis:names:specification:docbook:dtd:xml:4.1.2".to_vec()
+        );
     }
 }
