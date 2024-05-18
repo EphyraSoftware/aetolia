@@ -83,7 +83,7 @@ const fn is_hex_digit_upper(b: u8) -> bool {
 
 #[inline]
 const fn is_hex_digit(b: u8) -> bool {
-    matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f')
+    b.is_ascii_hexdigit()
 }
 
 #[inline]
@@ -215,9 +215,7 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
     let provided_len =
         prefix_parts.len() * 2 + suffix_parts.len() * 2 + if ipv4_post.is_some() { 4 } else { 0 };
 
-    if provided_len > 16 {
-        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
-    } else if provided_len < 16 && !fill_zeroes {
+    if provided_len > 16 || (provided_len < 16 && !fill_zeroes) {
         return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
     }
 

@@ -1,6 +1,6 @@
 use crate::parser::property::types::Date;
 use crate::parser::property::uri::{param_value_uri, Uri};
-use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time};
+use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
 use crate::parser::{Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
@@ -317,6 +317,25 @@ fn prop_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
     Ok((input, uri))
 }
 
+fn prop_value_utc_offset(input: &[u8]) -> IResult<&[u8], UtcOffset, Error> {
+    let (input, (sign, h, m, s)) = tuple((
+        one_of("+-"),
+        take_while_m_n(2, 2, is_digit),
+        take_while_m_n(2, 2, is_digit),
+        opt(take_while_m_n(2, 2, is_digit)),
+    ))(input)?;
+
+    Ok((
+        input,
+        UtcOffset {
+            sign: if sign == '+' { 1 } else { -1 },
+            hours: std::str::from_utf8(h).unwrap().parse().unwrap(),
+            minutes: std::str::from_utf8(m).unwrap().parse().unwrap(),
+            seconds: s.map(|s| std::str::from_utf8(s).unwrap().parse().unwrap()),
+        },
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -543,5 +562,35 @@ Come Prepared."#,
             Host::RegName(b"example.com".to_vec())
         );
         assert_eq!(value.path, b"/my-report.txt");
+    }
+
+    #[test]
+    fn utc_offset_negative() {
+        let (rem, value) = prop_value_utc_offset(b"-0500;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            UtcOffset {
+                sign: -1,
+                hours: 5,
+                minutes: 0,
+                seconds: None
+            },
+            value
+        );
+    }
+
+    #[test]
+    fn utc_offset_positive() {
+        let (rem, value) = prop_value_utc_offset(b"+0130;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            UtcOffset {
+                sign: 1,
+                hours: 1,
+                minutes: 30,
+                seconds: None
+            },
+            value
+        );
     }
 }

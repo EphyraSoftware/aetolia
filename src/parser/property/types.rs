@@ -49,3 +49,11 @@ pub enum PeriodEnd<'a> {
     DateTime(&'a [u8]),
     Duration(Duration),
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct UtcOffset {
+    pub sign: i8,
+    pub hours: u64,
+    pub minutes: u64,
+    pub seconds: Option<u64>,
+}
