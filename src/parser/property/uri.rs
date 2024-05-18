@@ -5,7 +5,7 @@ use nom::character::streaming::char;
 use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt, recognize, verify};
 use nom::error::ParseError;
-use nom::multi::{fold_many0, fold_many1, many0, many1, many_m_n, separated_list0};
+use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
 use nom::{IResult, InputIter, InputLength, InputTake, Parser};
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -194,257 +194,66 @@ fn ip_v_future_addr(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
     let (input, prefix_parts) = separated_list0(char(':'), h_16)(input)?;
 
-    println!("Took prefix parts: {:?}", prefix_parts);
+    if prefix_parts.len() > 7 {
+        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+    }
 
-    let prefix_len = prefix_parts.len();
+    let (input, found_collapse) = opt(tag("::"))(input)?;
+    let fill_zeroes = found_collapse.is_some();
 
-    Ok(match prefix_len {
-        7 => {
-            let (input, _) = tag("::")(input)?;
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    prefix_parts[2][0],
-                    prefix_parts[2][1],
-                    prefix_parts[3][0],
-                    prefix_parts[3][1],
-                    prefix_parts[4][0],
-                    prefix_parts[4][1],
-                    prefix_parts[5][0],
-                    prefix_parts[5][1],
-                    prefix_parts[6][0],
-                    prefix_parts[6][1],
-                    0,
-                    0,
-                ]),
-            )
-        }
-        6 => {
-            let (input, (_, last)) = tuple((tag("::"), h_16))(input)?;
+    let (input, suffix_parts) = separated_list0(char(':'), h_16)(input)?;
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    prefix_parts[2][0],
-                    prefix_parts[2][1],
-                    prefix_parts[3][0],
-                    prefix_parts[3][1],
-                    prefix_parts[4][0],
-                    prefix_parts[4][1],
-                    prefix_parts[5][0],
-                    prefix_parts[5][1],
-                    0,
-                    0,
-                    last[0],
-                    last[1],
-                ]),
-            )
-        }
-        5 => {
-            let (input, (_, last)) = tuple((tag("::"), ls_32))(input)?;
+    if suffix_parts.len() > 8 {
+        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+    }
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    prefix_parts[2][0],
-                    prefix_parts[2][1],
-                    prefix_parts[3][0],
-                    prefix_parts[3][1],
-                    prefix_parts[4][0],
-                    prefix_parts[4][1],
-                    0,
-                    0,
-                    last[0],
-                    last[1],
-                    last[2],
-                    last[3],
-                ]),
-            )
-        }
-        4 => {
-            let (input, (_, lead, _, last)) = tuple((tag("::"), h_16, char(':'), ls_32))(input)?;
+    let (input, ipv4_post) = opt(tuple((char(':'), ip_v4_addr)))(input)?;
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    prefix_parts[2][0],
-                    prefix_parts[2][1],
-                    prefix_parts[3][0],
-                    prefix_parts[3][1],
-                    0,
-                    0,
-                    lead[0],
-                    lead[1],
-                    last[0],
-                    last[1],
-                    last[2],
-                    last[3],
-                ]),
-            )
-        }
-        3 => {
-            let (input, (_, lead, _, last)) = tuple((
-                tag("::"),
-                many_m_n(2, 2, tuple((h_16, char(':'))))
-                    .map(|v| v.into_iter().map(|(v, _)| v).collect::<Vec<_>>()),
-                char(':'),
-                ls_32,
-            ))(input)?;
+    let mut content = [0u8; 16];
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    prefix_parts[2][0],
-                    prefix_parts[2][1],
-                    0,
-                    0,
-                    lead[0][0],
-                    lead[0][1],
-                    lead[1][0],
-                    lead[1][1],
-                    last[0],
-                    last[1],
-                    last[2],
-                    last[3],
-                ]),
-            )
-        }
-        2 => {
-            let (input, (_, lead, _, last)) = tuple((
-                tag("::"),
-                many_m_n(3, 3, tuple((h_16, char(':'))))
-                    .map(|v| v.into_iter().map(|(v, _)| v).collect::<Vec<_>>()),
-                char(':'),
-                ls_32,
-            ))(input)?;
+    let provided_len = prefix_parts.len() * 2 + suffix_parts.len() * 2 + if ipv4_post.is_some() { 4 } else { 0 };
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    prefix_parts[1][0],
-                    prefix_parts[1][1],
-                    0,
-                    0,
-                    lead[0][0],
-                    lead[0][1],
-                    lead[1][0],
-                    lead[1][1],
-                    lead[2][0],
-                    lead[2][1],
-                    last[0],
-                    last[1],
-                    last[2],
-                    last[3],
-                ]),
-            )
-        }
-        1 => {
-            let (input, (_, lead, _, last)) = tuple((
-                tag("::"),
-                many_m_n(4, 4, tuple((h_16, char(':'))))
-                    .map(|v| v.into_iter().map(|(v, _)| v).collect::<Vec<_>>()),
-                char(':'),
-                ls_32,
-            ))(input)?;
+    if provided_len > 16 {
+        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+    } else if provided_len < 16 && !fill_zeroes {
+        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+    }
 
-            (
-                input,
-                Ipv6Addr::from([
-                    prefix_parts[0][0],
-                    prefix_parts[0][1],
-                    0,
-                    0,
-                    lead[0][0],
-                    lead[0][1],
-                    lead[1][0],
-                    lead[1][1],
-                    lead[2][0],
-                    lead[2][1],
-                    lead[3][0],
-                    lead[3][1],
-                    last[0],
-                    last[1],
-                    last[2],
-                    last[3],
-                ]),
-            )
-        }
-        0 => {
-            let (input, v) = opt(tag("::"))(input)?;
+    let mut i = 0;
+    for [a, b] in prefix_parts {
+        content[i] = a;
+        content[i + 1] = b;
+        i += 2;
+    }
 
-            match v {
-                Some(_) => {
-                    let (input, (lead, _, last)) = tuple((
-                        many_m_n(5, 5, tuple((h_16, char(':'))))
-                            .map(|v| v.into_iter().map(|(v, _)| v).collect::<Vec<_>>()),
-                        char(':'),
-                        ls_32,
-                    ))(input)?;
+    if fill_zeroes {
+        let zeroes = 16 - provided_len;
+        i += zeroes;
+    }
 
-                    (
-                        input,
-                        Ipv6Addr::from([
-                            0, 0, lead[0][0], lead[0][1], lead[1][0], lead[1][1], lead[2][0],
-                            lead[2][1], lead[3][0], lead[3][1], lead[4][0], lead[4][1], last[0],
-                            last[1], last[2], last[3],
-                        ]),
-                    )
-                }
-                None => {
-                    let (input, (lead, _, last)) = tuple((
-                        many_m_n(6, 6, tuple((h_16, char(':'))))
-                            .map(|v| v.into_iter().map(|(v, _)| v).collect::<Vec<_>>()),
-                        char(':'),
-                        ls_32,
-                    ))(input)?;
+    for [a, b] in suffix_parts {
+        content[i] = a;
+        content[i + 1] = b;
+        i += 2;
+    }
 
-                    (
-                        input,
-                        Ipv6Addr::from([
-                            lead[0][0], lead[0][1], lead[1][0], lead[1][1], lead[2][0], lead[2][1],
-                            lead[3][0], lead[3][1], lead[4][0], lead[4][1], lead[5][0], lead[5][1],
-                            last[0], last[1], last[2], last[3],
-                        ]),
-                    )
-                }
-            }
-        }
-        _ => {
-            return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
-        }
-    })
+    if let Some((_, ipv4)) = ipv4_post {
+        content[12] = ipv4[0];
+        content[13] = ipv4[1];
+        content[14] = ipv4[2];
+        content[15] = ipv4[3];
+    }
+
+    Ok((input, Ipv6Addr::from(content)))
 }
 
 fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
     take_while_m_n(1, 4, is_hex_digit).map(|c: &[u8]| {
         let mut src = c.to_vec();
         while src.len() < 4 {
-            src.insert(0, 0);
+            src.insert(0, b'0');
         }
         let mut dst = [0, 0];
-        println!("Hex decode: {:?}", src);
         hex::decode_to_slice(src, &mut dst).unwrap();
         dst
     }).parse(input)
@@ -630,6 +439,7 @@ mod tests {
     fn ip_v6() {
         let (input, ipv6) = ip_v6_addr(b"2001:db8::7`").unwrap();
         check_rem(input, 1);
+        assert_eq!(ipv6, Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7));
     }
 
     #[test]
@@ -637,5 +447,8 @@ mod tests {
         let (input, uri) = param_value_uri(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
+        assert_eq!(uri.authority.host, Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7))));
+        assert_eq!(uri.path, b"/c=GB");
+        assert_eq!(uri.query.unwrap(), b"objectClass?one");
     }
 }
