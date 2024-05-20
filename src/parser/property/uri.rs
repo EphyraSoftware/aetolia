@@ -1,4 +1,5 @@
 use crate::parser::{Error, InnerError};
+use crate::single;
 use nom::branch::alt;
 use nom::bytes::streaming::{tag, take_while, take_while1, take_while_m_n};
 use nom::character::streaming::char;
@@ -325,33 +326,6 @@ fn reg_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
             acc
         },
     )(input)
-}
-
-/// Streaming, single character matching the predicate
-fn single<F, Input, Output, Error: ParseError<Input>>(
-    cond: F,
-) -> impl Fn(Input) -> IResult<Input, Output, Error>
-where
-    Input: InputIter<Item = Output> + InputLength + InputTake,
-    F: Fn(<Input as InputIter>::Item) -> bool,
-    Output: Copy,
-{
-    move |i: Input| {
-        match i.iter_elements().next() {
-            Some(c) if cond(c) => {
-                let (input, v) = i.take_split(1);
-                Ok((input, v.iter_elements().next().unwrap()))
-            }
-            // Closest error I can get, can't add to the Nom enum!
-            Some(_) => Err(nom::Err::Error(Error::from_error_kind(
-                i,
-                nom::error::ErrorKind::OneOf,
-            ))),
-            None => Err(nom::Err::Incomplete(nom::Needed::Size(
-                NonZeroUsize::new(1).unwrap(),
-            ))),
-        }
-    }
 }
 
 fn path_absolute_empty(input: &[u8]) -> IResult<&[u8], &[u8], Error> {

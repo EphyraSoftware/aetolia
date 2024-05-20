@@ -1,7 +1,8 @@
-use crate::parser::property::value_types::Date;
 use crate::parser::property::uri::{param_value_uri, Uri};
+use crate::parser::property::value_types::Date;
 use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
 use crate::parser::{Error, InnerError};
+use crate::single;
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::{tag, tag_no_case, take_while_m_n};
@@ -295,16 +296,73 @@ pub fn prop_value_period(input: &[u8]) -> IResult<&[u8], Period, Error> {
 
 #[inline]
 const fn is_text_safe_char(c: u8) -> bool {
-    !matches!(c, b'"' | b';' | b':' | b'\\' | b',')
+    matches!(c, b' ' | b'\t' | b'\x21' | b'\x23'..=b'\x2B' | b'\x2D'..=b'\x39' | b'\x3C'..=b'\x5B' | b'\x5D'..=b'\x7E')
 }
 
-fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn utf8_seq(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+    let (input, seq) = alt((
+        // Utf-8 2-byte sequence
+        recognize(tuple((
+            single(|b| matches!(b, b'\xC2'..=b'\xDF')),
+            single(|b| matches!(b, b'\x80'..=b'\xBF')),
+        ))),
+        // Utf-8 3-byte sequence
+        alt((
+            recognize(tuple((
+                single(|b| b == b'\xE0'),
+                single(|b| matches!(b, b'\xA0'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xE1'..=b'\xEC')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| b == b'\xED'),
+                single(|b| matches!(b, b'\x80'..=b'\x9F')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xEE'..=b'\xEF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+        )),
+        // Utf-8 4-byte sequence
+        alt((
+            recognize(tuple((
+                single(|b| b == b'\xF0'),
+                single(|b| matches!(b, b'\x90'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xF1'..=b'\xF3')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| b == b'\xF4'),
+                single(|b| matches!(b, b'\x80'..=b'\x8F')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+        )),
+    ))(input)?;
+
+    Ok((input, seq))
+}
+
+pub fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     let (input, r) = many0(alt((
         tuple((
             char('\\'),
             alt((tag_no_case("n").map(|_| b'\n' as char), one_of(r#"\;,"#))),
         ))
         .map(|(_, c)| vec![c as u8]),
+        utf8_seq.map(|seq| seq.to_vec()),
         take_while1(is_text_safe_char).map(|section: &[u8]| section.to_vec()),
     )))(input)?;
 
