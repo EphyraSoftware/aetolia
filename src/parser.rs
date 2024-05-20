@@ -11,6 +11,7 @@ use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult};
 
 mod language_tag;
+mod object;
 mod param;
 mod property;
 
@@ -35,6 +36,7 @@ pub enum InnerError {
     InvalidOctet,
     InvalidIpv6,
     InvalidPort,
+    MismatchedComponentEnd(Vec<u8>, Vec<u8>),
 }
 
 impl<'a> Error<'a> {

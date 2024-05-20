@@ -1,4 +1,4 @@
-use crate::parser::property::types::Date;
+use crate::parser::property::value_types::Date;
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
 use crate::parser::{Error, InnerError};

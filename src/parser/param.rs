@@ -2,15 +2,16 @@ mod types;
 mod values;
 
 use crate::parser::{
-    language_tag, param_name, param_value, quoted_string, read_string, reg_name, Error,
+    language_tag, param_name, param_value, quoted_string, read_string, reg_name, x_name, Error,
 };
+use nom::branch::alt;
 use nom::bytes::complete::take_until;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
 use nom::combinator::map_res;
-use nom::multi::separated_list1;
+use nom::multi::{many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
-use nom::IResult;
+use nom::{IResult, Parser};
 pub use types::*;
 pub use values::*;
 
@@ -184,6 +185,38 @@ fn param(input: &[u8]) -> IResult<&[u8], Option<Param>, Error> {
             name: name_s,
             value: param_value,
         }),
+    ))
+}
+
+pub fn other_params(input: &[u8]) -> IResult<&[u8], Vec<Param>, Error> {
+    many0(tuple((char(';'), other_param)).map(|(_, p)| p)).parse(input)
+}
+
+pub fn other_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+    alt((iana_param, x_param))(input)
+}
+
+fn iana_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+    let (input, (name, _, value)) = tuple((param_name, char('='), param_value))(input)?;
+
+    Ok((
+        input,
+        Param {
+            name: read_string(name, "iana-param name")?,
+            value: ParamValue::Other { value },
+        },
+    ))
+}
+
+fn x_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+    let (input, (name, _, value)) = tuple((x_name, char('='), param_value))(input)?;
+
+    Ok((
+        input,
+        Param {
+            name: read_string(name, "x-param name")?,
+            value: ParamValue::Other { value },
+        },
     ))
 }
 

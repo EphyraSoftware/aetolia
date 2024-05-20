@@ -1,13 +1,13 @@
 use crate::parser::language_tag::LanguageTag;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Param {
+pub struct Param<'a> {
     pub name: String,
-    pub value: ParamValue,
+    pub value: ParamValue<'a>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ParamValue {
+pub enum ParamValue<'a> {
     AltRep {
         uri: String,
     },
@@ -71,6 +71,9 @@ pub enum ParamValue {
     },
     Value {
         value: Value,
+    },
+    Other {
+        value: &'a [u8],
     },
 }
 
