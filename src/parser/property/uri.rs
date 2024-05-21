@@ -5,12 +5,10 @@ use nom::bytes::streaming::{tag, take_while, take_while1, take_while_m_n};
 use nom::character::streaming::char;
 use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt, recognize, verify};
-use nom::error::ParseError;
 use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
-use nom::{IResult, InputIter, InputLength, InputTake, Parser};
+use nom::{IResult, Parser};
 use std::net::{Ipv4Addr, Ipv6Addr};
-use std::num::NonZeroUsize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IpAddr {

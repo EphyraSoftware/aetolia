@@ -75,6 +75,9 @@ pub enum ParamValue<'a> {
     Other {
         value: &'a [u8],
     },
+    Others {
+        values: Vec<&'a [u8]>,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

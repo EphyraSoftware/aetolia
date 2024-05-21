@@ -1,25 +1,39 @@
 use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
-use crate::parser::{iana_token, parse_line_content, x_name, Error, InnerError};
+use crate::parser::property::{prop_product_id, prop_version};
+use crate::parser::{content_line, iana_token, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::crlf;
-use nom::combinator::eof;
+use nom::combinator::{eof, verify};
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::IResult;
+use nom::Parser;
 
 mod types;
 
-pub fn ical_stream(input: &[u8]) -> IResult<&[u8], Vec<ICalendar>, Error> {
-    many1(ical_object)(input)
+pub fn ical_stream(mut input: &[u8]) -> IResult<&[u8], Vec<ICalendar>, Error> {
+    let mut out = Vec::new();
+
+    loop {
+        if eof::<_, Error>(input).is_ok() {
+            break;
+        }
+
+        let (i, ical) = ical_object(input)?;
+        out.push(ical);
+
+        input = i;
+    }
+
+    Ok((input, out))
 }
 
 pub fn ical_object(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
-    let (input, (_, body, _, _)) = tuple((
+    let (input, (_, body, _)) = tuple((
         tag("BEGIN:VCALENDAR\r\n"),
         ical_body,
         tag("END:VCALENDAR\r\n"),
-        eof,
     ))(input)?;
 
     Ok((input, body))
@@ -38,11 +52,15 @@ fn ical_body(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
 }
 
 fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
-    todo!()
+    alt((
+        prop_product_id.map(|v| CalendarProperty::ProductId(v)),
+        prop_version.map(|v| CalendarProperty::Version(v)),
+    ))
+    .parse(input)
 }
 
 fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    alt((iana_comp, x_comp))(input)
+    alt((x_comp, iana_comp))(input)
 }
 
 fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
@@ -50,7 +68,7 @@ fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
         tag("BEGIN:"),
         iana_token,
         crlf,
-        many1(parse_line_content),
+        many1(content_line),
         tag("END:"),
         iana_token,
         tag("\r\n"),
@@ -71,10 +89,10 @@ fn x_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
         tag("BEGIN:"),
         x_name,
         crlf,
-        many1(parse_line_content),
+        many1(verify(content_line, |cl| cl.property_name != b"END")),
         tag("END:"),
         x_name,
-        tag("\r\n"),
+        crlf,
     ))(input)?;
 
     if name != end_name {
@@ -85,4 +103,26 @@ fn x_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     }
 
     Ok((input, CalendarComponent::XComp { name, lines }))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::property::types::VersionProperty;
+    use super::*;
+    use crate::test_utils::check_rem;
+
+    #[test]
+    fn minimal_ical_stream_test() {
+        let input = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\nBEGIN:x-com\r\nx-prop:I'm a property\r\nEND:x-com\r\nEND:VCALENDAR\r\n";
+        let (rem, ical) = ical_stream(input).unwrap();
+        check_rem(rem, 0);
+        assert_eq!(ical.len(), 1);
+        assert_eq!(ical[0].properties.len(), 2);
+        assert_eq!(ical[0].properties[0], CalendarProperty::Version(VersionProperty {
+            other_params: vec![],
+            min_version: None,
+            max_version: b"2.0",
+        }));
+        assert_eq!(ical[0].components.len(), 1);
+    }
 }

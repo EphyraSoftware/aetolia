@@ -1,14 +1,17 @@
 #![allow(dead_code)]
 
+use crate::parser::param::ParamValue;
+use crate::{single, utf8_seq};
 use nom::branch::alt;
-use nom::bytes::complete::{take_until, take_while, take_while1, take_while_m_n};
-use nom::bytes::streaming::tag;
+use nom::bytes::complete::{take_while, take_while1, take_while_m_n};
+use nom::bytes::streaming::{tag, tag_no_case};
 use nom::character::streaming::{alphanumeric1, char, crlf};
 use nom::combinator::{opt, recognize};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
-use nom::multi::separated_list1;
+use nom::multi::{fold_many0, many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
-use nom::{AsChar, IResult};
+use nom::{AsChar, IResult, Parser};
+use nom::character::complete::one_of;
 
 mod language_tag;
 mod object;
@@ -89,6 +92,7 @@ impl<'a> From<(&'a [u8], ErrorKind)> for Error<'a> {
 #[derive(Debug, Clone)]
 struct ContentLine<'a> {
     property_name: &'a [u8],
+    params: Vec<param::Param<'a>>,
     value: Vec<u8>,
 }
 
@@ -141,7 +145,7 @@ fn vendor_id(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 
 fn x_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     let (input, x_name) = recognize(tuple((
-        tag("X-"),
+        tag_no_case("X-"),
         opt(tuple((vendor_id, char('-')))),
         take_while1(|c: u8| c.is_alphanum() || c == b'-'),
     )))(input)?;
@@ -178,32 +182,52 @@ fn read_string<'a>(input: &'a [u8], context: &str) -> Result<String, nom::Err<Er
         .to_string())
 }
 
-fn parse_line_content(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
-    let (input, (parts, _)) = tuple((
-        separated_list1(
-            tuple((crlf, alt((char(' '), char('\t'))))),
-            take_until("\r\n"),
-        ),
+fn line_value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    let (input, v) = fold_many0(alt((tuple((tag("\r\n"), one_of(" \t"))).map(|_| vec![]), value_char)), Vec::new, |mut acc, item| {
+        acc.extend_from_slice(&item);
+        acc
+    })(input)?;
+
+    Ok((input, v))
+}
+
+fn value_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    alt((
+        single(|b| matches!(b, b' ' | b'\t' | b'\x21'..=b'\x7E')).map(|c| vec![c]),
+        utf8_seq.map(|c| c.to_vec()),
+    ))(input)
+}
+
+fn param(input: &[u8]) -> IResult<&[u8], param::Param, Error> {
+    let (input, (name, values)) = separated_pair(
+        param_name,
+        char('='),
+        separated_list1(char(','), param_value),
+    )(input)?;
+
+    Ok((
+        input,
+        param::Param {
+            name: read_string(name, "param name")?,
+            value: ParamValue::Others { values },
+        },
+    ))
+}
+
+fn content_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
+    let (input, (property_name, params, _, value, _)) = tuple((
+        name,
+        many0(tuple((char(';'), param)).map(|(_, p)| p)),
+        char(':'),
+        line_value,
         crlf,
     ))(input)?;
 
     Ok((
         input,
-        parts.iter().fold(vec![], |mut acc, x| {
-            acc.extend_from_slice(x);
-            acc
-        }),
-    ))
-}
-
-fn parse_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
-    let (input, (property_name, value)) =
-        separated_pair(name, char(':'), parse_line_content)(input)?;
-
-    Ok((
-        input,
         ContentLine {
             property_name,
+            params,
             value,
         },
     ))
@@ -237,7 +261,7 @@ mod tests {
 
     #[test]
     fn simple_content_line() {
-        let (rem, content_line) = parse_line(
+        let (rem, content_line) = content_line(
             b"DESCRIPTION:This is a long description that exists on a long line.\r\nnext",
         )
         .unwrap();
@@ -251,7 +275,7 @@ mod tests {
 
     #[test]
     fn content_line_multi_line() {
-        let (rem, content_line) = parse_line(
+        let (rem, content_line) = content_line(
             b"DESCRIPTION:This is a lo\r\n ng description\r\n  that exists on a long line.\r\nnext",
         )
         .unwrap();
@@ -268,7 +292,7 @@ mod tests {
     #[test]
     fn content_line_multi_line_with_tab() {
         let (rem, content_line) =
-            parse_line(b"DESCRIPTION:This is a lo\r\n ng description\r\n\t that exists on a long line.\r\nnext")
+            content_line(b"DESCRIPTION:This is a lo\r\n ng description\r\n\t that exists on a long line.\r\nnext")
                 .unwrap();
         check_rem(rem, 4);
         assert_eq!(b"DESCRIPTION", content_line.property_name);

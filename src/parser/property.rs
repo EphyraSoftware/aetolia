@@ -1,5 +1,5 @@
 mod recur;
-mod types;
+pub mod types;
 mod uri;
 mod value;
 mod value_types;

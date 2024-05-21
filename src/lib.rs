@@ -1,4 +1,8 @@
+use crate::parser::Error;
+use nom::branch::alt;
+use nom::combinator::recognize;
 use nom::error::ParseError;
+use nom::sequence::tuple;
 use nom::{IResult, InputIter, InputLength, InputTake};
 use std::num::NonZeroUsize;
 
@@ -32,4 +36,60 @@ where
             ))),
         }
     }
+}
+
+fn utf8_seq(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+    let (input, seq) = alt((
+        // Utf-8 2-byte sequence
+        recognize(tuple((
+            single(|b| matches!(b, b'\xC2'..=b'\xDF')),
+            single(|b| matches!(b, b'\x80'..=b'\xBF')),
+        ))),
+        // Utf-8 3-byte sequence
+        alt((
+            recognize(tuple((
+                single(|b| b == b'\xE0'),
+                single(|b| matches!(b, b'\xA0'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xE1'..=b'\xEC')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| b == b'\xED'),
+                single(|b| matches!(b, b'\x80'..=b'\x9F')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xEE'..=b'\xEF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+        )),
+        // Utf-8 4-byte sequence
+        alt((
+            recognize(tuple((
+                single(|b| b == b'\xF0'),
+                single(|b| matches!(b, b'\x90'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| matches!(b, b'\xF1'..=b'\xF3')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+            recognize(tuple((
+                single(|b| b == b'\xF4'),
+                single(|b| matches!(b, b'\x80'..=b'\x8F')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+                single(|b| matches!(b, b'\x80'..=b'\xBF')),
+            ))),
+        )),
+    ))(input)?;
+
+    Ok((input, seq))
 }
