@@ -53,8 +53,8 @@ fn ical_body(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
 
 fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
     alt((
-        prop_product_id.map(|v| CalendarProperty::ProductId(v)),
-        prop_version.map(|v| CalendarProperty::Version(v)),
+        prop_product_id.map(CalendarProperty::ProductId),
+        prop_version.map(CalendarProperty::Version),
     ))
     .parse(input)
 }
@@ -107,8 +107,8 @@ fn x_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::property::types::VersionProperty;
     use super::*;
+    use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
 
     #[test]
@@ -118,11 +118,14 @@ mod tests {
         check_rem(rem, 0);
         assert_eq!(ical.len(), 1);
         assert_eq!(ical[0].properties.len(), 2);
-        assert_eq!(ical[0].properties[0], CalendarProperty::Version(VersionProperty {
-            other_params: vec![],
-            min_version: None,
-            max_version: b"2.0",
-        }));
+        assert_eq!(
+            ical[0].properties[0],
+            CalendarProperty::Version(VersionProperty {
+                other_params: vec![],
+                min_version: None,
+                max_version: b"2.0",
+            })
+        );
         assert_eq!(ical[0].components.len(), 1);
     }
 }

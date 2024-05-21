@@ -5,13 +5,13 @@ use crate::{single, utf8_seq};
 use nom::branch::alt;
 use nom::bytes::complete::{take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::{tag, tag_no_case};
+use nom::character::complete::one_of;
 use nom::character::streaming::{alphanumeric1, char, crlf};
 use nom::combinator::{opt, recognize};
 use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::{fold_many0, many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult, Parser};
-use nom::character::complete::one_of;
 
 mod language_tag;
 mod object;
@@ -183,10 +183,17 @@ fn read_string<'a>(input: &'a [u8], context: &str) -> Result<String, nom::Err<Er
 }
 
 fn line_value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
-    let (input, v) = fold_many0(alt((tuple((tag("\r\n"), one_of(" \t"))).map(|_| vec![]), value_char)), Vec::new, |mut acc, item| {
-        acc.extend_from_slice(&item);
-        acc
-    })(input)?;
+    let (input, v) = fold_many0(
+        alt((
+            tuple((tag("\r\n"), one_of(" \t"))).map(|_| vec![]),
+            value_char,
+        )),
+        Vec::new,
+        |mut acc, item| {
+            acc.extend_from_slice(&item);
+            acc
+        },
+    )(input)?;
 
     Ok((input, v))
 }
