@@ -1,5 +1,7 @@
 use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
-use crate::parser::property::{prop_product_id, prop_version};
+use crate::parser::property::{
+    prop_calendar_scale, prop_iana, prop_method, prop_product_id, prop_version, prop_x,
+};
 use crate::parser::{content_line, iana_token, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -55,6 +57,10 @@ fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
     alt((
         prop_product_id.map(CalendarProperty::ProductId),
         prop_version.map(CalendarProperty::Version),
+        prop_calendar_scale.map(CalendarProperty::CalScale),
+        prop_method.map(CalendarProperty::Method),
+        prop_x.map(CalendarProperty::XProp),
+        prop_iana.map(CalendarProperty::IanaProp),
     ))
     .parse(input)
 }

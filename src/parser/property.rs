@@ -4,15 +4,17 @@ mod uri;
 mod value;
 mod value_types;
 
-use crate::parser::param::other_params;
-use crate::parser::property::types::{ProductId, VersionProperty};
-use crate::parser::Error;
+use crate::parser::param::{other_params, params};
+use crate::parser::property::types::{
+    CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
+};
+use crate::parser::{iana_token, value, x_name, Error};
 use crate::single;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
-use nom::combinator::recognize;
+use nom::combinator::{recognize, verify};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 pub use value::*;
@@ -64,10 +66,82 @@ pub fn prop_version(input: &[u8]) -> IResult<&[u8], VersionProperty, Error> {
     ))
 }
 
+pub fn prop_calendar_scale(input: &[u8]) -> IResult<&[u8], CalendarScaleProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("CALSCALE"),
+        other_params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        CalendarScaleProperty {
+            other_params: params,
+            value,
+        },
+    ))
+}
+
+pub fn prop_method(input: &[u8]) -> IResult<&[u8], MethodProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("METHOD"),
+        other_params,
+        char(':'),
+        iana_token,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        MethodProperty {
+            other_params: params,
+            value,
+        },
+    ))
+}
+
+pub fn prop_x(input: &[u8]) -> IResult<&[u8], XProperty, Error> {
+    let (input, (name, params, _, value, _)) =
+        tuple((x_name, params, char(':'), value, tag("\r\n")))(input)?;
+
+    Ok((
+        input,
+        XProperty {
+            name,
+            params,
+            value,
+        },
+    ))
+}
+
+pub fn prop_iana(input: &[u8]) -> IResult<&[u8], IanaProperty, Error> {
+    let (input, (name, params, _, value, _)) = tuple((
+        verify(iana_token, |t: &[u8]| {
+            // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out
+            t != b"BEGIN" && t != b"END"
+        }),
+        params,
+        char(':'),
+        value,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        IanaProperty {
+            name,
+            params,
+            value,
+        },
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::ParamValue;
+    use crate::parser::param::{ParamValue, Value};
     use crate::test_utils::check_rem;
 
     #[test]
@@ -89,7 +163,9 @@ mod tests {
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Other { value: b"val" }
+            ParamValue::Others {
+                values: vec![b"val"]
+            }
         );
         assert_eq!(prop.value, b"-//ABC Corporation//NONSGML My Product//EN");
     }
@@ -113,7 +189,9 @@ mod tests {
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Other { value: b"val" }
+            ParamValue::Others {
+                values: vec![b"val"]
+            }
         );
         assert_eq!(prop.min_version, None);
         assert_eq!(prop.max_version, b"2.0");
@@ -137,5 +215,106 @@ mod tests {
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.min_version.unwrap(), b"3.2");
         assert_eq!(prop.max_version, b"3.5");
+    }
+
+    #[test]
+    fn cal_scale() {
+        let input = b"CALSCALE:GREGORIAN\r\n;";
+        let (rem, prop) = prop_calendar_scale(input).unwrap();
+        check_rem(rem, 1);
+        assert!(prop.other_params.is_empty());
+        assert_eq!(prop.value, b"GREGORIAN");
+    }
+
+    #[test]
+    fn cal_scale_with_param() {
+        let input = b"CALSCALE;x-prop=val:GREGORIAN\r\n;";
+        let (rem, prop) = prop_calendar_scale(input).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(prop.other_params.len(), 1);
+        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
+        assert_eq!(
+            prop.other_params[0].value,
+            ParamValue::Others {
+                values: vec![b"val"]
+            }
+        );
+        assert_eq!(prop.value, b"GREGORIAN");
+    }
+
+    #[test]
+    fn method() {
+        let input = b"METHOD:REQUEST\r\n;";
+        let (rem, prop) = prop_method(input).unwrap();
+        check_rem(rem, 1);
+        assert!(prop.other_params.is_empty());
+        assert_eq!(prop.value, b"REQUEST");
+    }
+
+    #[test]
+    fn method_with_param() {
+        let input = b"METHOD;x-prop=val:REQUEST\r\n;";
+        let (rem, prop) = prop_method(input).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(prop.other_params.len(), 1);
+        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
+        assert_eq!(
+            prop.other_params[0].value,
+            ParamValue::Others {
+                values: vec![b"val"]
+            }
+        );
+        assert_eq!(prop.value, b"REQUEST");
+    }
+
+    #[test]
+    fn x_prop() {
+        let input =
+            b"X-ABC-MMSUBJ;VALUE=URI;FMTTYPE=audio/basic:http://www.example.org/mysubj.au\r\n;";
+        let (rem, prop) = prop_x(input).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(prop.name, b"X-ABC-MMSUBJ");
+        assert_eq!(prop.params.len(), 2);
+        assert_eq!(prop.params[0].name, "VALUE".to_string());
+        assert_eq!(
+            prop.params[0].value,
+            ParamValue::Value { value: Value::Uri }
+        );
+        assert_eq!(prop.params[1].name, "FMTTYPE".to_string());
+        assert_eq!(
+            prop.params[1].value,
+            ParamValue::FormatType {
+                type_name: "audio".to_string(),
+                sub_type_name: "basic".to_string()
+            }
+        );
+        assert_eq!(prop.value, b"http://www.example.org/mysubj.au");
+    }
+
+    #[test]
+    fn iana_prop() {
+        let input = b"DRESSCODE:CASUAL\r\n;";
+        let (rem, prop) = prop_iana(input).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(prop.name, b"DRESSCODE");
+        assert!(prop.params.is_empty());
+        assert_eq!(prop.value, b"CASUAL");
+    }
+
+    #[test]
+    fn iana_prop_with_params() {
+        let input = b"NON-SMOKING;VALUE=BOOLEAN:TRUE\r\n;";
+        let (rem, prop) = prop_iana(input).unwrap();
+        check_rem(rem, 1);
+        assert_eq!(prop.name, b"NON-SMOKING");
+        assert_eq!(prop.params.len(), 1);
+        assert_eq!(prop.params[0].name, "VALUE".to_string());
+        assert_eq!(
+            prop.params[0].value,
+            ParamValue::Value {
+                value: Value::Boolean
+            }
+        );
+        assert_eq!(prop.value, b"TRUE");
     }
 }

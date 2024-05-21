@@ -1,4 +1,6 @@
-use crate::parser::property::types::{ProductId, VersionProperty};
+use crate::parser::property::types::{
+    CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
+};
 use crate::parser::ContentLine;
 
 #[derive(Debug)]
@@ -11,10 +13,10 @@ pub struct ICalendar<'a> {
 pub enum CalendarProperty<'a> {
     ProductId(ProductId<'a>),
     Version(VersionProperty<'a>),
-    CalScale,
-    Method,
-    XProp,
-    IanaProp,
+    CalScale(CalendarScaleProperty<'a>),
+    Method(MethodProperty<'a>),
+    XProp(XProperty<'a>),
+    IanaProp(IanaProperty<'a>),
 }
 
 #[derive(Debug)]

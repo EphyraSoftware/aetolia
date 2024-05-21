@@ -40,6 +40,7 @@ pub enum InnerError {
     InvalidIpv6,
     InvalidPort,
     MismatchedComponentEnd(Vec<u8>, Vec<u8>),
+    UnknownParamName(Vec<u8>),
 }
 
 impl<'a> Error<'a> {
@@ -203,6 +204,13 @@ fn value_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
         single(|b| matches!(b, b' ' | b'\t' | b'\x21'..=b'\x7E')).map(|c| vec![c]),
         utf8_seq.map(|c| c.to_vec()),
     ))(input)
+}
+
+pub fn value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+    fold_many0(value_char, Vec::new, |mut acc, item| {
+        acc.extend_from_slice(&item);
+        acc
+    })(input)
 }
 
 fn param(input: &[u8]) -> IResult<&[u8], param::Param, Error> {
