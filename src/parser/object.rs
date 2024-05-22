@@ -11,8 +11,9 @@ use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
+use crate::parser::component::component_event;
 
-mod types;
+pub mod types;
 
 pub fn ical_stream(mut input: &[u8]) -> IResult<&[u8], Vec<ICalendar>, Error> {
     let mut out = Vec::new();
@@ -66,7 +67,11 @@ fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
 }
 
 fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    alt((x_comp, iana_comp))(input)
+    alt((
+        component_event,
+        x_comp,
+        iana_comp
+    ))(input)
 }
 
 fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {

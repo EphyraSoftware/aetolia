@@ -3,6 +3,7 @@ pub mod types;
 mod uri;
 mod value;
 mod value_types;
+mod component;
 
 use crate::parser::param::{other_params, params};
 use crate::parser::property::types::{
@@ -19,6 +20,7 @@ use nom::sequence::tuple;
 use nom::{IResult, Parser};
 pub use value::*;
 pub use value_types::*;
+pub use component::*;
 
 pub fn prop_product_id(input: &[u8]) -> IResult<&[u8], ProductId, Error> {
     let (input, (_, params, _, value, _)) = tuple((

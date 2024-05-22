@@ -17,6 +17,7 @@ mod language_tag;
 mod object;
 mod param;
 mod property;
+mod component;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {

@@ -57,3 +57,9 @@ pub struct UtcOffset {
     pub minutes: u64,
     pub seconds: Option<u64>,
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DateOrDateTime {
+    Date(Date),
+    DateTime(DateTime),
+}
