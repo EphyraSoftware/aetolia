@@ -1,11 +1,106 @@
+use crate::parser::param::{other_params, params, Param};
+use crate::parser::property::{
+    prop_value_date, prop_value_date_time, prop_value_float, prop_value_text, DateOrDateTime,
+    DateTime,
+};
+use crate::parser::{iana_token, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
-use nom::{IResult, Parser};
 use nom::sequence::tuple;
-use crate::parser::Error;
-use crate::parser::param::{other_params, Param, params};
-use crate::parser::property::{DateOrDateTime, DateTime, prop_value_date, prop_value_date_time};
+use nom::{IResult, Parser};
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Classification<'a> {
+    Public,
+    Private,
+    Confidential,
+    XName(&'a [u8]),
+    IanaToken(&'a [u8]),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ClassificationProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Classification<'a>,
+}
+
+/// Parse a CLASS property.
+///
+/// RFC 5545, section 3.8.1.3
+pub fn prop_classification(input: &[u8]) -> IResult<&[u8], ClassificationProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("CLASS"),
+        other_params,
+        char(':'),
+        alt((
+            tag("PUBLIC").map(|_| Classification::Public),
+            tag("PRIVATE").map(|_| Classification::Private),
+            tag("CONFIDENTIAL").map(|_| Classification::Confidential),
+            x_name.map(Classification::XName),
+            iana_token.map(Classification::IanaToken),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        ClassificationProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct DescriptionProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a DESCRIPTION property.
+///
+/// RFC 5545, section 3.8.1.5
+fn prop_description(input: &[u8]) -> IResult<&[u8], DescriptionProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("DESCRIPTION"),
+        params,
+        char(':'),
+        prop_value_text.map(|v| v),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, DescriptionProperty { params, value }))
+}
+
+#[derive(Debug, PartialEq)]
+pub struct GeographicPositionProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+/// Parse a GEO property.
+///
+/// RFC 5545, section 3.8.1.6
+fn prop_geographic_position(input: &[u8]) -> IResult<&[u8], GeographicPositionProperty, Error> {
+    let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
+        tag("GEO"),
+        other_params,
+        char(':'),
+        tuple((prop_value_float, char(';'), prop_value_float)),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        GeographicPositionProperty {
+            other_params,
+            latitude,
+            longitude,
+        },
+    ))
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeStartProperty<'a> {
@@ -13,6 +108,9 @@ pub struct DateTimeStartProperty<'a> {
     pub value: DateOrDateTime,
 }
 
+/// Parse a DTSTART property.
+///
+/// RFC 5545, section 3.8.2.4
 pub fn prop_date_time_start(input: &[u8]) -> IResult<&[u8], DateTimeStartProperty, Error> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DTSTART"),
@@ -20,15 +118,63 @@ pub fn prop_date_time_start(input: &[u8]) -> IResult<&[u8], DateTimeStartPropert
         char(':'),
         alt((
             prop_value_date_time.map(DateOrDateTime::DateTime),
-            prop_value_date.map(DateOrDateTime::Date)
-            )),
+            prop_value_date.map(DateOrDateTime::Date),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, DateTimeStartProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct UniqueIdentifier<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a UID property.
+///
+/// RFC 5545, section 3.8.4.7
+pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifier, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("UID"),
+        other_params,
+        char(':'),
+        prop_value_text,
         tag("\r\n"),
     ))(input)?;
 
     Ok((
         input,
-        DateTimeStartProperty {
-            params,
+        UniqueIdentifier {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CreatedProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: DateTime,
+}
+
+/// Parse a CREATED property.
+///
+/// RFC 5545, section 3.8.7.1
+pub fn prop_date_time_created(input: &[u8]) -> IResult<&[u8], CreatedProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("CREATED"),
+        other_params,
+        char(':'),
+        prop_value_date_time,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        CreatedProperty {
+            other_params,
             value,
         },
     ))
@@ -40,6 +186,9 @@ pub struct DateTimeStamp<'a> {
     pub value: DateTime,
 }
 
+/// Parse a DTSTAMP property.
+///
+/// RFC 5545, section 3.8.7.2
 pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStamp, Error> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DTSTAMP"),
@@ -60,29 +209,157 @@ pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStamp, Error
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::parser::property::{Date, Time};
     use crate::test_utils::check_rem;
-    use super::*;
+
+    #[test]
+    fn classification_public() {
+        let (rem, prop) = prop_classification(b"CLASS:PUBLIC\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ClassificationProperty {
+                other_params: vec![],
+                value: Classification::Public,
+            }
+        );
+    }
+
+    #[test]
+    fn description() {
+        let (rem, prop) = prop_description(b"DESCRIPTION:Meeting to provide technical review for \"Phoenix\"\r\n design.\\nHappy Face Conference Room. Phoenix design team\r\n MUST attend this meeting.\\nRSVP to team leader.\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DescriptionProperty {
+                params: vec![],
+                value: br#"Meeting to provide technical review for "Phoenix" design.
+Happy Face Conference Room. Phoenix design team MUST attend this meeting.
+RSVP to team leader."#
+                    .to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn geographic_position() {
+        let (rem, prop) = prop_geographic_position(b"GEO:37.386013;-122.082932\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            GeographicPositionProperty {
+                other_params: vec![],
+                latitude: 37.386013,
+                longitude: -122.082932,
+            }
+        );
+    }
+
+    #[test]
+    fn date_time_start_date() {
+        let (rem, prop) = prop_date_time_start(b"DTSTART:19980118\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeStartProperty {
+                params: vec![],
+                value: DateOrDateTime::Date(Date {
+                    year: 1998,
+                    month: 1,
+                    day: 18,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn date_time_start_datetime() {
+        let (rem, prop) = prop_date_time_start(b"DTSTART:19980118T073000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeStartProperty {
+                params: vec![],
+                value: DateOrDateTime::DateTime(DateTime {
+                    date: Date {
+                        year: 1998,
+                        month: 1,
+                        day: 18,
+                    },
+                    time: Time {
+                        hour: 7,
+                        minute: 30,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn unique_identifier() {
+        let (rem, prop) =
+            prop_unique_identifier(b"UID:19960401T080045Z-4000F192713-0052@example.com\r\n;")
+                .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            UniqueIdentifier {
+                other_params: vec![],
+                value: b"19960401T080045Z-4000F192713-0052@example.com".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn created() {
+        let (rem, prop) = prop_date_time_created(b"CREATED:19980118T230000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            CreatedProperty {
+                other_params: vec![],
+                value: DateTime {
+                    date: Date {
+                        year: 1998,
+                        month: 1,
+                        day: 18,
+                    },
+                    time: Time {
+                        hour: 23,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                },
+            }
+        );
+    }
 
     #[test]
     fn date_time_stamp() {
-        let (rem, prop) = prop_date_time_stamp(b"DTSTAMP:19971210T080000Z\r\n;").unwrap();
+        let (rem, prop) = prop_date_time_created(b"CREATED:19960329T133000Z\r\n;").unwrap();
         check_rem(rem, 1);
-        assert_eq!(prop, DateTimeStamp {
-            other_params: vec![],
-            value: DateTime {
-                date: Date {
-                    year: 1997,
-                    month: 12,
-                    day: 10,
-                },
-                time: Time {
-                    hour: 8,
-                    minute: 0,
-                    second: 0,
-                    is_utc: true,
-                },
+        assert_eq!(
+            prop,
+            CreatedProperty {
+                other_params: vec![],
+                value: DateTime {
+                    date: Date {
+                        year: 1996,
+                        month: 3,
+                        day: 29,
+                    },
+                    time: Time {
+                        hour: 13,
+                        minute: 30,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }
             }
-        });
+        );
     }
 }

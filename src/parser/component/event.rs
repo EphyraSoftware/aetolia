@@ -1,13 +1,11 @@
-use nom::branch::alt;
-use nom::bytes::streaming::tag;
-use nom::{IResult, Parser};
-use nom::multi::many0;
-use nom::sequence::tuple;
-use crate::parser::Error;
 use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{prop_date_time_stamp, prop_date_time_start, prop_iana, prop_x};
-
-
+use crate::parser::Error;
+use nom::branch::alt;
+use nom::bytes::streaming::tag;
+use nom::multi::many0;
+use nom::sequence::tuple;
+use nom::{IResult, Parser};
 
 pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     let (input, (_, properties, _)) = tuple((
@@ -17,14 +15,9 @@ pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error>
             prop_date_time_stamp.map(ComponentProperty::DateTimeStamp),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-            ))),
+        ))),
         tag("END:VEVENT\r\n"),
     ))(input)?;
 
-    Ok((
-        input,
-        CalendarComponent::Event {
-            properties,
-        },
-    ))
+    Ok((input, CalendarComponent::Event { properties }))
 }

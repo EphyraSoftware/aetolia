@@ -9,7 +9,7 @@ use nom::bytes::streaming::{tag, tag_no_case, take_while_m_n};
 use nom::character::is_digit;
 use nom::character::streaming::{char, one_of};
 use nom::combinator::{opt, recognize};
-use nom::multi::many0;
+use nom::multi::{fold_many0, many0};
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
@@ -300,17 +300,31 @@ const fn is_text_safe_char(c: u8) -> bool {
 }
 
 pub fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
-    let (input, r) = many0(alt((
-        tuple((
-            char('\\'),
-            alt((tag_no_case("n").map(|_| b'\n' as char), one_of(r#"\;,"#))),
-        ))
-        .map(|(_, c)| vec![c as u8]),
-        utf8_seq.map(|seq| seq.to_vec()),
-        take_while1(is_text_safe_char).map(|section: &[u8]| section.to_vec()),
-    )))(input)?;
+    let (input, r) = fold_many0(
+        alt((
+            // Escaped characters
+            tuple((
+                char('\\'),
+                alt((tag_no_case("n").map(|_| b'\n' as char), one_of(r#"\;,"#))),
+            ))
+            .map(|(_, c)| vec![c as u8]),
+            // Allowed raw characters
+            one_of(r#":""#).map(|c: char| vec![c as u8]),
+            // Text split over multiple lines
+            tuple((tag("\r\n"), alt((char(' '), char('\t'))))).map(|(_, ws)| vec![ws as u8]),
+            // UTF-8 sequence
+            utf8_seq.map(|seq| seq.to_vec()),
+            // Other text safe characters
+            take_while1(is_text_safe_char).map(|section: &[u8]| section.to_vec()),
+        )),
+        Vec::new,
+        |mut acc, item| {
+            acc.extend_from_slice(&item);
+            acc
+        },
+    )(input)?;
 
-    Ok((input, r.into_iter().flatten().collect()))
+    Ok((input, r))
 }
 
 fn prop_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
@@ -552,6 +566,14 @@ Conference Room - 3B
 Come Prepared."#,
             value.as_slice()
         );
+    }
+
+    #[test]
+    fn text_with_quoted_value() {
+        let (rem, value) = prop_value_text(br#"Hello\, "World";"#).unwrap();
+        println!("{:?}", String::from_utf8(value.clone()).unwrap());
+        check_rem(rem, 1);
+        assert_eq!(br#"Hello, "World""#, value.as_slice());
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use crate::parser::component::component_event;
 use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
 use crate::parser::property::{
     prop_calendar_scale, prop_iana, prop_method, prop_product_id, prop_version, prop_x,
@@ -11,7 +12,6 @@ use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
-use crate::parser::component::component_event;
 
 pub mod types;
 
@@ -67,11 +67,7 @@ fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
 }
 
 fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    alt((
-        component_event,
-        x_comp,
-        iana_comp
-    ))(input)
+    alt((component_event, x_comp, iana_comp))(input)
 }
 
 fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {

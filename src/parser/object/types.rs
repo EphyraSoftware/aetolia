@@ -1,8 +1,8 @@
 use crate::parser::property::types::{
     CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
 };
-use crate::parser::ContentLine;
 use crate::parser::property::{DateTimeStamp, DateTimeStartProperty};
+use crate::parser::ContentLine;
 
 #[derive(Debug)]
 pub struct ICalendar<'a> {

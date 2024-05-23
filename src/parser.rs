@@ -13,11 +13,11 @@ use nom::multi::{fold_many0, many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult, Parser};
 
+mod component;
 mod language_tag;
 mod object;
 mod param;
 mod property;
-mod component;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
