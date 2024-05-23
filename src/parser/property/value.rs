@@ -311,7 +311,7 @@ pub fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
             // Allowed raw characters
             one_of(r#":""#).map(|c: char| vec![c as u8]),
             // Text split over multiple lines
-            tuple((tag("\r\n"), alt((char(' '), char('\t'))))).map(|(_, ws)| vec![ws as u8]),
+            tuple((tag("\r\n"), alt((char(' '), char('\t'))))).map(|_| Vec::with_capacity(0)),
             // UTF-8 sequence
             utf8_seq.map(|seq| seq.to_vec()),
             // Other text safe characters
