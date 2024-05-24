@@ -17,6 +17,7 @@ mod component;
 mod language_tag;
 mod object;
 mod param;
+mod pre;
 mod property;
 
 #[derive(Clone, Debug, PartialEq)]

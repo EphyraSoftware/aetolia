@@ -1,13 +1,14 @@
 use crate::parser::param::{other_params, params, Param};
+use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
     prop_value_calendar_user_address, prop_value_date, prop_value_date_time, prop_value_float,
-    prop_value_text, DateOrDateTime, DateTime,
+    prop_value_integer, prop_value_text, DateOrDateTime, DateTime,
 };
 use crate::parser::{iana_token, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
-use nom::combinator::recognize;
+use nom::combinator::{recognize, verify};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
@@ -125,6 +126,102 @@ pub fn prop_location(input: &[u8]) -> IResult<&[u8], LocationProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct PriorityProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: u8,
+}
+
+/// Parse a PRIORITY property.
+///
+/// RFC 5545, section 3.8.1.9
+pub fn prop_priority(input: &[u8]) -> IResult<&[u8], PriorityProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("PRIORITY"),
+        other_params,
+        char(':'),
+        verify(prop_value_integer, |v| 0 <= *v && *v <= 9).map(|v| v as u8),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        PriorityProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Status {
+    Tentative,
+    Confirmed,
+    Cancelled,
+    NeedsAction,
+    Completed,
+    InProcess,
+    Draft,
+    Final,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct StatusProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Status,
+}
+
+/// Parse a STATUS property.
+///
+/// RFC 5545, section 3.8.1.11
+pub fn prop_status(input: &[u8]) -> IResult<&[u8], StatusProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("STATUS"),
+        other_params,
+        char(':'),
+        alt((
+            tag("TENTATIVE").map(|_| Status::Tentative),
+            tag("CONFIRMED").map(|_| Status::Confirmed),
+            tag("CANCELLED").map(|_| Status::Cancelled),
+            tag("NEEDS-ACTION").map(|_| Status::NeedsAction),
+            tag("COMPLETED").map(|_| Status::Completed),
+            tag("IN-PROCESS").map(|_| Status::InProcess),
+            tag("DRAFT").map(|_| Status::Draft),
+            tag("FINAL").map(|_| Status::Final),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        StatusProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct SummaryProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a SUMMARY property.
+///
+/// RFC 5545, section 3.8.1.12
+pub fn prop_summary(input: &[u8]) -> IResult<&[u8], SummaryProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("SUMMARY"),
+        params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, SummaryProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeStartProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: DateOrDateTime,
@@ -149,6 +246,42 @@ pub fn prop_date_time_start(input: &[u8]) -> IResult<&[u8], DateTimeStartPropert
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum TimeTransparency {
+    Opaque,
+    Transparent,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TimeTransparencyProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: TimeTransparency,
+}
+
+/// Parse a TRANSP property.
+///
+/// RFC 5545, section 3.8.2.7
+pub fn prop_time_transparency(input: &[u8]) -> IResult<&[u8], TimeTransparencyProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("TRANSP"),
+        other_params,
+        char(':'),
+        alt((
+            tag("OPAQUE").map(|_| TimeTransparency::Opaque),
+            tag("TRANSPARENT").map(|_| TimeTransparency::Transparent),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        TimeTransparencyProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct OrganizerProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: &'a [u8],
@@ -167,6 +300,57 @@ pub fn prop_organizer(input: &[u8]) -> IResult<&[u8], OrganizerProperty, Error> 
     ))(input)?;
 
     Ok((input, OrganizerProperty { params, value: uri }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct RecurrenceIdProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: DateOrDateTime,
+}
+
+/// Parse a RECURRENCE-ID property.
+///
+/// RFC 5545, section 3.8.4.4
+pub fn prop_recurrence_id(input: &[u8]) -> IResult<&[u8], RecurrenceIdProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("RECURRENCE-ID"),
+        params,
+        char(':'),
+        alt((
+            prop_value_date_time.map(DateOrDateTime::DateTime),
+            prop_value_date.map(DateOrDateTime::Date),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, RecurrenceIdProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct UrlProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Uri<'a>,
+}
+
+/// Parse a URL property.
+///
+/// RFC 5545, section 3.8.4.6
+pub fn prop_url(input: &[u8]) -> IResult<&[u8], UrlProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("URL"),
+        other_params,
+        char(':'),
+        param_value_uri,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        UrlProperty {
+            other_params,
+            value,
+        },
+    ))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -277,10 +461,38 @@ pub fn prop_last_modified(input: &[u8]) -> IResult<&[u8], LastModifiedProperty, 
     ))
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub struct SequenceProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: u32,
+}
+
+/// Parse a SEQUENCE property.
+///
+/// RFC 5545, section 3.8.7.4
+pub fn prop_sequence(input: &[u8]) -> IResult<&[u8], SequenceProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("SEQUENCE"),
+        other_params,
+        char(':'),
+        prop_value_integer.map(|v| v as u32),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        SequenceProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::ParamValue;
+    use crate::parser::param::{ParamValue, Range, Value};
+    use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Time};
     use crate::test_utils::check_rem;
 
@@ -352,9 +564,48 @@ RSVP to team leader."#
                     name: "ALTREP".to_string(),
                     value: ParamValue::AltRep {
                         uri: "http://xyzcorp.com/conf-rooms/f123.vcf".to_string(),
-                    }
+                    },
                 }],
                 value: b"Conference Room - F123, Bldg. 002".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn priority() {
+        let (rem, prop) = prop_priority(b"PRIORITY:1\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            PriorityProperty {
+                other_params: vec![],
+                value: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn status() {
+        let (rem, prop) = prop_status(b"STATUS:TENTATIVE\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            StatusProperty {
+                other_params: vec![],
+                value: Status::Tentative,
+            }
+        );
+    }
+
+    #[test]
+    fn summary() {
+        let (rem, prop) = prop_summary(b"SUMMARY:Department Party\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            SummaryProperty {
+                params: vec![],
+                value: b"Department Party".to_vec(),
             }
         );
     }
@@ -402,6 +653,32 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn transp_opaque() {
+        let (rem, prop) = prop_time_transparency(b"TRANSP:OPAQUE\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeTransparencyProperty {
+                other_params: vec![],
+                value: TimeTransparency::Opaque,
+            }
+        );
+    }
+
+    #[test]
+    fn transp_transparent() {
+        let (rem, prop) = prop_time_transparency(b"TRANSP:TRANSPARENT\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeTransparencyProperty {
+                other_params: vec![],
+                value: TimeTransparency::Transparent,
+            }
+        );
+    }
+
+    #[test]
     fn organizer() {
         let (rem, prop) =
             prop_organizer(b"ORGANIZER;CN=John Smith:mailto:jsmith@example.com\r\n;").unwrap();
@@ -413,7 +690,7 @@ RSVP to team leader."#
                     name: "CN".to_string(),
                     value: ParamValue::CommonName {
                         name: "John Smith".to_string(),
-                    }
+                    },
                 }],
                 value: b"mailto:jsmith@example.com",
             }
@@ -432,7 +709,7 @@ RSVP to team leader."#
                         name: "CN".to_string(),
                         value: ParamValue::CommonName {
                             name: "JohnSmith".to_string(),
-                        }
+                        },
                     },
                     Param {
                         name: "DIR".to_string(),
@@ -440,8 +717,8 @@ RSVP to team leader."#
                             uri:
                                 "ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)"
                                     .to_string(),
-                        }
-                    }
+                        },
+                    },
                 ],
                 value: b"mailto:jsmith@example.com",
             }
@@ -449,10 +726,9 @@ RSVP to team leader."#
     }
 
     #[test]
-    #[ignore = "Unfolding required for all values, not just text"]
     fn organizer_with_sent_by_param() {
         let (rem, prop) = prop_organizer(
-            b"ORGANIZER;SENT-BY=\"mailto:jane_doe@example.com\":\r\n mailto:jsmith@example.com",
+            b"ORGANIZER;SENT-BY=\"mailto:jane_doe@example.com\":mailto:jsmith@example.com\r\n;",
         )
         .unwrap();
         check_rem(rem, 1);
@@ -461,11 +737,86 @@ RSVP to team leader."#
             OrganizerProperty {
                 params: vec![Param {
                     name: "SENT-BY".to_string(),
-                    value: ParamValue::AltRep {
-                        uri: "mailto:jane_doe@example.com".to_string(),
-                    }
+                    value: ParamValue::SentBy {
+                        address: "mailto:jane_doe@example.com".to_string(),
+                    },
                 }],
                 value: b"mailto:jsmith@example.com",
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_id_date() {
+        let (rem, prop) = prop_recurrence_id(b"RECURRENCE-ID;VALUE=DATE:19960401\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceIdProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value { value: Value::Date },
+                }],
+                value: DateOrDateTime::Date(Date {
+                    year: 1996,
+                    month: 4,
+                    day: 1,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_id_datetime() {
+        let (rem, prop) =
+            prop_recurrence_id(b"RECURRENCE-ID;RANGE=THISANDFUTURE:19960120T120000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceIdProperty {
+                params: vec![Param {
+                    name: "RANGE".to_string(),
+                    value: ParamValue::Range {
+                        range: Range::ThisAndFuture,
+                    },
+                }],
+                value: DateOrDateTime::DateTime(DateTime {
+                    date: Date {
+                        year: 1996,
+                        month: 1,
+                        day: 20,
+                    },
+                    time: Time {
+                        hour: 12,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn url() {
+        let (rem, prop) =
+            prop_url(b"URL:http://example.com/pub/calendars/jsmith/mytime.ics\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            UrlProperty {
+                other_params: vec![],
+                value: Uri {
+                    scheme: b"http",
+                    authority: Some(Authority {
+                        user_info: None,
+                        host: Host::RegName(b"example.com".to_vec()),
+                        port: None,
+                    }),
+                    path: b"/pub/calendars/jsmith/mytime.ics".to_vec(),
+                    query: None,
+                    fragment: None,
+                },
             }
         );
     }
@@ -530,7 +881,7 @@ RSVP to team leader."#
                         second: 0,
                         is_utc: true,
                     },
-                }
+                },
             }
         );
     }
@@ -555,7 +906,20 @@ RSVP to team leader."#
                         second: 0,
                         is_utc: true,
                     },
-                }
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn sequence() {
+        let (rem, prop) = prop_sequence(b"SEQUENCE:2\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            SequenceProperty {
+                other_params: vec![],
+                value: 2,
             }
         );
     }
