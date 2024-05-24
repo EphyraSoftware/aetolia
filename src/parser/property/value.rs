@@ -22,7 +22,10 @@ const fn is_base64(c: u8) -> bool {
 pub fn prop_value_binary(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     let (input, content) = recognize(tuple((
         many0(take_while_m_n(4, 4, is_base64)),
-        opt(alt((tag("=="), tag("=")))),
+        opt(alt((
+            tuple((take_while_m_n(2, 2, is_base64), tag("=="))),
+            tuple((take_while_m_n(3, 3, is_base64), tag("="))),
+        ))),
     )))(input)?;
 
     Ok((input, content))

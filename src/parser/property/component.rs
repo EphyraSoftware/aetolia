@@ -1,8 +1,10 @@
-use crate::parser::param::{other_params, params, Param};
+use crate::parser::param::{other_params, params, Encoding, Param, ParamValue, Value};
+use crate::parser::property::recur::{recur, RecurRulePart};
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
-    prop_value_calendar_user_address, prop_value_date, prop_value_date_time, prop_value_float,
-    prop_value_integer, prop_value_text, DateOrDateTime, DateTime,
+    prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
+    prop_value_duration, prop_value_float, prop_value_integer, prop_value_text, DateOrDateTime,
+    DateTime, Duration,
 };
 use crate::parser::{iana_token, x_name, Error};
 use nom::branch::alt;
@@ -11,6 +13,65 @@ use nom::character::streaming::char;
 use nom::combinator::{recognize, verify};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum AttachValue<'a> {
+    Uri(Uri<'a>),
+    Binary(&'a [u8]),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct AttachProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: AttachValue<'a>,
+}
+
+/// Parse an ATTACH property.
+///
+/// RFC 5545, section 3.8.1.1
+pub fn prop_attach(input: &[u8]) -> IResult<&[u8], AttachProperty, Error> {
+    let (input, (_, params, _)) = tuple((tag("ATTACH"), params, char(':')))(input)?;
+
+    let is_base_64 = params.iter().any(|p| {
+        matches!(
+            p.value,
+            ParamValue::Encoding {
+                encoding: Encoding::Base64,
+            }
+        )
+    });
+
+    let is_binary = params.iter().any(|p| {
+        matches!(
+            p.value,
+            ParamValue::Value {
+                value: Value::Binary,
+            }
+        )
+    });
+
+    if is_base_64 && is_binary {
+        let (input, (v, _)) = tuple((prop_value_binary, tag("\r\n")))(input)?;
+
+        Ok((
+            input,
+            AttachProperty {
+                params,
+                value: AttachValue::Binary(v),
+            },
+        ))
+    } else {
+        let (input, (v, _)) = tuple((param_value_uri, tag("\r\n")))(input)?;
+
+        Ok((
+            input,
+            AttachProperty {
+                params,
+                value: AttachValue::Uri(v),
+            },
+        ))
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Classification<'a> {
@@ -222,6 +283,30 @@ pub fn prop_summary(input: &[u8]) -> IResult<&[u8], SummaryProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct DateTimeEndProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: DateOrDateTime,
+}
+
+/// Parse a DTEND property.
+///
+/// RFC 5545, section 3.8.2.2
+pub fn prop_date_time_end(input: &[u8]) -> IResult<&[u8], DateTimeEndProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("DTEND"),
+        params,
+        char(':'),
+        alt((
+            prop_value_date_time.map(DateOrDateTime::DateTime),
+            prop_value_date.map(DateOrDateTime::Date),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, DateTimeEndProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeStartProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: DateOrDateTime,
@@ -243,6 +328,33 @@ pub fn prop_date_time_start(input: &[u8]) -> IResult<&[u8], DateTimeStartPropert
     ))(input)?;
 
     Ok((input, DateTimeStartProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct DurationProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Duration,
+}
+
+/// Parse a DURATION property.
+///
+/// RFC 5545, section 3.8.2.5
+pub fn prop_duration(input: &[u8]) -> IResult<&[u8], DurationProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("DURATION"),
+        other_params,
+        char(':'),
+        prop_value_duration,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        DurationProperty {
+            other_params,
+            value,
+        },
+    ))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -381,6 +493,28 @@ pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifier, 
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct RecurrenceRuleProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Vec<RecurRulePart>,
+}
+
+/// Parse an RRULE property.
+///
+/// RFC 5545, section 3.8.5.3
+pub fn prop_recurrence_rule(input: &[u8]) -> IResult<&[u8], RecurrenceRuleProperty, Error> {
+    let (input, (_, other_params, _, value, _)) =
+        tuple((tag("RRULE"), other_params, char(':'), recur, tag("\r\n")))(input)?;
+
+    Ok((
+        input,
+        RecurrenceRuleProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct CreatedProperty<'a> {
     pub other_params: Vec<Param<'a>>,
     pub value: DateTime,
@@ -492,9 +626,61 @@ pub fn prop_sequence(input: &[u8]) -> IResult<&[u8], SequenceProperty, Error> {
 mod tests {
     use super::*;
     use crate::parser::param::{ParamValue, Range, Value};
+    use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Time};
     use crate::test_utils::check_rem;
+    use base64::Engine;
+
+    #[test]
+    fn attach_uri() {
+        let (rem, prop) =
+            prop_attach(b"ATTACH:CID:jsmith.part3.960817T083000.xyzMail@example.com\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            AttachProperty {
+                params: vec![],
+                value: AttachValue::Uri(Uri {
+                    scheme: b"CID",
+                    authority: None,
+                    path: b"jsmith.part3.960817T083000.xyzMail@example.com".to_vec(),
+                    query: None,
+                    fragment: None,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn attach_binary() {
+        let (rem, prop) =
+            prop_attach(b"ATTACH;VALUE=BINARY;ENCODING=BASE64:dGVzdA==\r\n;").unwrap();
+        check_rem(rem, 1);
+
+        let r = base64::prelude::BASE64_STANDARD.encode("test");
+
+        assert_eq!(
+            prop,
+            AttachProperty {
+                params: vec![
+                    Param {
+                        name: "VALUE".to_string(),
+                        value: ParamValue::Value {
+                            value: Value::Binary
+                        },
+                    },
+                    Param {
+                        name: "ENCODING".to_string(),
+                        value: ParamValue::Encoding {
+                            encoding: Encoding::Base64,
+                        },
+                    },
+                ],
+                value: AttachValue::Binary(r.as_bytes()),
+            }
+        );
+    }
 
     #[test]
     fn classification_public() {
@@ -611,6 +797,51 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn date_time_end_date() {
+        let (rem, prop) = prop_date_time_end(b"DTEND;VALUE=DATE:19980704\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeEndProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value { value: Value::Date },
+                },],
+                value: DateOrDateTime::Date(Date {
+                    year: 1998,
+                    month: 7,
+                    day: 4,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn date_time_end_datetime() {
+        let (rem, prop) = prop_date_time_end(b"DTEND:19960401T150000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeEndProperty {
+                params: vec![],
+                value: DateOrDateTime::DateTime(DateTime {
+                    date: Date {
+                        year: 1996,
+                        month: 4,
+                        day: 1,
+                    },
+                    time: Time {
+                        hour: 15,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }),
+            }
+        );
+    }
+
+    #[test]
     fn date_time_start_date() {
         let (rem, prop) = prop_date_time_start(b"DTSTART:19980118\r\n;").unwrap();
         check_rem(rem, 1);
@@ -648,6 +879,24 @@ RSVP to team leader."#
                         is_utc: true,
                     },
                 }),
+            }
+        );
+    }
+
+    #[test]
+    fn duration() {
+        let (rem, prop) = prop_duration(b"DURATION:PT1H0M0S\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DurationProperty {
+                other_params: vec![],
+                value: Duration {
+                    sign: 1,
+                    weeks: 0,
+                    days: 0,
+                    seconds: 3600,
+                },
             }
         );
     }
@@ -832,6 +1081,22 @@ RSVP to team leader."#
             UniqueIdentifier {
                 other_params: vec![],
                 value: b"19960401T080045Z-4000F192713-0052@example.com".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_rule() {
+        let (rem, prop) = prop_recurrence_rule(b"RRULE:FREQ=DAILY;COUNT=10\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceRuleProperty {
+                other_params: vec![],
+                value: vec![
+                    RecurRulePart::Freq(RecurFreq::Daily),
+                    RecurRulePart::Count(10),
+                ],
             }
         );
     }
