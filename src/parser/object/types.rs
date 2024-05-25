@@ -1,7 +1,15 @@
 use crate::parser::property::types::{
     CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
 };
-use crate::parser::property::{DateTimeStamp, DateTimeStartProperty};
+use crate::parser::property::{
+    AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty, CommentProperty,
+    ContactProperty, CreatedProperty, DateTimeEndProperty, DateTimeStamp, DateTimeStartProperty,
+    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty,
+    LastModifiedProperty, LocationProperty, OrganizerProperty, PriorityProperty,
+    RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty,
+    RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty,
+    TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
+};
 use crate::parser::ContentLine;
 
 #[derive(Debug)]
@@ -20,10 +28,38 @@ pub enum CalendarProperty<'a> {
     IanaProp(IanaProperty<'a>),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ComponentProperty<'a> {
-    DateTimeStart(DateTimeStartProperty<'a>),
     DateTimeStamp(DateTimeStamp<'a>),
+    UniqueIdentifier(UniqueIdentifierProperty<'a>),
+    DateTimeStart(DateTimeStartProperty<'a>),
+    Classification(ClassificationProperty<'a>),
+    DateTimeCreated(CreatedProperty<'a>),
+    Description(DescriptionProperty<'a>),
+    GeographicPosition(GeographicPositionProperty<'a>),
+    LastModified(LastModifiedProperty<'a>),
+    Location(LocationProperty<'a>),
+    Organizer(OrganizerProperty<'a>),
+    Priority(PriorityProperty<'a>),
+    Sequence(SequenceProperty<'a>),
+    Status(StatusProperty<'a>),
+    Summary(SummaryProperty<'a>),
+    TimeTransparency(TimeTransparencyProperty<'a>),
+    Url(UrlProperty<'a>),
+    RecurrenceId(RecurrenceIdProperty<'a>),
+    RecurrenceRule(RecurrenceRuleProperty<'a>),
+    DateTimeEnd(DateTimeEndProperty<'a>),
+    Duration(DurationProperty<'a>),
+    Attach(AttachProperty<'a>),
+    Attendee(AttendeeProperty<'a>),
+    Categories(CategoriesProperty<'a>),
+    Comment(CommentProperty<'a>),
+    Contact(ContactProperty<'a>),
+    ExceptionDateTimes(ExceptionDateTimesProperty<'a>),
+    RequestStatus(RequestStatusProperty<'a>),
+    RelatedTo(RelatedToProperty<'a>),
+    Resources(ResourcesProperty<'a>),
+    RecurrenceDateTimes(RecurrenceDateTimesProperty<'a>),
     XProp(XProperty<'a>),
     IanaProp(IanaProperty<'a>),
 }

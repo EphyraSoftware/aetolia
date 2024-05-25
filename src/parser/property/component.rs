@@ -169,7 +169,7 @@ pub struct DescriptionProperty<'a> {
 /// Parse a DESCRIPTION property.
 ///
 /// RFC 5545, section 3.8.1.5
-fn prop_description(input: &[u8]) -> IResult<&[u8], DescriptionProperty, Error> {
+pub fn prop_description(input: &[u8]) -> IResult<&[u8], DescriptionProperty, Error> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DESCRIPTION"),
         params,
@@ -191,7 +191,7 @@ pub struct GeographicPositionProperty<'a> {
 /// Parse a GEO property.
 ///
 /// RFC 5545, section 3.8.1.6
-fn prop_geographic_position(input: &[u8]) -> IResult<&[u8], GeographicPositionProperty, Error> {
+pub fn prop_geographic_position(input: &[u8]) -> IResult<&[u8], GeographicPositionProperty, Error> {
     let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
         tag("GEO"),
         other_params,
@@ -595,7 +595,7 @@ pub fn prop_url(input: &[u8]) -> IResult<&[u8], UrlProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct UniqueIdentifier<'a> {
+pub struct UniqueIdentifierProperty<'a> {
     pub other_params: Vec<Param<'a>>,
     pub value: Vec<u8>,
 }
@@ -603,7 +603,7 @@ pub struct UniqueIdentifier<'a> {
 /// Parse a UID property.
 ///
 /// RFC 5545, section 3.8.4.7
-pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifier, Error> {
+pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifierProperty, Error> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("UID"),
         other_params,
@@ -614,7 +614,7 @@ pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifier, 
 
     Ok((
         input,
-        UniqueIdentifier {
+        UniqueIdentifierProperty {
             other_params,
             value,
         },
@@ -711,7 +711,7 @@ pub struct CreatedProperty<'a> {
 /// Parse a CREATED property.
 ///
 /// RFC 5545, section 3.8.7.1
-pub fn prop_date_time_created(input: &[u8]) -> IResult<&[u8], CreatedProperty, Error> {
+pub fn prop_created(input: &[u8]) -> IResult<&[u8], CreatedProperty, Error> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("CREATED"),
         other_params,
@@ -1451,7 +1451,7 @@ RSVP to team leader."#
         check_rem(rem, 1);
         assert_eq!(
             prop,
-            UniqueIdentifier {
+            UniqueIdentifierProperty {
                 other_params: vec![],
                 value: b"19960401T080045Z-4000F192713-0052@example.com".to_vec(),
             }
@@ -1640,7 +1640,7 @@ RSVP to team leader."#
 
     #[test]
     fn created() {
-        let (rem, prop) = prop_date_time_created(b"CREATED:19980118T230000Z\r\n;").unwrap();
+        let (rem, prop) = prop_created(b"CREATED:19980118T230000Z\r\n;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             prop,
@@ -1665,7 +1665,7 @@ RSVP to team leader."#
 
     #[test]
     fn date_time_stamp() {
-        let (rem, prop) = prop_date_time_created(b"CREATED:19960329T133000Z\r\n;").unwrap();
+        let (rem, prop) = prop_created(b"CREATED:19960329T133000Z\r\n;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             prop,
