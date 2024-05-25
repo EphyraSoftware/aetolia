@@ -3,14 +3,17 @@ use crate::parser::property::recur::{recur, RecurRulePart};
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
     prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
-    prop_value_duration, prop_value_float, prop_value_integer, prop_value_text, DateOrDateTime,
-    DateTime, Duration,
+    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration,
 };
-use crate::parser::{iana_token, x_name, Error};
+use crate::parser::{iana_token, read_int, x_name, Error};
 use nom::branch::alt;
+use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::tag;
+use nom::character::is_digit;
 use nom::character::streaming::char;
-use nom::combinator::{recognize, verify};
+use nom::combinator::{map_res, opt, recognize, verify};
+use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
@@ -74,6 +77,27 @@ pub fn prop_attach(input: &[u8]) -> IResult<&[u8], AttachProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct CategoriesProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<Vec<u8>>,
+}
+
+/// Parse a CATEGORIES property.
+///
+/// RFC 5545, section 3.8.1.2
+pub fn prop_categories(input: &[u8]) -> IResult<&[u8], CategoriesProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("CATEGORIES"),
+        params,
+        char(':'),
+        separated_list1(char(','), prop_value_text),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, CategoriesProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Classification<'a> {
     Public,
     Private,
@@ -113,6 +137,27 @@ pub fn prop_classification(input: &[u8]) -> IResult<&[u8], ClassificationPropert
             value,
         },
     ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CommentProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a COMMENT property.
+///
+/// RFC 5545, section 3.8.1.4
+pub fn prop_comment(input: &[u8]) -> IResult<&[u8], CommentProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("COMMENT"),
+        params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, CommentProperty { params, value }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -211,6 +256,27 @@ pub fn prop_priority(input: &[u8]) -> IResult<&[u8], PriorityProperty, Error> {
             value,
         },
     ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ResourcesProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<Vec<u8>>,
+}
+
+/// Parse a RESOURCES property.
+///
+/// RFC 5545, section 3.8.1.10
+pub fn prop_resources(input: &[u8]) -> IResult<&[u8], ResourcesProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("RESOURCES"),
+        params,
+        char(':'),
+        separated_list1(char(','), prop_value_text),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, ResourcesProperty { params, value }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -394,6 +460,48 @@ pub fn prop_time_transparency(input: &[u8]) -> IResult<&[u8], TimeTransparencyPr
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct AttendeeProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: &'a [u8],
+}
+
+/// Parse an ATTENDEE property.
+///
+/// RFC 5545, section 3.8.4.1
+pub fn prop_attendee(input: &[u8]) -> IResult<&[u8], AttendeeProperty, Error> {
+    let (input, (_, params, _, uri, _)) = tuple((
+        tag("ATTENDEE"),
+        params,
+        char(':'),
+        recognize(prop_value_calendar_user_address),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, AttendeeProperty { params, value: uri }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ContactProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a CONTACT property.
+///
+/// RFC 5545, section 3.8.4.2
+pub fn prop_contact(input: &[u8]) -> IResult<&[u8], ContactProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("CONTACT"),
+        params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, ContactProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct OrganizerProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: &'a [u8],
@@ -436,6 +544,27 @@ pub fn prop_recurrence_id(input: &[u8]) -> IResult<&[u8], RecurrenceIdProperty, 
     ))(input)?;
 
     Ok((input, RecurrenceIdProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct RelatedToProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a RELATED-TO property.
+///
+/// RFC 5545, section 3.8.4.5
+pub fn prop_related_to(input: &[u8]) -> IResult<&[u8], RelatedToProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("RELATED-TO"),
+        params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, RelatedToProperty { params, value }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -490,6 +619,65 @@ pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifier, 
             value,
         },
     ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ExceptionDateTimesProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<DateOrDateTime>,
+}
+
+/// Parse an EXDATE property.
+///
+/// RFC 5545, section 3.8.5.1
+pub fn prop_exception_date_times(
+    input: &[u8],
+) -> IResult<&[u8], ExceptionDateTimesProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("EXDATE"),
+        params,
+        char(':'),
+        separated_list1(
+            char(','),
+            alt((
+                prop_value_date_time.map(DateOrDateTime::DateTime),
+                prop_value_date.map(DateOrDateTime::Date),
+            )),
+        ),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, ExceptionDateTimesProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct RecurrenceDateTimesProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<DateOrDateTimeOrPeriod<'a>>,
+}
+
+/// Parse an RDATE property.
+///
+/// RFC 5545, section 3.8.5.2
+pub fn prop_recurrence_date_times(
+    input: &[u8],
+) -> IResult<&[u8], RecurrenceDateTimesProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("RDATE"),
+        params,
+        char(':'),
+        separated_list1(
+            char(','),
+            alt((
+                prop_value_period.map(DateOrDateTimeOrPeriod::Period),
+                prop_value_date_time.map(DateOrDateTimeOrPeriod::DateTime),
+                prop_value_date.map(DateOrDateTimeOrPeriod::Date),
+            )),
+        ),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, RecurrenceDateTimesProperty { params, value }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -622,13 +810,71 @@ pub fn prop_sequence(input: &[u8]) -> IResult<&[u8], SequenceProperty, Error> {
     ))
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub struct RequestStatusProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub status_code: Vec<u32>,
+    pub status_description: Vec<u8>,
+    pub extra_data: Option<Vec<u8>>,
+}
+
+/// Parse a REQUEST-STATUS property.
+///
+/// RFC 5545, section 3.8.8.3
+pub fn prop_request_status(input: &[u8]) -> IResult<&[u8], RequestStatusProperty, Error> {
+    fn status_code(input: &[u8]) -> IResult<&[u8], Vec<u32>, Error> {
+        let (input, (num, mut nums)) = tuple((
+            map_res(
+                verify(take_while1(is_digit), |v: &[u8]| v.len() == 1),
+                |v| read_int::<u32>(v),
+            ),
+            fold_many_m_n(
+                1,
+                2,
+                map_res(tuple((char('.'), take_while1(is_digit))), |(_, v)| {
+                    read_int::<u32>(v)
+                }),
+                Vec::new,
+                |mut acc, item| {
+                    acc.push(item);
+                    acc
+                },
+            ),
+        ))(input)?;
+
+        nums.insert(0, num);
+        Ok((input, nums))
+    }
+
+    let (input, (_, params, _, status_code, _, status_description, extra_data, _)) = tuple((
+        tag("REQUEST-STATUS"),
+        params,
+        char(':'),
+        status_code,
+        char(';'),
+        prop_value_text,
+        opt(tuple((char(';'), prop_value_text)).map(|(_, v)| v)),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        RequestStatusProperty {
+            params,
+            status_code,
+            status_description,
+            extra_data,
+        },
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::{ParamValue, Range, Value};
+    use crate::parser::param::{ParamValue, ParticipationStatusUnknown, Range, Role, Value};
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
-    use crate::parser::property::{Date, Time};
+    use crate::parser::property::{Date, Period, PeriodEnd, Time};
     use crate::test_utils::check_rem;
     use base64::Engine;
 
@@ -683,6 +929,19 @@ mod tests {
     }
 
     #[test]
+    fn categories() {
+        let (rem, prop) = prop_categories(b"CATEGORIES:APPOINTMENT,EDUCATION\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            CategoriesProperty {
+                params: vec![],
+                value: vec![b"APPOINTMENT".to_vec(), b"EDUCATION".to_vec()],
+            }
+        );
+    }
+
+    #[test]
     fn classification_public() {
         let (rem, prop) = prop_classification(b"CLASS:PUBLIC\r\n;").unwrap();
         check_rem(rem, 1);
@@ -691,6 +950,19 @@ mod tests {
             ClassificationProperty {
                 other_params: vec![],
                 value: Classification::Public,
+            }
+        );
+    }
+
+    #[test]
+    fn comment() {
+        let (rem, prop) = prop_comment(b"COMMENT:The meeting really needs to include both ourselves and the customer. We can't hold this meeting without them. As a matter of fact\\, the venue for the meeting ought to be at their site. - - John\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            CommentProperty {
+                params: vec![],
+                value: b"The meeting really needs to include both ourselves and the customer. We can't hold this meeting without them. As a matter of fact, the venue for the meeting ought to be at their site. - - John".to_vec(),
             }
         );
     }
@@ -766,6 +1038,19 @@ RSVP to team leader."#
             PriorityProperty {
                 other_params: vec![],
                 value: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn resources() {
+        let (rem, prop) = prop_resources(b"RESOURCES:EASEL,PROJECTOR,VCR\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ResourcesProperty {
+                params: vec![],
+                value: vec![b"EASEL".to_vec(), b"PROJECTOR".to_vec(), b"VCR".to_vec(),],
             }
         );
     }
@@ -928,6 +1213,79 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn attendee() {
+        let (rem, prop) = prop_attendee(b"ATTENDEE;ROLE=REQ-PARTICIPANT;DELEGATED-FROM=\"mailto:bob@example.com\";PARTSTAT=ACCEPTED;CN=Jane Doe:mailto:jdoe@example.com\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            AttendeeProperty {
+                params: vec![
+                    Param {
+                        name: "ROLE".to_string(),
+                        value: ParamValue::Role {
+                            role: Role::RequiredParticipant,
+                        },
+                    },
+                    Param {
+                        name: "DELEGATED-FROM".to_string(),
+                        value: ParamValue::DelegatedFrom {
+                            delegators: vec!["mailto:bob@example.com".to_string()],
+                        },
+                    },
+                    Param {
+                        name: "PARTSTAT".to_string(),
+                        value: ParamValue::ParticipationStatus {
+                            status: ParticipationStatusUnknown::Accepted,
+                        },
+                    },
+                    Param {
+                        name: "CN".to_string(),
+                        value: ParamValue::CommonName {
+                            name: "Jane Doe".to_string(),
+                        },
+                    }
+                ],
+                value: b"mailto:jdoe@example.com",
+            }
+        );
+    }
+
+    #[test]
+    fn contact() {
+        let (rem, prop) =
+            prop_contact(b"CONTACT:Jim Dolittle\\, ABC Industries\\, +1-919-555-1234\r\n;")
+                .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ContactProperty {
+                params: vec![],
+                value: b"Jim Dolittle, ABC Industries, +1-919-555-1234".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn contact_altrep() {
+        let (rem, prop) = prop_contact(b"CONTACT;ALTREP=\"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)\":Jim Dolittle\\, ABC Industries\\, +1-919-555-1234\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ContactProperty {
+                params: vec![Param {
+                    name: "ALTREP".to_string(),
+                    value: ParamValue::AltRep {
+                        uri:
+                            "ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
+                                .to_string(),
+                    },
+                }],
+                value: b"Jim Dolittle, ABC Industries, +1-919-555-1234".to_vec(),
+            }
+        );
+    }
+
+    #[test]
     fn organizer() {
         let (rem, prop) =
             prop_organizer(b"ORGANIZER;CN=John Smith:mailto:jsmith@example.com\r\n;").unwrap();
@@ -1047,6 +1405,21 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn related_to() {
+        let (rem, prop) =
+            prop_related_to(b"RELATED-TO:jsmith.part7.19960817T083000.xyzMail@example.com\r\n;")
+                .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RelatedToProperty {
+                params: vec![],
+                value: b"jsmith.part7.19960817T083000.xyzMail@example.com".to_vec(),
+            }
+        );
+    }
+
+    #[test]
     fn url() {
         let (rem, prop) =
             prop_url(b"URL:http://example.com/pub/calendars/jsmith/mytime.ics\r\n;").unwrap();
@@ -1081,6 +1454,170 @@ RSVP to team leader."#
             UniqueIdentifier {
                 other_params: vec![],
                 value: b"19960401T080045Z-4000F192713-0052@example.com".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn exception_date_times() {
+        let (rem, prop) = prop_exception_date_times(
+            b"EXDATE:19960402T010000Z,19960403T010000Z,19960404T010000Z\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ExceptionDateTimesProperty {
+                params: vec![],
+                value: vec![
+                    DateOrDateTime::DateTime(DateTime {
+                        date: Date {
+                            year: 1996,
+                            month: 4,
+                            day: 2,
+                        },
+                        time: Time {
+                            hour: 1,
+                            minute: 0,
+                            second: 0,
+                            is_utc: true,
+                        },
+                    }),
+                    DateOrDateTime::DateTime(DateTime {
+                        date: Date {
+                            year: 1996,
+                            month: 4,
+                            day: 3,
+                        },
+                        time: Time {
+                            hour: 1,
+                            minute: 0,
+                            second: 0,
+                            is_utc: true,
+                        },
+                    }),
+                    DateOrDateTime::DateTime(DateTime {
+                        date: Date {
+                            year: 1996,
+                            month: 4,
+                            day: 4,
+                        },
+                        time: Time {
+                            hour: 1,
+                            minute: 0,
+                            second: 0,
+                            is_utc: true,
+                        },
+                    }),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_date_times_datetime() {
+        let (rem, prop) =
+            prop_recurrence_date_times(b"RDATE;TZID=America/New_York:19970714T083000\r\n;")
+                .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceDateTimesProperty {
+                params: vec![Param {
+                    name: "TZID".to_string(),
+                    value: ParamValue::TimeZoneId {
+                        tz_id: "America/New_York".to_string(),
+                        unique: false,
+                    },
+                }],
+                value: vec![DateOrDateTimeOrPeriod::DateTime(DateTime {
+                    date: Date {
+                        year: 1997,
+                        month: 7,
+                        day: 14,
+                    },
+                    time: Time {
+                        hour: 8,
+                        minute: 30,
+                        second: 0,
+                        is_utc: false,
+                    },
+                }),],
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_date_times_periods() {
+        let (rem, prop) = prop_recurrence_date_times(
+            b"RDATE;VALUE=PERIOD:19960403T020000Z/19960403T040000Z,19960404T010000Z/PT3H\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceDateTimesProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value {
+                        value: Value::Period
+                    },
+                }],
+                value: vec![
+                    DateOrDateTimeOrPeriod::Period(Period {
+                        start: b"19960403T020000Z",
+                        end: PeriodEnd::DateTime(b"19960403T040000Z"),
+                    }),
+                    DateOrDateTimeOrPeriod::Period(Period {
+                        start: b"19960404T010000Z",
+                        end: PeriodEnd::Duration(Duration {
+                            sign: 1,
+                            weeks: 0,
+                            days: 0,
+                            seconds: 10800,
+                        }),
+                    }),
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn recurrence_date_times_dates() {
+        let (rem, prop) = prop_recurrence_date_times(
+            b"RDATE;VALUE=DATE:19970101,19970120,19970217,19970421\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RecurrenceDateTimesProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value { value: Value::Date },
+                }],
+                value: vec![
+                    DateOrDateTimeOrPeriod::Date(Date {
+                        year: 1997,
+                        month: 1,
+                        day: 1,
+                    }),
+                    DateOrDateTimeOrPeriod::Date(Date {
+                        year: 1997,
+                        month: 1,
+                        day: 20,
+                    }),
+                    DateOrDateTimeOrPeriod::Date(Date {
+                        year: 1997,
+                        month: 2,
+                        day: 17,
+                    }),
+                    DateOrDateTimeOrPeriod::Date(Date {
+                        year: 1997,
+                        month: 4,
+                        day: 21,
+                    }),
+                ],
             }
         );
     }
@@ -1185,6 +1722,39 @@ RSVP to team leader."#
             SequenceProperty {
                 other_params: vec![],
                 value: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn request_status() {
+        let (rem, prop) = prop_request_status(b"REQUEST-STATUS:2.0;Success\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RequestStatusProperty {
+                params: vec![],
+                status_code: vec![2, 0],
+                status_description: b"Success".to_vec(),
+                extra_data: None,
+            }
+        );
+    }
+
+    #[test]
+    fn request_status_rejected() {
+        let (rem, prop) = prop_request_status(
+            b"REQUEST-STATUS:3.1;Invalid property value;DTSTART:96-Apr-01\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RequestStatusProperty {
+                params: vec![],
+                status_code: vec![3, 1],
+                status_description: b"Invalid property value".to_vec(),
+                extra_data: Some(b"DTSTART:96-Apr-01".to_vec()),
             }
         );
     }

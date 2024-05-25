@@ -12,6 +12,7 @@ use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::{fold_many0, many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult, Parser};
+use std::str::FromStr;
 
 mod component;
 mod language_tag;
@@ -183,6 +184,18 @@ fn read_string<'a>(input: &'a [u8], context: &str) -> Result<String, nom::Err<Er
             ))
         })?
         .to_string())
+}
+
+pub fn read_int<N: FromStr>(input: &[u8]) -> Result<N, nom::Err<Error>> {
+    std::str::from_utf8(input)
+        .map_err(|e| {
+            nom::Err::Error(Error::new(
+                input,
+                InnerError::EncodingError("Invalid integer number text".to_string(), e),
+            ))
+        })?
+        .parse()
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum)))
 }
 
 fn line_value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {

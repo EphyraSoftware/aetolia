@@ -63,3 +63,10 @@ pub enum DateOrDateTime {
     Date(Date),
     DateTime(DateTime),
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DateOrDateTimeOrPeriod<'a> {
+    Date(Date),
+    DateTime(DateTime),
+    Period(Period<'a>),
+}
