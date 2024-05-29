@@ -3,9 +3,10 @@ use crate::parser::property::types::{
 };
 use crate::parser::property::{
     AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty, CommentProperty,
-    ContactProperty, CreatedProperty, DateTimeEndProperty, DateTimeStamp, DateTimeStartProperty,
-    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty,
-    LastModifiedProperty, LocationProperty, OrganizerProperty, PriorityProperty,
+    ContactProperty, CreatedProperty, DateTimeCompletedProperty, DateTimeDueProperty,
+    DateTimeEndProperty, DateTimeStamp, DateTimeStartProperty, DescriptionProperty,
+    DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty, LastModifiedProperty,
+    LocationProperty, OrganizerProperty, PercentCompleteProperty, PriorityProperty,
     RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty,
     RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty,
     TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
@@ -60,6 +61,9 @@ pub enum ComponentProperty<'a> {
     RelatedTo(RelatedToProperty<'a>),
     Resources(ResourcesProperty<'a>),
     RecurrenceDateTimes(RecurrenceDateTimesProperty<'a>),
+    DateTimeCompleted(DateTimeCompletedProperty<'a>),
+    PercentComplete(PercentCompleteProperty<'a>),
+    DateTimeDue(DateTimeDueProperty<'a>),
     XProp(XProperty<'a>),
     IanaProp(IanaProperty<'a>),
 }

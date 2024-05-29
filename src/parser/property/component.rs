@@ -232,6 +232,33 @@ pub fn prop_location(input: &[u8]) -> IResult<&[u8], LocationProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct PercentCompleteProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: u8,
+}
+
+/// Parse a PERCENT-COMPLETE property.
+///
+/// RFC 5545, section 3.8.1.8
+pub fn prop_percent_complete(input: &[u8]) -> IResult<&[u8], PercentCompleteProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("PERCENT-COMPLETE"),
+        other_params,
+        char(':'),
+        verify(prop_value_integer, |v| 0 <= *v && *v <= 100).map(|v| v as u8),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        PercentCompleteProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct PriorityProperty<'a> {
     pub other_params: Vec<Param<'a>>,
     pub value: u8,
@@ -349,6 +376,33 @@ pub fn prop_summary(input: &[u8]) -> IResult<&[u8], SummaryProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct DateTimeCompletedProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: DateTime,
+}
+
+/// Parse a COMPLETED property.
+///
+/// RFC 5545, section 3.8.2.1
+pub fn prop_date_time_completed(input: &[u8]) -> IResult<&[u8], DateTimeCompletedProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("COMPLETED"),
+        other_params,
+        char(':'),
+        prop_value_date_time,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        DateTimeCompletedProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeEndProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: DateOrDateTime,
@@ -370,6 +424,30 @@ pub fn prop_date_time_end(input: &[u8]) -> IResult<&[u8], DateTimeEndProperty, E
     ))(input)?;
 
     Ok((input, DateTimeEndProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct DateTimeDueProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: DateOrDateTime,
+}
+
+/// Parse a DUE property.
+///
+/// RFC 5545, section 3.8.2.3
+pub fn prop_date_time_due(input: &[u8]) -> IResult<&[u8], DateTimeDueProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("DUE"),
+        params,
+        char(':'),
+        alt((
+            prop_value_date_time.map(DateOrDateTime::DateTime),
+            prop_value_date.map(DateOrDateTime::Date),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, DateTimeDueProperty { params, value }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -1030,6 +1108,19 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn percent_complete() {
+        let (rem, prop) = prop_percent_complete(b"PERCENT-COMPLETE:39\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            PercentCompleteProperty {
+                other_params: vec![],
+                value: 39,
+            }
+        );
+    }
+
+    #[test]
     fn priority() {
         let (rem, prop) = prop_priority(b"PRIORITY:1\r\n;").unwrap();
         check_rem(rem, 1);
@@ -1082,6 +1173,31 @@ RSVP to team leader."#
     }
 
     #[test]
+    fn date_time_completed() {
+        let (rem, prop) = prop_date_time_completed(b"COMPLETED:19960401T150000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeCompletedProperty {
+                other_params: vec![],
+                value: DateTime {
+                    date: Date {
+                        year: 1996,
+                        month: 4,
+                        day: 1,
+                    },
+                    time: Time {
+                        hour: 15,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                },
+            }
+        );
+    }
+
+    #[test]
     fn date_time_end_date() {
         let (rem, prop) = prop_date_time_end(b"DTEND;VALUE=DATE:19980704\r\n;").unwrap();
         check_rem(rem, 1);
@@ -1117,6 +1233,51 @@ RSVP to team leader."#
                     },
                     time: Time {
                         hour: 15,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn date_time_due_date() {
+        let (rem, prop) = prop_date_time_due(b"DUE;VALUE=DATE:19980401\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeDueProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value { value: Value::Date },
+                },],
+                value: DateOrDateTime::Date(Date {
+                    year: 1998,
+                    month: 4,
+                    day: 1,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn date_time_due_datetime() {
+        let (rem, prop) = prop_date_time_due(b"DUE:19980430T000000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            DateTimeDueProperty {
+                params: vec![],
+                value: DateOrDateTime::DateTime(DateTime {
+                    date: Date {
+                        year: 1998,
+                        month: 4,
+                        day: 30,
+                    },
+                    time: Time {
+                        hour: 0,
                         minute: 0,
                         second: 0,
                         is_utc: true,
