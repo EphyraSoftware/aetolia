@@ -808,7 +808,7 @@ pub fn prop_created(input: &[u8]) -> IResult<&[u8], CreatedProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeStamp<'a> {
+pub struct DateTimeStampProperty<'a> {
     pub other_params: Vec<Param<'a>>,
     pub value: DateTime,
 }
@@ -816,7 +816,7 @@ pub struct DateTimeStamp<'a> {
 /// Parse a DTSTAMP property.
 ///
 /// RFC 5545, section 3.8.7.2
-pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStamp, Error> {
+pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStampProperty, Error> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DTSTAMP"),
         other_params,
@@ -827,7 +827,7 @@ pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStamp, Error
 
     Ok((
         input,
-        DateTimeStamp {
+        DateTimeStampProperty {
             other_params,
             value,
         },

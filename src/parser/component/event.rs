@@ -67,7 +67,7 @@ mod tests {
     use super::*;
     use crate::parser::property::{
         CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
-        DateTimeEndProperty, DateTimeStamp, DateTimeStartProperty, SummaryProperty, Time,
+        DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
     };
     use crate::test_utils::check_rem;
@@ -92,7 +92,7 @@ mod tests {
 
                 assert_eq!(
                     properties[1],
-                    ComponentProperty::DateTimeStamp(DateTimeStamp {
+                    ComponentProperty::DateTimeStamp(DateTimeStampProperty {
                         other_params: vec![],
                         value: DateTime {
                             date: Date {

@@ -4,7 +4,7 @@ use crate::parser::property::types::{
 use crate::parser::property::{
     AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty, CommentProperty,
     ContactProperty, CreatedProperty, DateTimeCompletedProperty, DateTimeDueProperty,
-    DateTimeEndProperty, DateTimeStamp, DateTimeStartProperty, DescriptionProperty,
+    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
     DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty, LastModifiedProperty,
     LocationProperty, OrganizerProperty, PercentCompleteProperty, PriorityProperty,
     RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty,
@@ -31,7 +31,7 @@ pub enum CalendarProperty<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum ComponentProperty<'a> {
-    DateTimeStamp(DateTimeStamp<'a>),
+    DateTimeStamp(DateTimeStampProperty<'a>),
     UniqueIdentifier(UniqueIdentifierProperty<'a>),
     DateTimeStart(DateTimeStartProperty<'a>),
     Classification(ClassificationProperty<'a>),
