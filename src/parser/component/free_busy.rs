@@ -35,7 +35,7 @@ pub fn component_free_busy(input: &[u8]) -> IResult<&[u8], CalendarComponent, Er
         tag("END:VFREEBUSY\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::Event { properties }))
+    Ok((input, CalendarComponent::FreeBusy { properties }))
 }
 
 #[cfg(test)]
@@ -54,7 +54,7 @@ mod tests {
         let (rem, component) = component_free_busy(input).unwrap();
         check_rem(rem, 0);
         match component {
-            CalendarComponent::Event { properties } => {
+            CalendarComponent::FreeBusy { properties } => {
                 assert_eq!(properties.len(), 6);
 
                 assert_eq!(

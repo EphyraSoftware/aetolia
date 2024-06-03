@@ -4,7 +4,8 @@ use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
     prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
     prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
+    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
+    UtcOffset,
 };
 use crate::parser::{iana_token, read_int, x_name, Error};
 use nom::branch::alt;
@@ -559,6 +560,135 @@ pub fn prop_time_transparency(input: &[u8]) -> IResult<&[u8], TimeTransparencyPr
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct TimeZoneIdProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a TZID property.
+///
+/// RFC 5545, section 3.8.3.1
+pub fn prop_time_zone_id(input: &[u8]) -> IResult<&[u8], TimeZoneIdProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("TZID"),
+        other_params,
+        char(':'),
+        tuple((opt(char('/')), prop_value_text)).map(|(prefix, mut value)| {
+            if let Some('/') = prefix {
+                value.insert(0, b'/');
+            }
+
+            value
+        }),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        TimeZoneIdProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TimeZoneNameProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<u8>,
+}
+
+/// Parse a TZNAME property.
+///
+/// RFC 5545, section 3.8.3.2
+pub fn prop_time_zone_name(input: &[u8]) -> IResult<&[u8], TimeZoneNameProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("TZNAME"),
+        params,
+        char(':'),
+        prop_value_text,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, TimeZoneNameProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TimeZoneOffsetProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: UtcOffset,
+}
+
+/// Parse a TZOFFSETFROM property.
+///
+/// RFC 5545, section 3.8.3.3
+pub fn prop_time_zone_offset_from(input: &[u8]) -> IResult<&[u8], TimeZoneOffsetProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("TZOFFSETFROM"),
+        other_params,
+        char(':'),
+        prop_value_utc_offset,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        TimeZoneOffsetProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+/// Parse a TZOFFSETTO property.
+///
+/// RFC 5545, section 3.8.3.4
+pub fn prop_time_zone_offset_to(input: &[u8]) -> IResult<&[u8], TimeZoneOffsetProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("TZOFFSETTO"),
+        other_params,
+        char(':'),
+        prop_value_utc_offset,
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        TimeZoneOffsetProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TimeZoneUrlProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: &'a [u8],
+}
+
+/// Parse a TZURL property.
+///
+/// RFC 5545, section 3.8.3.5
+pub fn prop_time_zone_url(input: &[u8]) -> IResult<&[u8], TimeZoneUrlProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("TZURL"),
+        other_params,
+        char(':'),
+        recognize(param_value_uri),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        TimeZoneUrlProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct AttendeeProperty<'a> {
     pub params: Vec<Param<'a>>,
     pub value: &'a [u8],
@@ -970,6 +1100,7 @@ pub fn prop_request_status(input: &[u8]) -> IResult<&[u8], RequestStatusProperty
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::language_tag::LanguageTag;
     use crate::parser::param::{
         FreeBusyTimeType, ParamValue, ParticipationStatusUnknown, Range, Role, Value,
     };
@@ -1164,7 +1295,7 @@ RSVP to team leader."#
             prop,
             ResourcesProperty {
                 params: vec![],
-                value: vec![b"EASEL".to_vec(), b"PROJECTOR".to_vec(), b"VCR".to_vec(),],
+                value: vec![b"EASEL".to_vec(), b"PROJECTOR".to_vec(), b"VCR".to_vec()],
             }
         );
     }
@@ -1432,7 +1563,7 @@ RSVP to team leader."#
                             days: 0,
                             seconds: 3600,
                         }),
-                    }
+                    },
                 ],
             }
         );
@@ -1460,6 +1591,119 @@ RSVP to team leader."#
             TimeTransparencyProperty {
                 other_params: vec![],
                 value: TimeTransparency::Transparent,
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_id() {
+        let (rem, prop) = prop_time_zone_id(b"TZID:America/New_York\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneIdProperty {
+                other_params: vec![],
+                value: b"America/New_York".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_id_custom() {
+        let (rem, prop) = prop_time_zone_id(b"TZID:/example.org/America/New_York\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneIdProperty {
+                other_params: vec![],
+                value: b"/example.org/America/New_York".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_name() {
+        let (rem, prop) = prop_time_zone_name(b"TZNAME:EST\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneNameProperty {
+                params: vec![],
+                value: b"EST".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_name_with_params() {
+        let (rem, prop) = prop_time_zone_name(b"TZNAME;LANGUAGE=fr-CA:HNE\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneNameProperty {
+                params: vec![Param {
+                    name: "LANGUAGE".to_string(),
+                    value: ParamValue::Language {
+                        language: LanguageTag {
+                            language: "fr".to_string(),
+                            region: Some("CA".to_string()),
+                            ..Default::default()
+                        },
+                    },
+                }],
+                value: b"HNE".to_vec(),
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_offset_from() {
+        let (rem, prop) = prop_time_zone_offset_from(b"TZOFFSETFROM:-0500\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneOffsetProperty {
+                other_params: vec![],
+                value: UtcOffset {
+                    sign: -1,
+                    hours: 5,
+                    minutes: 0,
+                    seconds: None,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_offset_to() {
+        let (rem, prop) = prop_time_zone_offset_to(b"TZOFFSETTO:+1245\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneOffsetProperty {
+                other_params: vec![],
+                value: UtcOffset {
+                    sign: 1,
+                    hours: 12,
+                    minutes: 45,
+                    seconds: None,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn time_zone_url() {
+        let (rem, prop) = prop_time_zone_url(
+            b"TZURL:http://timezones.example.org/tz/America-Los_Angeles.ics\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TimeZoneUrlProperty {
+                other_params: vec![],
+                value: b"http://timezones.example.org/tz/America-Los_Angeles.ics",
             }
         );
     }
@@ -1495,7 +1739,7 @@ RSVP to team leader."#
                         value: ParamValue::CommonName {
                             name: "Jane Doe".to_string(),
                         },
-                    }
+                    },
                 ],
                 value: b"mailto:jdoe@example.com",
             }

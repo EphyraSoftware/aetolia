@@ -61,7 +61,7 @@ pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> 
         tag("END:VTODO\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::Event { properties }))
+    Ok((input, CalendarComponent::ToDo { properties }))
 }
 
 #[cfg(test)]
@@ -82,7 +82,7 @@ mod tests {
         check_rem(rem, 0);
 
         match component {
-            CalendarComponent::Event { properties } => {
+            CalendarComponent::ToDo { properties } => {
                 assert_eq!(properties.len(), 7);
 
                 assert_eq!(

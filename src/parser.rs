@@ -93,7 +93,7 @@ impl<'a> From<(&'a [u8], ErrorKind)> for Error<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 struct ContentLine<'a> {
     property_name: &'a [u8],
     params: Vec<param::Param<'a>>,

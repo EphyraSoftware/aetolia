@@ -51,7 +51,7 @@ pub fn component_journal(input: &[u8]) -> IResult<&[u8], CalendarComponent, Erro
         tag("END:VJOURNAL\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::Event { properties }))
+    Ok((input, CalendarComponent::Journal { properties }))
 }
 
 #[cfg(test)]
@@ -71,7 +71,7 @@ mod tests {
         check_rem(rem, 0);
 
         match component {
-            CalendarComponent::Event { properties } => {
+            CalendarComponent::Journal { properties } => {
                 assert_eq!(properties.len(), 5);
 
                 assert_eq!(

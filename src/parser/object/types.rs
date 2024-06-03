@@ -9,7 +9,8 @@ use crate::parser::property::{
     LastModifiedProperty, LocationProperty, OrganizerProperty, PercentCompleteProperty,
     PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
     RelatedToProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
-    SummaryProperty, TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
+    SummaryProperty, TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty,
+    TimeZoneOffsetProperty, TimeZoneUrlProperty, UniqueIdentifierProperty, UrlProperty,
 };
 use crate::parser::ContentLine;
 
@@ -65,13 +66,38 @@ pub enum ComponentProperty<'a> {
     PercentComplete(PercentCompleteProperty<'a>),
     DateTimeDue(DateTimeDueProperty<'a>),
     FreeBusyTime(FreeBusyTimeProperty<'a>),
+    TimeZoneId(TimeZoneIdProperty<'a>),
+    TimeZoneUrl(TimeZoneUrlProperty<'a>),
+    TimeZoneOffsetTo(TimeZoneOffsetProperty<'a>),
+    TimeZoneOffsetFrom(TimeZoneOffsetProperty<'a>),
+    TimeZoneName(TimeZoneNameProperty<'a>),
+    Standard(CalendarComponent<'a>),
+    Daylight(CalendarComponent<'a>),
     XProp(XProperty<'a>),
     IanaProp(IanaProperty<'a>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CalendarComponent<'a> {
     Event {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    ToDo {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    Journal {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    FreeBusy {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    Standard {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    Daylight {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    TimeZone {
         properties: Vec<ComponentProperty<'a>>,
     },
     IanaComp {

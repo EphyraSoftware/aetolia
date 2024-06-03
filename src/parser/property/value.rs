@@ -336,7 +336,7 @@ fn prop_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
     Ok((input, uri))
 }
 
-fn prop_value_utc_offset(input: &[u8]) -> IResult<&[u8], UtcOffset, Error> {
+pub fn prop_value_utc_offset(input: &[u8]) -> IResult<&[u8], UtcOffset, Error> {
     let (input, (sign, h, m, s)) = tuple((
         one_of("+-"),
         take_while_m_n(2, 2, is_digit),
