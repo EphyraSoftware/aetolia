@@ -5,11 +5,11 @@ use crate::parser::property::{
     AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty, CommentProperty,
     ContactProperty, CreatedProperty, DateTimeCompletedProperty, DateTimeDueProperty,
     DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
-    DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty, LastModifiedProperty,
-    LocationProperty, OrganizerProperty, PercentCompleteProperty, PriorityProperty,
-    RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty,
-    RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty,
-    TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
+    DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty, GeographicPositionProperty,
+    LastModifiedProperty, LocationProperty, OrganizerProperty, PercentCompleteProperty,
+    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
+    RelatedToProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
+    SummaryProperty, TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
 };
 use crate::parser::ContentLine;
 
@@ -64,6 +64,7 @@ pub enum ComponentProperty<'a> {
     DateTimeCompleted(DateTimeCompletedProperty<'a>),
     PercentComplete(PercentCompleteProperty<'a>),
     DateTimeDue(DateTimeDueProperty<'a>),
+    FreeBusyTime(FreeBusyTimeProperty<'a>),
     XProp(XProperty<'a>),
     IanaProp(IanaProperty<'a>),
 }

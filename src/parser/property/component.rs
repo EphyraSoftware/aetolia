@@ -4,7 +4,7 @@ use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
     prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
     prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
 };
 use crate::parser::{iana_token, read_int, x_name, Error};
 use nom::branch::alt;
@@ -502,6 +502,27 @@ pub fn prop_duration(input: &[u8]) -> IResult<&[u8], DurationProperty, Error> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct FreeBusyTimeProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: Vec<Period<'a>>,
+}
+
+/// Parse a FREEBUSY property.
+///
+/// RFC 5545, section 3.8.2.6
+pub fn prop_free_busy_time(input: &[u8]) -> IResult<&[u8], FreeBusyTimeProperty, Error> {
+    let (input, (_, params, _, value, _)) = tuple((
+        tag("FREEBUSY"),
+        params,
+        char(':'),
+        separated_list1(char(','), prop_value_period),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((input, FreeBusyTimeProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum TimeTransparency {
     Opaque,
     Transparent,
@@ -949,7 +970,9 @@ pub fn prop_request_status(input: &[u8]) -> IResult<&[u8], RequestStatusProperty
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::{ParamValue, ParticipationStatusUnknown, Range, Role, Value};
+    use crate::parser::param::{
+        FreeBusyTimeType, ParamValue, ParticipationStatusUnknown, Range, Role, Value,
+    };
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Period, PeriodEnd, Time};
@@ -1343,6 +1366,74 @@ RSVP to team leader."#
                     days: 0,
                     seconds: 3600,
                 },
+            }
+        );
+    }
+
+    #[test]
+    fn free_busy() {
+        let (rem, prop) =
+            prop_free_busy_time(b"FREEBUSY;FBTYPE=BUSY-UNAVAILABLE:19970308T160000Z/PT8H30M\r\n;")
+                .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            FreeBusyTimeProperty {
+                params: vec![Param {
+                    name: "FBTYPE".to_string(),
+                    value: ParamValue::FreeBusyTimeType {
+                        fb_type: FreeBusyTimeType::BusyUnavailable,
+                    },
+                }],
+                value: vec![Period {
+                    start: b"19970308T160000Z",
+                    end: PeriodEnd::Duration(Duration {
+                        sign: 1,
+                        weeks: 0,
+                        days: 0,
+                        seconds: 30600,
+                    }),
+                }],
+            }
+        );
+    }
+
+    #[test]
+    fn free_busy_multiple() {
+        let (rem, prop) = prop_free_busy_time(
+            b"FREEBUSY;FBTYPE=FREE:19970308T160000Z/PT3H,19970308T200000Z/PT1H\r\n;",
+        )
+        .unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            FreeBusyTimeProperty {
+                params: vec![Param {
+                    name: "FBTYPE".to_string(),
+                    value: ParamValue::FreeBusyTimeType {
+                        fb_type: FreeBusyTimeType::Free,
+                    },
+                }],
+                value: vec![
+                    Period {
+                        start: b"19970308T160000Z",
+                        end: PeriodEnd::Duration(Duration {
+                            sign: 1,
+                            weeks: 0,
+                            days: 0,
+                            seconds: 10800,
+                        }),
+                    },
+                    Period {
+                        start: b"19970308T200000Z",
+                        end: PeriodEnd::Duration(Duration {
+                            sign: 1,
+                            weeks: 0,
+                            days: 0,
+                            seconds: 3600,
+                        }),
+                    }
+                ],
             }
         );
     }
