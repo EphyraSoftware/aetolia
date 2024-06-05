@@ -44,6 +44,7 @@ pub enum InnerError {
     InvalidPort,
     MismatchedComponentEnd(Vec<u8>, Vec<u8>),
     UnknownParamName(Vec<u8>),
+    InvalidValueParam,
 }
 
 impl<'a> Error<'a> {

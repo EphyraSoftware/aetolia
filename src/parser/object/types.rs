@@ -2,15 +2,16 @@ use crate::parser::property::types::{
     CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
 };
 use crate::parser::property::{
-    AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty, CommentProperty,
-    ContactProperty, CreatedProperty, DateTimeCompletedProperty, DateTimeDueProperty,
-    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
-    DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty, GeographicPositionProperty,
-    LastModifiedProperty, LocationProperty, OrganizerProperty, PercentCompleteProperty,
-    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
-    RelatedToProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
-    SummaryProperty, TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty,
-    TimeZoneOffsetProperty, TimeZoneUrlProperty, UniqueIdentifierProperty, UrlProperty,
+    ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty,
+    CommentProperty, ContactProperty, CreatedProperty, DateTimeCompletedProperty,
+    DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
+    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
+    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
+    PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty,
+    RecurrenceRuleProperty, RelatedToProperty, RepeatCountProperty, RequestStatusProperty,
+    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, TimeTransparencyProperty,
+    TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty, TimeZoneUrlProperty,
+    TriggerProperty, UniqueIdentifierProperty, UrlProperty,
 };
 use crate::parser::ContentLine;
 
@@ -73,6 +74,9 @@ pub enum ComponentProperty<'a> {
     TimeZoneName(TimeZoneNameProperty<'a>),
     Standard(CalendarComponent<'a>),
     Daylight(CalendarComponent<'a>),
+    Action(ActionProperty<'a>),
+    Trigger(TriggerProperty<'a>),
+    RepeatCount(RepeatCountProperty<'a>),
     XProp(XProperty<'a>),
     IanaProp(IanaProperty<'a>),
 }
@@ -98,6 +102,9 @@ pub enum CalendarComponent<'a> {
         properties: Vec<ComponentProperty<'a>>,
     },
     TimeZone {
+        properties: Vec<ComponentProperty<'a>>,
+    },
+    Alarm {
         properties: Vec<ComponentProperty<'a>>,
     },
     IanaComp {

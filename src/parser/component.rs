@@ -1,3 +1,4 @@
+mod alarm;
 mod event;
 mod free_busy;
 mod journal;

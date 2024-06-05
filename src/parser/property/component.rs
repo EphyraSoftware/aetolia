@@ -7,7 +7,7 @@ use crate::parser::property::{
     prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
     UtcOffset,
 };
-use crate::parser::{iana_token, read_int, x_name, Error};
+use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::tag;
@@ -20,7 +20,7 @@ use nom::{IResult, Parser};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttachValue<'a> {
-    Uri(Uri<'a>),
+    Uri(&'a [u8]),
     Binary(&'a [u8]),
 }
 
@@ -65,7 +65,7 @@ pub fn prop_attach(input: &[u8]) -> IResult<&[u8], AttachProperty, Error> {
             },
         ))
     } else {
-        let (input, (v, _)) = tuple((param_value_uri, tag("\r\n")))(input)?;
+        let (input, (v, _)) = tuple((recognize(param_value_uri), tag("\r\n")))(input)?;
 
         Ok((
             input,
@@ -932,6 +932,126 @@ pub fn prop_recurrence_rule(input: &[u8]) -> IResult<&[u8], RecurrenceRuleProper
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum Action<'a> {
+    Audio,
+    Display,
+    Email,
+    XName(&'a [u8]),
+    IanaToken(&'a [u8]),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ActionProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: Action<'a>,
+}
+
+/// Parse an ACTION property.
+///
+/// RFC 5545, section 3.8.6.1
+pub fn prop_action(input: &[u8]) -> IResult<&[u8], ActionProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("ACTION"),
+        other_params,
+        char(':'),
+        alt((
+            tag("AUDIO").map(|_| Action::Audio),
+            tag("DISPLAY").map(|_| Action::Display),
+            tag("EMAIL").map(|_| Action::Email),
+            x_name.map(Action::XName),
+            iana_token.map(Action::IanaToken),
+        )),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        ActionProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct RepeatCountProperty<'a> {
+    pub other_params: Vec<Param<'a>>,
+    pub value: u32,
+}
+
+/// Parse a REPEAT property.
+///
+/// RFC 5545, section 3.8.6.2
+pub fn prop_repeat_count(input: &[u8]) -> IResult<&[u8], RepeatCountProperty, Error> {
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("REPEAT"),
+        other_params,
+        char(':'),
+        prop_value_integer.map(|v| v as u32),
+        tag("\r\n"),
+    ))(input)?;
+
+    Ok((
+        input,
+        RepeatCountProperty {
+            other_params,
+            value,
+        },
+    ))
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum DurationOrDateTime {
+    Duration(Duration),
+    DateTime(DateTime),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct TriggerProperty<'a> {
+    pub params: Vec<Param<'a>>,
+    pub value: DurationOrDateTime,
+}
+
+/// Parse a TRIGGER property.
+///
+/// RFC 5545, section 3.8.6.3
+pub fn prop_trigger(input: &[u8]) -> IResult<&[u8], TriggerProperty, Error> {
+    let (input, (_, params, _)) = tuple((tag("TRIGGER"), params, char(':')))(input)?;
+
+    let value_choice = params
+        .iter()
+        .filter_map(|p| match p.value {
+            ParamValue::Value {
+                value: Value::Duration,
+            } => Some(1),
+            ParamValue::Value {
+                value: Value::DateTime,
+            } => Some(2),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    let (input, value) = match value_choice.as_slice() {
+        [1] | [] => prop_value_duration
+            .map(DurationOrDateTime::Duration)
+            .parse(input),
+        [2] => prop_value_date_time
+            .map(DurationOrDateTime::DateTime)
+            .parse(input),
+        _ => {
+            return Err(nom::Err::Error(Error::new(
+                input,
+                InnerError::InvalidValueParam,
+            )))
+        }
+    }?;
+
+    let (input, _) = tag("\r\n")(input)?;
+
+    Ok((input, TriggerProperty { params, value }))
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct CreatedProperty<'a> {
     pub other_params: Vec<Param<'a>>,
     pub value: DateTime,
@@ -1102,7 +1222,7 @@ mod tests {
     use super::*;
     use crate::parser::language_tag::LanguageTag;
     use crate::parser::param::{
-        FreeBusyTimeType, ParamValue, ParticipationStatusUnknown, Range, Role, Value,
+        FreeBusyTimeType, ParamValue, ParticipationStatusUnknown, Range, Related, Role, Value,
     };
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
@@ -1119,13 +1239,7 @@ mod tests {
             prop,
             AttachProperty {
                 params: vec![],
-                value: AttachValue::Uri(Uri {
-                    scheme: b"CID",
-                    authority: None,
-                    path: b"jsmith.part3.960817T083000.xyzMail@example.com".to_vec(),
-                    query: None,
-                    fragment: None,
-                }),
+                value: AttachValue::Uri(b"CID:jsmith.part3.960817T083000.xyzMail@example.com"),
             }
         );
     }
@@ -2155,6 +2269,103 @@ RSVP to team leader."#
                         is_utc: true,
                     },
                 },
+            }
+        );
+    }
+
+    #[test]
+    fn action() {
+        let (rem, prop) = prop_action(b"ACTION:DISPLAY\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            ActionProperty {
+                other_params: vec![],
+                value: Action::Display,
+            }
+        );
+    }
+
+    #[test]
+    fn repeat() {
+        let (rem, prop) = prop_repeat_count(b"REPEAT:4\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            RepeatCountProperty {
+                other_params: vec![],
+                value: 4,
+            }
+        );
+    }
+
+    #[test]
+    fn trigger_duration() {
+        let (rem, prop) = prop_trigger(b"TRIGGER:-PT15M\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TriggerProperty {
+                params: vec![],
+                value: DurationOrDateTime::Duration(Duration {
+                    sign: -1,
+                    weeks: 0,
+                    days: 0,
+                    seconds: 900,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn trigger_duration_related_end() {
+        let (rem, prop) = prop_trigger(b"TRIGGER;RELATED=END:PT5M\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TriggerProperty {
+                params: vec![Param {
+                    name: "RELATED".to_string(),
+                    value: ParamValue::Related {
+                        related: Related::End,
+                    },
+                }],
+                value: DurationOrDateTime::Duration(Duration {
+                    sign: 1,
+                    weeks: 0,
+                    days: 0,
+                    seconds: 300,
+                }),
+            }
+        );
+    }
+
+    #[test]
+    fn trigger_date_time() {
+        let (rem, prop) = prop_trigger(b"TRIGGER;VALUE=DATE-TIME:19980101T050000Z\r\n;").unwrap();
+        check_rem(rem, 1);
+        assert_eq!(
+            prop,
+            TriggerProperty {
+                params: vec![Param {
+                    name: "VALUE".to_string(),
+                    value: ParamValue::Value {
+                        value: Value::DateTime,
+                    },
+                }],
+                value: DurationOrDateTime::DateTime(DateTime {
+                    date: Date {
+                        year: 1998,
+                        month: 1,
+                        day: 1,
+                    },
+                    time: Time {
+                        hour: 5,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true,
+                    },
+                }),
             }
         );
     }
