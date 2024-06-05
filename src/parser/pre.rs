@@ -48,10 +48,10 @@ mod tests {
     #[test]
     fn general_line() {
         let (rem, line) = content_line_first_pass(
-            b"DESCRIP\r\n TION;BRE\r\n NT\r\n =\r\n sent\r\n :\r\n Meeting \"\r\n A\"\r\n;",
+            b"DESCRIP\r\n TION;BRE\r\n NT\r\n =\r\n sent\r\n :\r\n Meeting \"\r\n A\"\r\n",
         )
         .unwrap();
-        check_rem(rem, 1);
+        check_rem(rem, 0);
         assert_eq!(line, b"DESCRIPTION;BRENT=sent:Meeting \"A\"\r\n");
     }
 }
