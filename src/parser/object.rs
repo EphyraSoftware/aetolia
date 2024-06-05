@@ -1,4 +1,6 @@
-use crate::parser::component::component_event;
+use crate::parser::component::{
+    component_event, component_free_busy, component_journal, component_timezone, component_todo,
+};
 use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
 use crate::parser::property::{
     prop_calendar_scale, prop_iana, prop_method, prop_product_id, prop_version, prop_x,
@@ -67,7 +69,15 @@ fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
 }
 
 fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    alt((component_event, x_comp, iana_comp))(input)
+    alt((
+        component_event,
+        component_todo,
+        component_journal,
+        component_free_busy,
+        component_timezone,
+        x_comp,
+        iana_comp,
+    ))(input)
 }
 
 fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {

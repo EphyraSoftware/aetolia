@@ -1,3 +1,4 @@
+use crate::parser::component::alarm::component_alarm;
 use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_attach, prop_attendee, prop_categories, prop_classification, prop_comment, prop_contact,
@@ -14,7 +15,6 @@ use nom::bytes::streaming::tag;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use crate::parser::component::alarm::component_alarm;
 
 pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     let (input, (_, properties, alarms, _)) = tuple((
@@ -81,7 +81,7 @@ mod tests {
         check_rem(rem, 0);
 
         match component {
-            CalendarComponent::Event { properties } => {
+            CalendarComponent::Event { properties, .. } => {
                 assert_eq!(properties.len(), 7);
 
                 assert_eq!(
