@@ -11,7 +11,7 @@ use crate::parser::property::{
 };
 use crate::parser::Error;
 
-pub fn component_free_busy(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_alarm(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VALARM\r\n"),
         many0(alt((
@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn test_component_alarm() {
         let input = b"BEGIN:VALARM\r\nTRIGGER;VALUE=DATE-TIME:19970317T133000Z\r\nREPEAT:4\r\nDURATION:PT15M\r\nACTION:AUDIO\r\nATTACH;FMTTYPE=audio/basic:ftp://example.com/pub/sounds/bell-01.aud\r\nEND:VALARM\r\n";
-        let (rem, component) = component_free_busy(input).unwrap();
+        let (rem, component) = component_alarm(input).unwrap();
         check_rem(rem, 0);
         match component {
             CalendarComponent::Alarm { properties } => {

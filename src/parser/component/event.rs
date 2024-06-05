@@ -14,9 +14,10 @@ use nom::bytes::streaming::tag;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use crate::parser::component::alarm::component_alarm;
 
 pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, alarms, _)) = tuple((
         tag("BEGIN:VEVENT\r\n"),
         many0(alt((
             alt((
@@ -56,10 +57,11 @@ pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error>
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
         ))),
+        many0(component_alarm),
         tag("END:VEVENT\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::Event { properties }))
+    Ok((input, CalendarComponent::Event { properties, alarms }))
 }
 
 #[cfg(test)]

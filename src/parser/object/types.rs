@@ -85,9 +85,11 @@ pub enum ComponentProperty<'a> {
 pub enum CalendarComponent<'a> {
     Event {
         properties: Vec<ComponentProperty<'a>>,
+        alarms: Vec<CalendarComponent<'a>>,
     },
     ToDo {
         properties: Vec<ComponentProperty<'a>>,
+        alarms: Vec<CalendarComponent<'a>>,
     },
     Journal {
         properties: Vec<ComponentProperty<'a>>,

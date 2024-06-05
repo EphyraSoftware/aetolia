@@ -15,9 +15,10 @@ use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
+use crate::parser::component::alarm::component_alarm;
 
 pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, alarms, _)) = tuple((
         tag("BEGIN:VTODO\r\n"),
         many0(alt((
             alt((
@@ -58,10 +59,11 @@ pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> 
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
         ))),
+        many0(component_alarm),
         tag("END:VTODO\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::ToDo { properties }))
+    Ok((input, CalendarComponent::ToDo { properties, alarms }))
 }
 
 #[cfg(test)]
