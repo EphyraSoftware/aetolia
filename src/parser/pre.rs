@@ -1,6 +1,7 @@
 use crate::parser::Error;
 use nom::bytes::streaming::{tag, take_until};
 use nom::character::streaming::one_of;
+use nom::combinator::opt;
 use nom::sequence::tuple;
 use nom::IResult;
 
@@ -12,8 +13,15 @@ pub fn content_line_first_pass(mut input: &[u8]) -> IResult<&[u8], Vec<u8>, Erro
         out.extend_from_slice(o);
         input = i;
 
-        match tuple((tag("\r\n"), one_of(" \t")))(input) {
-            Ok((i, _)) => {
+        if input.len() == 2 {
+            break;
+        }
+
+        match tuple((tag("\r\n"), opt(one_of(" \t"))))(input) {
+            Ok((i, (lb, sp))) => {
+                if sp.is_none() {
+                    out.extend_from_slice(lb);
+                }
                 input = i;
             }
             Err(e) => {

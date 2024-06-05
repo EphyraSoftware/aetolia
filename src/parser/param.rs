@@ -181,7 +181,7 @@ fn known_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
             (input, ParamValue::Value { value })
         }
         _ => {
-            return Err(nom::Err::Failure(Error::new(
+            return Err(nom::Err::Error(Error::new(
                 input,
                 InnerError::UnknownParamName(name.to_vec()),
             )));
