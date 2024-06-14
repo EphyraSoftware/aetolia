@@ -10,6 +10,7 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::crlf;
 use nom::combinator::{eof, verify};
+use nom::error::ParseError;
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::IResult;
@@ -17,7 +18,7 @@ use nom::Parser;
 
 pub mod types;
 
-pub fn ical_stream(mut input: &[u8]) -> IResult<&[u8], Vec<ICalendar>, Error> {
+pub fn ical_stream<'a, E: ParseError<&'a [u8]>>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E> {
     let mut out = Vec::new();
 
     loop {
@@ -34,7 +35,7 @@ pub fn ical_stream(mut input: &[u8]) -> IResult<&[u8], Vec<ICalendar>, Error> {
     Ok((input, out))
 }
 
-pub fn ical_object(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
+pub fn ical_object<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E> {
     let (input, (_, body, _)) = tuple((
         tag("BEGIN:VCALENDAR\r\n"),
         ical_body,
@@ -44,7 +45,7 @@ pub fn ical_object(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
     Ok((input, body))
 }
 
-fn ical_body(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
+fn ical_body<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E> {
     let (input, (properties, components)) = tuple((many0(ical_cal_prop), many1(component)))(input)?;
 
     Ok((
@@ -56,7 +57,7 @@ fn ical_body(input: &[u8]) -> IResult<&[u8], ICalendar, Error> {
     ))
 }
 
-fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
+fn ical_cal_prop<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarProperty<'a>, E> {
     alt((
         prop_product_id.map(CalendarProperty::ProductId),
         prop_version.map(CalendarProperty::Version),
@@ -68,7 +69,7 @@ fn ical_cal_prop(input: &[u8]) -> IResult<&[u8], CalendarProperty, Error> {
     .parse(input)
 }
 
-fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+fn component<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     alt((
         component_event,
         component_todo,
@@ -80,7 +81,7 @@ fn component(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     ))(input)
 }
 
-fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+fn iana_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, name, _, lines, _, end_name, _)) = tuple((
         tag("BEGIN:"),
         iana_token,
@@ -101,7 +102,7 @@ fn iana_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
     Ok((input, CalendarComponent::IanaComp { name, lines }))
 }
 
-fn x_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+fn x_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, name, _, lines, _, end_name, _)) = tuple((
         tag("BEGIN:"),
         x_name,
@@ -125,6 +126,7 @@ fn x_comp(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::pre::content_line_first_pass;
     use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
 
@@ -145,4 +147,24 @@ mod tests {
         );
         assert_eq!(ical[0].components.len(), 1);
     }
+
+    // #[test]
+    // fn real_file() {
+    //     let input = std::fs::read_to_string("sample.ics").unwrap();
+    //
+    //     let (input, first) = content_line_first_pass(input.as_bytes()).unwrap();
+    //     check_rem(input, 0);
+    //
+    //     println!("{:?}", first.len());
+    //     println!("{:?}", first[0..100].to_vec());
+    //     let r = ical_stream(&first);
+    //     match r {
+    //         Err(e) => {
+    //             println!("{:?}", String::from_utf8_lossy(e.input));
+    //         }
+    //         _ => {}
+    //     }
+    //     let (rem, ical) = r.unwrap();
+    //     check_rem(rem, 0);
+    // }
 }

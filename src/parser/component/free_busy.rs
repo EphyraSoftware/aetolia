@@ -4,15 +4,17 @@ use crate::parser::property::{
     prop_date_time_start, prop_free_busy_time, prop_iana, prop_organizer, prop_request_status,
     prop_unique_identifier, prop_url, prop_x,
 };
-use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_free_busy(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_free_busy<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VFREEBUSY\r\n"),
         many0(alt((
@@ -46,12 +48,13 @@ mod tests {
         DateTimeStampProperty, DateTimeStartProperty, OrganizerProperty, Time,
         UniqueIdentifierProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_free_busy() {
         let input = b"BEGIN:VFREEBUSY\r\nUID:19970901T082949Z-FA43EF@example.com\r\nORGANIZER:mailto:jane_doe@example.com\r\nATTENDEE:mailto:john_public@example.com\r\nDTSTART:19971015T050000Z\r\nDTEND:19971016T050000Z\r\nDTSTAMP:19970901T083000Z\r\nEND:VFREEBUSY\r\n";
-        let (rem, component) = component_free_busy(input).unwrap();
+        let (rem, component) = component_free_busy::<Error>(input).unwrap();
         check_rem(rem, 0);
         match component {
             CalendarComponent::FreeBusy { properties } => {

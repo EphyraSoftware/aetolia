@@ -9,6 +9,7 @@ use nom::bytes::streaming::{tag, tag_no_case, take_while_m_n};
 use nom::character::is_digit;
 use nom::character::streaming::{char, one_of};
 use nom::combinator::{opt, recognize};
+use nom::error::ParseError;
 use nom::multi::{fold_many0, many0};
 use nom::sequence::tuple;
 use nom::IResult;
@@ -19,7 +20,7 @@ const fn is_base64(c: u8) -> bool {
     matches!(c, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/')
 }
 
-pub fn prop_value_binary(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+pub fn prop_value_binary<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     let (input, content) = recognize(tuple((
         many0(take_while_m_n(4, 4, is_base64)),
         opt(alt((
@@ -31,7 +32,7 @@ pub fn prop_value_binary(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     Ok((input, content))
 }
 
-pub fn prop_value_boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
+pub fn prop_value_boolean<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], bool, E> {
     let (input, value) = alt((
         tag_no_case("TRUE").map(|_| true),
         tag_no_case("FALSE").map(|_| false),
@@ -40,13 +41,13 @@ pub fn prop_value_boolean(input: &[u8]) -> IResult<&[u8], bool, Error> {
     Ok((input, value))
 }
 
-pub fn prop_value_calendar_user_address(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+pub fn prop_value_calendar_user_address<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E> {
     let (input, uri) = param_value_uri(input)?;
 
     Ok((input, uri))
 }
 
-pub fn prop_value_date(input: &[u8]) -> IResult<&[u8], Date, Error> {
+pub fn prop_value_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Date, E> {
     let (input, (year, month, day)) = tuple((
         take_while_m_n(4, 4, is_digit),
         take_while_m_n(2, 2, is_digit),
@@ -86,7 +87,7 @@ pub fn prop_value_date(input: &[u8]) -> IResult<&[u8], Date, Error> {
     Ok((input, Date { year, month, day }))
 }
 
-pub fn prop_value_time(input: &[u8]) -> IResult<&[u8], Time, Error> {
+pub fn prop_value_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Time, E> {
     let (input, (h, m, s, is_utc)) = tuple((
         take_while_m_n(2, 2, is_digit),
         take_while_m_n(2, 2, is_digit),
@@ -117,13 +118,13 @@ pub fn prop_value_time(input: &[u8]) -> IResult<&[u8], Time, Error> {
     ))
 }
 
-pub fn prop_value_date_time(input: &[u8]) -> IResult<&[u8], DateTime, Error> {
+pub fn prop_value_date_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E> {
     let (input, (date, _, time)) = tuple((prop_value_date, char('T'), prop_value_time))(input)?;
 
     Ok((input, DateTime { date, time }))
 }
 
-pub fn duration_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
+pub fn duration_num<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
     let (input, v) = take_while1(is_digit)(input)?;
 
     let s = std::str::from_utf8(v).map_err(|e| {
@@ -140,7 +141,7 @@ pub fn duration_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
     ))
 }
 
-fn duration_time(input: &[u8]) -> IResult<&[u8], u64, Error> {
+fn duration_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
     let (input, num) = duration_num(input)?;
 
     let (input, time_branch) = one_of("HMS")(input)?;
@@ -169,7 +170,7 @@ fn duration_time(input: &[u8]) -> IResult<&[u8], u64, Error> {
     }
 }
 
-fn opt_sign(input: &[u8]) -> IResult<&[u8], i8, Error> {
+fn opt_sign<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], i8, E> {
     opt(alt((char('+'), char('-'))))
         .map(|x| {
             match x {
@@ -182,7 +183,7 @@ fn opt_sign(input: &[u8]) -> IResult<&[u8], i8, Error> {
         .parse(input)
 }
 
-pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
+pub fn prop_value_duration<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Duration, E> {
     let (input, (sign, _)) = tuple((opt_sign, char('P')))(input)?;
 
     let (input, t) = opt(char('T'))(input)?;
@@ -237,7 +238,7 @@ pub fn prop_value_duration(input: &[u8]) -> IResult<&[u8], Duration, Error> {
     }
 }
 
-pub fn prop_value_float(input: &[u8]) -> IResult<&[u8], f64, Error> {
+pub fn prop_value_float<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], f64, E> {
     let (input, (sign, num)) = tuple((
         opt_sign,
         recognize(tuple((
@@ -259,7 +260,7 @@ pub fn prop_value_float(input: &[u8]) -> IResult<&[u8], f64, Error> {
     Ok((input, sign as f64 * num))
 }
 
-pub fn prop_value_integer(input: &[u8]) -> IResult<&[u8], i32, Error> {
+pub fn prop_value_integer<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], i32, E> {
     let (input, (sign, num)) = tuple((opt_sign, take_while1(is_digit)))(input)?;
 
     let num: i32 = std::str::from_utf8(num)
@@ -280,11 +281,11 @@ const fn is_iso_8601_basic(c: u8) -> bool {
     matches!(c, b'0'..=b'9' | b'T' | b'Z' | b'-' | b'+' | b':')
 }
 
-fn iso_8601_basic(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn iso_8601_basic<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     take_while_m_n(1, 21, is_iso_8601_basic)(input)
 }
 
-pub fn prop_value_period(input: &[u8]) -> IResult<&[u8], Period, Error> {
+pub fn prop_value_period<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Period<'a>, E> {
     let (input, (start, _, end)) = tuple((
         iso_8601_basic,
         char('/'),
@@ -302,7 +303,7 @@ const fn is_text_safe_char(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\x21' | b'\x23'..=b'\x2B' | b'\x2D'..=b'\x39' | b'\x3C'..=b'\x5B' | b'\x5D'..=b'\x7E')
 }
 
-pub fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+pub fn prop_value_text<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     let (input, r) = fold_many0(
         alt((
             // Escaped characters
@@ -330,13 +331,13 @@ pub fn prop_value_text(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     Ok((input, r))
 }
 
-fn prop_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+fn prop_value_uri<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E> {
     let (input, (_, uri, _)) = tuple((char('"'), param_value_uri, char('"')))(input)?;
 
     Ok((input, uri))
 }
 
-pub fn prop_value_utc_offset(input: &[u8]) -> IResult<&[u8], UtcOffset, Error> {
+pub fn prop_value_utc_offset<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], UtcOffset, E> {
     let (input, (sign, h, m, s)) = tuple((
         one_of("+-"),
         take_while_m_n(2, 2, is_digit),

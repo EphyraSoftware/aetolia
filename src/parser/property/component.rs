@@ -14,6 +14,7 @@ use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
 use nom::combinator::{map_res, opt, recognize, verify};
+use nom::error::ParseError;
 use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
@@ -33,7 +34,9 @@ pub struct AttachProperty<'a> {
 /// Parse an ATTACH property.
 ///
 /// RFC 5545, section 3.8.1.1
-pub fn prop_attach(input: &[u8]) -> IResult<&[u8], AttachProperty, Error> {
+pub fn prop_attach<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], AttachProperty<'a>, E> {
     let (input, (_, params, _)) = tuple((tag("ATTACH"), params, char(':')))(input)?;
 
     let is_base_64 = params.iter().any(|p| {
@@ -86,7 +89,9 @@ pub struct CategoriesProperty<'a> {
 /// Parse a CATEGORIES property.
 ///
 /// RFC 5545, section 3.8.1.2
-pub fn prop_categories(input: &[u8]) -> IResult<&[u8], CategoriesProperty, Error> {
+pub fn prop_categories<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CategoriesProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CATEGORIES"),
         params,
@@ -116,7 +121,9 @@ pub struct ClassificationProperty<'a> {
 /// Parse a CLASS property.
 ///
 /// RFC 5545, section 3.8.1.3
-pub fn prop_classification(input: &[u8]) -> IResult<&[u8], ClassificationProperty, Error> {
+pub fn prop_classification<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ClassificationProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("CLASS"),
         other_params,
@@ -149,7 +156,9 @@ pub struct CommentProperty<'a> {
 /// Parse a COMMENT property.
 ///
 /// RFC 5545, section 3.8.1.4
-pub fn prop_comment(input: &[u8]) -> IResult<&[u8], CommentProperty, Error> {
+pub fn prop_comment<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CommentProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("COMMENT"),
         params,
@@ -170,7 +179,9 @@ pub struct DescriptionProperty<'a> {
 /// Parse a DESCRIPTION property.
 ///
 /// RFC 5545, section 3.8.1.5
-pub fn prop_description(input: &[u8]) -> IResult<&[u8], DescriptionProperty, Error> {
+pub fn prop_description<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DescriptionProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DESCRIPTION"),
         params,
@@ -192,7 +203,9 @@ pub struct GeographicPositionProperty<'a> {
 /// Parse a GEO property.
 ///
 /// RFC 5545, section 3.8.1.6
-pub fn prop_geographic_position(input: &[u8]) -> IResult<&[u8], GeographicPositionProperty, Error> {
+pub fn prop_geographic_position<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], GeographicPositionProperty<'a>, E> {
     let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
         tag("GEO"),
         other_params,
@@ -220,7 +233,9 @@ pub struct LocationProperty<'a> {
 /// Parse a LOCATION property.
 ///
 /// RFC 5545, section 3.8.1.7
-pub fn prop_location(input: &[u8]) -> IResult<&[u8], LocationProperty, Error> {
+pub fn prop_location<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], LocationProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("LOCATION"),
         params,
@@ -241,7 +256,9 @@ pub struct PercentCompleteProperty<'a> {
 /// Parse a PERCENT-COMPLETE property.
 ///
 /// RFC 5545, section 3.8.1.8
-pub fn prop_percent_complete(input: &[u8]) -> IResult<&[u8], PercentCompleteProperty, Error> {
+pub fn prop_percent_complete<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], PercentCompleteProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("PERCENT-COMPLETE"),
         other_params,
@@ -268,7 +285,9 @@ pub struct PriorityProperty<'a> {
 /// Parse a PRIORITY property.
 ///
 /// RFC 5545, section 3.8.1.9
-pub fn prop_priority(input: &[u8]) -> IResult<&[u8], PriorityProperty, Error> {
+pub fn prop_priority<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], PriorityProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("PRIORITY"),
         other_params,
@@ -295,7 +314,9 @@ pub struct ResourcesProperty<'a> {
 /// Parse a RESOURCES property.
 ///
 /// RFC 5545, section 3.8.1.10
-pub fn prop_resources(input: &[u8]) -> IResult<&[u8], ResourcesProperty, Error> {
+pub fn prop_resources<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ResourcesProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RESOURCES"),
         params,
@@ -328,7 +349,9 @@ pub struct StatusProperty<'a> {
 /// Parse a STATUS property.
 ///
 /// RFC 5545, section 3.8.1.11
-pub fn prop_status(input: &[u8]) -> IResult<&[u8], StatusProperty, Error> {
+pub fn prop_status<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], StatusProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("STATUS"),
         other_params,
@@ -364,7 +387,9 @@ pub struct SummaryProperty<'a> {
 /// Parse a SUMMARY property.
 ///
 /// RFC 5545, section 3.8.1.12
-pub fn prop_summary(input: &[u8]) -> IResult<&[u8], SummaryProperty, Error> {
+pub fn prop_summary<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], SummaryProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("SUMMARY"),
         params,
@@ -385,7 +410,9 @@ pub struct DateTimeCompletedProperty<'a> {
 /// Parse a COMPLETED property.
 ///
 /// RFC 5545, section 3.8.2.1
-pub fn prop_date_time_completed(input: &[u8]) -> IResult<&[u8], DateTimeCompletedProperty, Error> {
+pub fn prop_date_time_completed<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeCompletedProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("COMPLETED"),
         other_params,
@@ -412,7 +439,9 @@ pub struct DateTimeEndProperty<'a> {
 /// Parse a DTEND property.
 ///
 /// RFC 5545, section 3.8.2.2
-pub fn prop_date_time_end(input: &[u8]) -> IResult<&[u8], DateTimeEndProperty, Error> {
+pub fn prop_date_time_end<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeEndProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DTEND"),
         params,
@@ -436,7 +465,9 @@ pub struct DateTimeDueProperty<'a> {
 /// Parse a DUE property.
 ///
 /// RFC 5545, section 3.8.2.3
-pub fn prop_date_time_due(input: &[u8]) -> IResult<&[u8], DateTimeDueProperty, Error> {
+pub fn prop_date_time_due<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeDueProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DUE"),
         params,
@@ -460,7 +491,9 @@ pub struct DateTimeStartProperty<'a> {
 /// Parse a DTSTART property.
 ///
 /// RFC 5545, section 3.8.2.4
-pub fn prop_date_time_start(input: &[u8]) -> IResult<&[u8], DateTimeStartProperty, Error> {
+pub fn prop_date_time_start<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeStartProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DTSTART"),
         params,
@@ -484,7 +517,9 @@ pub struct DurationProperty<'a> {
 /// Parse a DURATION property.
 ///
 /// RFC 5545, section 3.8.2.5
-pub fn prop_duration(input: &[u8]) -> IResult<&[u8], DurationProperty, Error> {
+pub fn prop_duration<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DurationProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DURATION"),
         other_params,
@@ -511,7 +546,9 @@ pub struct FreeBusyTimeProperty<'a> {
 /// Parse a FREEBUSY property.
 ///
 /// RFC 5545, section 3.8.2.6
-pub fn prop_free_busy_time(input: &[u8]) -> IResult<&[u8], FreeBusyTimeProperty, Error> {
+pub fn prop_free_busy_time<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], FreeBusyTimeProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("FREEBUSY"),
         params,
@@ -538,7 +575,9 @@ pub struct TimeTransparencyProperty<'a> {
 /// Parse a TRANSP property.
 ///
 /// RFC 5545, section 3.8.2.7
-pub fn prop_time_transparency(input: &[u8]) -> IResult<&[u8], TimeTransparencyProperty, Error> {
+pub fn prop_time_transparency<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeTransparencyProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TRANSP"),
         other_params,
@@ -568,7 +607,9 @@ pub struct TimeZoneIdProperty<'a> {
 /// Parse a TZID property.
 ///
 /// RFC 5545, section 3.8.3.1
-pub fn prop_time_zone_id(input: &[u8]) -> IResult<&[u8], TimeZoneIdProperty, Error> {
+pub fn prop_time_zone_id<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeZoneIdProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZID"),
         other_params,
@@ -601,7 +642,9 @@ pub struct TimeZoneNameProperty<'a> {
 /// Parse a TZNAME property.
 ///
 /// RFC 5545, section 3.8.3.2
-pub fn prop_time_zone_name(input: &[u8]) -> IResult<&[u8], TimeZoneNameProperty, Error> {
+pub fn prop_time_zone_name<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeZoneNameProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("TZNAME"),
         params,
@@ -622,7 +665,9 @@ pub struct TimeZoneOffsetProperty<'a> {
 /// Parse a TZOFFSETFROM property.
 ///
 /// RFC 5545, section 3.8.3.3
-pub fn prop_time_zone_offset_from(input: &[u8]) -> IResult<&[u8], TimeZoneOffsetProperty, Error> {
+pub fn prop_time_zone_offset_from<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeZoneOffsetProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZOFFSETFROM"),
         other_params,
@@ -643,7 +688,9 @@ pub fn prop_time_zone_offset_from(input: &[u8]) -> IResult<&[u8], TimeZoneOffset
 /// Parse a TZOFFSETTO property.
 ///
 /// RFC 5545, section 3.8.3.4
-pub fn prop_time_zone_offset_to(input: &[u8]) -> IResult<&[u8], TimeZoneOffsetProperty, Error> {
+pub fn prop_time_zone_offset_to<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeZoneOffsetProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZOFFSETTO"),
         other_params,
@@ -670,7 +717,9 @@ pub struct TimeZoneUrlProperty<'a> {
 /// Parse a TZURL property.
 ///
 /// RFC 5545, section 3.8.3.5
-pub fn prop_time_zone_url(input: &[u8]) -> IResult<&[u8], TimeZoneUrlProperty, Error> {
+pub fn prop_time_zone_url<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TimeZoneUrlProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZURL"),
         other_params,
@@ -697,7 +746,9 @@ pub struct AttendeeProperty<'a> {
 /// Parse an ATTENDEE property.
 ///
 /// RFC 5545, section 3.8.4.1
-pub fn prop_attendee(input: &[u8]) -> IResult<&[u8], AttendeeProperty, Error> {
+pub fn prop_attendee<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], AttendeeProperty<'a>, E> {
     let (input, (_, params, _, uri, _)) = tuple((
         tag("ATTENDEE"),
         params,
@@ -718,7 +769,9 @@ pub struct ContactProperty<'a> {
 /// Parse a CONTACT property.
 ///
 /// RFC 5545, section 3.8.4.2
-pub fn prop_contact(input: &[u8]) -> IResult<&[u8], ContactProperty, Error> {
+pub fn prop_contact<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ContactProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CONTACT"),
         params,
@@ -739,7 +792,9 @@ pub struct OrganizerProperty<'a> {
 /// Parse an ORGANIZER property.
 ///
 /// RFC 5545, section 3.8.4.3
-pub fn prop_organizer(input: &[u8]) -> IResult<&[u8], OrganizerProperty, Error> {
+pub fn prop_organizer<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], OrganizerProperty<'a>, E> {
     let (input, (_, params, _, uri, _)) = tuple((
         tag("ORGANIZER"),
         params,
@@ -760,7 +815,9 @@ pub struct RecurrenceIdProperty<'a> {
 /// Parse a RECURRENCE-ID property.
 ///
 /// RFC 5545, section 3.8.4.4
-pub fn prop_recurrence_id(input: &[u8]) -> IResult<&[u8], RecurrenceIdProperty, Error> {
+pub fn prop_recurrence_id<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RecurrenceIdProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RECURRENCE-ID"),
         params,
@@ -784,7 +841,9 @@ pub struct RelatedToProperty<'a> {
 /// Parse a RELATED-TO property.
 ///
 /// RFC 5545, section 3.8.4.5
-pub fn prop_related_to(input: &[u8]) -> IResult<&[u8], RelatedToProperty, Error> {
+pub fn prop_related_to<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RelatedToProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RELATED-TO"),
         params,
@@ -805,7 +864,9 @@ pub struct UrlProperty<'a> {
 /// Parse a URL property.
 ///
 /// RFC 5545, section 3.8.4.6
-pub fn prop_url(input: &[u8]) -> IResult<&[u8], UrlProperty, Error> {
+pub fn prop_url<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], UrlProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("URL"),
         other_params,
@@ -832,7 +893,9 @@ pub struct UniqueIdentifierProperty<'a> {
 /// Parse a UID property.
 ///
 /// RFC 5545, section 3.8.4.7
-pub fn prop_unique_identifier(input: &[u8]) -> IResult<&[u8], UniqueIdentifierProperty, Error> {
+pub fn prop_unique_identifier<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], UniqueIdentifierProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("UID"),
         other_params,
@@ -859,9 +922,9 @@ pub struct ExceptionDateTimesProperty<'a> {
 /// Parse an EXDATE property.
 ///
 /// RFC 5545, section 3.8.5.1
-pub fn prop_exception_date_times(
-    input: &[u8],
-) -> IResult<&[u8], ExceptionDateTimesProperty, Error> {
+pub fn prop_exception_date_times<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ExceptionDateTimesProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("EXDATE"),
         params,
@@ -888,9 +951,9 @@ pub struct RecurrenceDateTimesProperty<'a> {
 /// Parse an RDATE property.
 ///
 /// RFC 5545, section 3.8.5.2
-pub fn prop_recurrence_date_times(
-    input: &[u8],
-) -> IResult<&[u8], RecurrenceDateTimesProperty, Error> {
+pub fn prop_recurrence_date_times<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RecurrenceDateTimesProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RDATE"),
         params,
@@ -918,7 +981,9 @@ pub struct RecurrenceRuleProperty<'a> {
 /// Parse an RRULE property.
 ///
 /// RFC 5545, section 3.8.5.3
-pub fn prop_recurrence_rule(input: &[u8]) -> IResult<&[u8], RecurrenceRuleProperty, Error> {
+pub fn prop_recurrence_rule<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RecurrenceRuleProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) =
         tuple((tag("RRULE"), other_params, char(':'), recur, tag("\r\n")))(input)?;
 
@@ -949,7 +1014,9 @@ pub struct ActionProperty<'a> {
 /// Parse an ACTION property.
 ///
 /// RFC 5545, section 3.8.6.1
-pub fn prop_action(input: &[u8]) -> IResult<&[u8], ActionProperty, Error> {
+pub fn prop_action<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ActionProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("ACTION"),
         other_params,
@@ -982,7 +1049,9 @@ pub struct RepeatCountProperty<'a> {
 /// Parse a REPEAT property.
 ///
 /// RFC 5545, section 3.8.6.2
-pub fn prop_repeat_count(input: &[u8]) -> IResult<&[u8], RepeatCountProperty, Error> {
+pub fn prop_repeat_count<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RepeatCountProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("REPEAT"),
         other_params,
@@ -1015,7 +1084,9 @@ pub struct TriggerProperty<'a> {
 /// Parse a TRIGGER property.
 ///
 /// RFC 5545, section 3.8.6.3
-pub fn prop_trigger(input: &[u8]) -> IResult<&[u8], TriggerProperty, Error> {
+pub fn prop_trigger<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TriggerProperty<'a>, E> {
     let (input, (_, params, _)) = tuple((tag("TRIGGER"), params, char(':')))(input)?;
 
     let value_choice = params
@@ -1060,7 +1131,9 @@ pub struct CreatedProperty<'a> {
 /// Parse a CREATED property.
 ///
 /// RFC 5545, section 3.8.7.1
-pub fn prop_created(input: &[u8]) -> IResult<&[u8], CreatedProperty, Error> {
+pub fn prop_created<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CreatedProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("CREATED"),
         other_params,
@@ -1087,7 +1160,9 @@ pub struct DateTimeStampProperty<'a> {
 /// Parse a DTSTAMP property.
 ///
 /// RFC 5545, section 3.8.7.2
-pub fn prop_date_time_stamp(input: &[u8]) -> IResult<&[u8], DateTimeStampProperty, Error> {
+pub fn prop_date_time_stamp<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeStampProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DTSTAMP"),
         other_params,
@@ -1114,7 +1189,9 @@ pub struct LastModifiedProperty<'a> {
 /// Parse a LAST-MODIFIED property.
 ///
 /// RFC 5545, section 3.8.7.3
-pub fn prop_last_modified(input: &[u8]) -> IResult<&[u8], LastModifiedProperty, Error> {
+pub fn prop_last_modified<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], LastModifiedProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("LAST-MODIFIED"),
         other_params,
@@ -1141,7 +1218,9 @@ pub struct SequenceProperty<'a> {
 /// Parse a SEQUENCE property.
 ///
 /// RFC 5545, section 3.8.7.4
-pub fn prop_sequence(input: &[u8]) -> IResult<&[u8], SequenceProperty, Error> {
+pub fn prop_sequence<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], SequenceProperty<'a>, E> {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("SEQUENCE"),
         other_params,
@@ -1170,8 +1249,10 @@ pub struct RequestStatusProperty<'a> {
 /// Parse a REQUEST-STATUS property.
 ///
 /// RFC 5545, section 3.8.8.3
-pub fn prop_request_status(input: &[u8]) -> IResult<&[u8], RequestStatusProperty, Error> {
-    fn status_code(input: &[u8]) -> IResult<&[u8], Vec<u32>, Error> {
+pub fn prop_request_status<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RequestStatusProperty<'a>, E> {
+    fn status_code<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u32>, E> {
         let (input, (num, mut nums)) = tuple((
             map_res(
                 verify(take_while1(is_digit), |v: &[u8]| v.len() == 1),

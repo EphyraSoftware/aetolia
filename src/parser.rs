@@ -107,11 +107,11 @@ const fn is_control(b: u8) -> bool {
     matches!(b, b'\0'..=b'\x08' | b'\x0A'..=b'\x1F' | b'\x7F')
 }
 
-fn param_text(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn param_text<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     take_while(|c| c != b'\"' && c != b';' && c != b':' && c != b',' && !is_control(c))(input)
 }
 
-fn quoted_string(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn quoted_string<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     let (input, (_, content, _)) = tuple((
         char('"'),
         take_while(|c| c != b'\"' && !is_control(c)),
@@ -121,34 +121,34 @@ fn quoted_string(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     Ok((input, content))
 }
 
-fn param_value(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn param_value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     let (input, value) = alt((quoted_string, param_text))(input)?;
 
     Ok((input, value))
 }
 
-fn safe_char(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn safe_char<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     take_while(|c| c != b'\"' && !is_control(c))(input)
 }
 
-fn iana_token(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn iana_token<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     take_while1(|c: u8| c.is_alphanum() || c == b'-')(input)
 }
 
-fn vendor_id(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn vendor_id<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     let (rest, id) = alphanumeric1(input)?;
 
-    if id.len() < 3 {
-        return Err(nom::Err::Failure(Error::new(
-            rest,
-            InnerError::XNameTooShort,
-        )));
-    }
+    // if id.len() < 3 {
+    //     return Err(nom::Err::Failure(Error::new(
+    //         rest,
+    //         InnerError::XNameTooShort,
+    //     )));
+    // }
 
     Ok((rest, id))
 }
 
-fn x_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn x_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     let (input, x_name) = recognize(tuple((
         tag_no_case("X-"),
         opt(tuple((vendor_id, char('-')))),
@@ -158,11 +158,11 @@ fn x_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     Ok((input, x_name))
 }
 
-fn name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     alt((iana_token, x_name))(input)
 }
 
-fn param_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn param_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     alt((iana_token, x_name))(input)
 }
 
@@ -172,11 +172,11 @@ const fn is_reg_name_char(b: u8) -> bool {
 }
 
 // See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
-fn reg_name(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn reg_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     take_while_m_n(1, 127, is_reg_name_char)(input)
 }
 
-fn read_string<'a>(input: &'a [u8], context: &str) -> Result<String, nom::Err<Error<'a>>> {
+fn read_string<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], context: &str) -> Result<String, nom::Err<E>> {
     Ok(std::str::from_utf8(input)
         .map_err(|e| {
             nom::Err::Failure(Error::new(
@@ -187,7 +187,7 @@ fn read_string<'a>(input: &'a [u8], context: &str) -> Result<String, nom::Err<Er
         .to_string())
 }
 
-pub fn read_int<N: FromStr>(input: &[u8]) -> Result<N, nom::Err<Error>> {
+pub fn read_int<'a, E: ParseError<&'a [u8]>, N: FromStr>(input: &'a [u8]) -> Result<N, nom::Err<E>> {
     std::str::from_utf8(input)
         .map_err(|e| {
             nom::Err::Error(Error::new(
@@ -199,7 +199,7 @@ pub fn read_int<N: FromStr>(input: &[u8]) -> Result<N, nom::Err<Error>> {
         .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum)))
 }
 
-fn line_value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn line_value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     let (input, v) = fold_many0(
         alt((
             tuple((tag("\r\n"), one_of(" \t"))).map(|_| vec![]),
@@ -215,21 +215,21 @@ fn line_value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     Ok((input, v))
 }
 
-fn value_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn value_char<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     alt((
         single(|b| matches!(b, b' ' | b'\t' | b'\x21'..=b'\x7E')).map(|c| vec![c]),
         utf8_seq.map(|c| c.to_vec()),
     ))(input)
 }
 
-pub fn value(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+pub fn value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     fold_many0(value_char, Vec::new, |mut acc, item| {
         acc.extend_from_slice(&item);
         acc
     })(input)
 }
 
-fn param(input: &[u8]) -> IResult<&[u8], param::Param, Error> {
+fn param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], param::Param<'a>, E> {
     let (input, (name, values)) = separated_pair(
         param_name,
         char('='),
@@ -245,7 +245,7 @@ fn param(input: &[u8]) -> IResult<&[u8], param::Param, Error> {
     ))
 }
 
-fn content_line(input: &[u8]) -> IResult<&[u8], ContentLine, Error> {
+fn content_line<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E> {
     let (input, (property_name, params, _, value, _)) = tuple((
         name,
         many0(tuple((char(';'), param)).map(|(_, p)| p)),

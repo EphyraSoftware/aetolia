@@ -19,10 +19,11 @@ use nom::character::streaming::char;
 use nom::combinator::{recognize, verify};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use nom::error::ParseError;
 pub use value::*;
 pub use value_types::*;
 
-pub fn prop_product_id(input: &[u8]) -> IResult<&[u8], ProductId, Error> {
+pub fn prop_product_id<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ProductId<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("PRODID"),
         other_params,
@@ -40,7 +41,7 @@ pub fn prop_product_id(input: &[u8]) -> IResult<&[u8], ProductId, Error> {
     ))
 }
 
-pub fn prop_version(input: &[u8]) -> IResult<&[u8], VersionProperty, Error> {
+pub fn prop_version<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], VersionProperty<'a>, E> {
     let (input, (_, params, _, (min_ver, max_ver), _)) = tuple((
         tag("VERSION"),
         other_params,
@@ -68,7 +69,7 @@ pub fn prop_version(input: &[u8]) -> IResult<&[u8], VersionProperty, Error> {
     ))
 }
 
-pub fn prop_calendar_scale(input: &[u8]) -> IResult<&[u8], CalendarScaleProperty, Error> {
+pub fn prop_calendar_scale<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarScaleProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CALSCALE"),
         other_params,
@@ -86,7 +87,7 @@ pub fn prop_calendar_scale(input: &[u8]) -> IResult<&[u8], CalendarScaleProperty
     ))
 }
 
-pub fn prop_method(input: &[u8]) -> IResult<&[u8], MethodProperty, Error> {
+pub fn prop_method<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], MethodProperty<'a>, E> {
     let (input, (_, params, _, value, _)) = tuple((
         tag("METHOD"),
         other_params,
@@ -104,7 +105,7 @@ pub fn prop_method(input: &[u8]) -> IResult<&[u8], MethodProperty, Error> {
     ))
 }
 
-pub fn prop_x(input: &[u8]) -> IResult<&[u8], XProperty, Error> {
+pub fn prop_x<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], XProperty<'a>, E> {
     let (input, (name, params, _, value, _)) =
         tuple((x_name, params, char(':'), value, tag("\r\n")))(input)?;
 
@@ -118,7 +119,7 @@ pub fn prop_x(input: &[u8]) -> IResult<&[u8], XProperty, Error> {
     ))
 }
 
-pub fn prop_iana(input: &[u8]) -> IResult<&[u8], IanaProperty, Error> {
+pub fn prop_iana<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], IanaProperty<'a>, E> {
     let (input, (name, params, _, value, _)) = tuple((
         verify(iana_token, |t: &[u8]| {
             // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out

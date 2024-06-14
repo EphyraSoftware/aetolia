@@ -12,18 +12,19 @@ use nom::combinator::map_res;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{IResult, Parser};
+use nom::error::ParseError;
 pub use types::*;
 pub use values::*;
 
-pub fn params(input: &[u8]) -> IResult<&[u8], Vec<Param>, Error> {
+pub fn params<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E> {
     many0(tuple((char(';'), known_param)).map(|(_, p)| p)).parse(input)
 }
 
-pub fn param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+pub fn param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
     alt((known_param, iana_param, x_param))(input)
 }
 
-fn known_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+fn known_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
     let (input, (name, _)) = tuple((param_name, char('=')))(input)?;
 
     let name_s = read_string(name, "param_name")?;
@@ -197,15 +198,15 @@ fn known_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
     ))
 }
 
-pub fn other_params(input: &[u8]) -> IResult<&[u8], Vec<Param>, Error> {
+pub fn other_params<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E> {
     many0(tuple((char(';'), other_param)).map(|(_, p)| p)).parse(input)
 }
 
-pub fn other_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+pub fn other_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
     alt((iana_param, x_param))(input)
 }
 
-fn iana_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+fn iana_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
     let (input, (name, _, values)) = tuple((
         param_name,
         char('='),
@@ -221,7 +222,7 @@ fn iana_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
     ))
 }
 
-fn x_param(input: &[u8]) -> IResult<&[u8], Param, Error> {
+fn x_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
     let (input, (name, _, values)) =
         tuple((x_name, char('='), separated_list1(char(','), param_value)))(input)?;
 

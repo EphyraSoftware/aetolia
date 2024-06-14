@@ -1,5 +1,6 @@
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
@@ -9,9 +10,10 @@ use crate::parser::property::{
     prop_action, prop_attach, prop_attendee, prop_description, prop_duration, prop_iana,
     prop_repeat_count, prop_summary, prop_trigger, prop_x,
 };
-use crate::parser::Error;
 
-pub fn component_alarm(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_alarm<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VALARM\r\n"),
         many0(alt((
@@ -42,12 +44,13 @@ mod tests {
         Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration,
         DurationOrDateTime, DurationProperty, RepeatCountProperty, Time, TriggerProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_alarm() {
         let input = b"BEGIN:VALARM\r\nTRIGGER;VALUE=DATE-TIME:19970317T133000Z\r\nREPEAT:4\r\nDURATION:PT15M\r\nACTION:AUDIO\r\nATTACH;FMTTYPE=audio/basic:ftp://example.com/pub/sounds/bell-01.aud\r\nEND:VALARM\r\n";
-        let (rem, component) = component_alarm(input).unwrap();
+        let (rem, component) = component_alarm::<Error>(input).unwrap();
         check_rem(rem, 0);
         match component {
             CalendarComponent::Alarm { properties } => {

@@ -9,6 +9,7 @@ use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 use std::net::{Ipv4Addr, Ipv6Addr};
+use nom::error::ParseError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IpAddr {
@@ -39,7 +40,7 @@ pub struct Uri<'a> {
     pub fragment: Option<&'a [u8]>,
 }
 
-pub fn param_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+pub fn param_value_uri<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E> {
     let (input, (scheme, _, (authority, path), query, fragment)) = tuple((
         scheme,
         char(':'),
@@ -69,7 +70,7 @@ const fn is_scheme_char(b: u8) -> bool {
     matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'-' | b'.')
 }
 
-fn scheme(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn scheme<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     verify(take_while1(is_scheme_char), |sch: &[u8]| {
         is_alphabetic(sch[0])
     })(input)
@@ -90,7 +91,7 @@ const fn is_unreserved(b: u8) -> bool {
     matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~')
 }
 
-fn pct_encoded(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn pct_encoded<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     tuple((
         char('%'),
         take_while_m_n(2, 2, is_hex_digit_upper).map(|v| {
@@ -110,7 +111,7 @@ const fn is_sub_delim(b: u8) -> bool {
     )
 }
 
-fn authority(input: &[u8]) -> IResult<&[u8], Authority, Error> {
+fn authority<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Authority, E> {
     tuple((
         opt(tuple((user_info, char('@'))).map(|(u, _)| u)),
         host,
@@ -124,7 +125,7 @@ fn authority(input: &[u8]) -> IResult<&[u8], Authority, Error> {
     .parse(input)
 }
 
-fn port(input: &[u8]) -> IResult<&[u8], u16, Error> {
+fn port<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u16, E> {
     map_res(take_while(is_digit), |c| {
         std::str::from_utf8(c)
             .map_err(|e| {
@@ -139,7 +140,7 @@ fn port(input: &[u8]) -> IResult<&[u8], u16, Error> {
     .parse(input)
 }
 
-fn user_info(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn user_info<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     fold_many1(
         alt((
             single(is_unreserved).map(|c| vec![c]),
@@ -155,7 +156,7 @@ fn user_info(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     )(input)
 }
 
-fn host(input: &[u8]) -> IResult<&[u8], Host, Error> {
+fn host<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Host, E> {
     alt((
         ip_literal.map(Host::IpAddr),
         ip_v4_addr
@@ -165,7 +166,7 @@ fn host(input: &[u8]) -> IResult<&[u8], Host, Error> {
     ))(input)
 }
 
-fn ip_literal(input: &[u8]) -> IResult<&[u8], IpAddr, Error> {
+fn ip_literal<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], IpAddr, E> {
     tuple((
         tag("["),
         alt((
@@ -178,7 +179,7 @@ fn ip_literal(input: &[u8]) -> IResult<&[u8], IpAddr, Error> {
     .parse(input)
 }
 
-fn ip_v_future_addr(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn ip_v_future_addr<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E> {
     recognize(tuple((
         char('v').map(|a| a as u8),
         take_while1(is_hex_digit),
@@ -191,7 +192,7 @@ fn ip_v_future_addr(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     )))(input)
 }
 
-fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
+fn ip_v6_addr<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Ipv6Addr, E> {
     let (input, prefix_parts) = separated_list0(char(':'), h_16)(input)?;
 
     if prefix_parts.len() > 7 {
@@ -246,7 +247,7 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
     Ok((input, Ipv6Addr::from(content)))
 }
 
-fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
+fn h_16<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], [u8; 2], E> {
     take_while_m_n(1, 4, is_hex_digit)
         .map(|c: &[u8]| {
             let mut src = c.to_vec();
@@ -260,7 +261,7 @@ fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
         .parse(input)
 }
 
-fn ls_32(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn ls_32<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     alt((
         tuple((h_16, char(':'), h_16)).map(|(a, _, b)| {
             let mut r = Vec::with_capacity(4);
@@ -272,7 +273,7 @@ fn ls_32(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     ))(input)
 }
 
-fn ip_v4_addr(input: &[u8]) -> IResult<&[u8], [u8; 4], Error> {
+fn ip_v4_addr<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], [u8; 4], E> {
     tuple((
         dec_octet,
         char('.'),
@@ -286,7 +287,7 @@ fn ip_v4_addr(input: &[u8]) -> IResult<&[u8], [u8; 4], Error> {
     .parse(input)
 }
 
-fn dec_octet(input: &[u8]) -> IResult<&[u8], u8, Error> {
+fn dec_octet<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u8, E> {
     map_res(
         verify(take_while_m_n(1, 3, is_digit), |b: &[u8]| {
             // May not have a 0 prefix
@@ -311,7 +312,7 @@ fn dec_octet(input: &[u8]) -> IResult<&[u8], u8, Error> {
     )(input)
 }
 
-fn reg_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn reg_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     fold_many0(
         alt((
             single(is_unreserved).map(|c| vec![c]),
@@ -326,33 +327,33 @@ fn reg_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     )(input)
 }
 
-fn path_absolute_empty(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_absolute_empty<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     recognize(many0(tuple((char('/'), segment))))(input)
 }
 
-fn path_absolute(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_absolute<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     recognize(tuple((segment_nz, path_absolute_empty)))(input)
 }
 
-fn path_rootless(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_rootless<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     recognize(tuple((segment_nz, many0(tuple((char('/'), segment))))))(input)
 }
 
-fn segment(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn segment<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     fold_many0(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
     })(input)
 }
 
-fn segment_nz(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn segment_nz<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     fold_many1(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
     })(input)
 }
 
-fn query_or_fragment(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn query_or_fragment<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E> {
     recognize(many0(alt((
         p_char,
         tag("/").map(|c: &[u8]| c.to_vec()),
@@ -360,7 +361,7 @@ fn query_or_fragment(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     ))))(input)
 }
 
-fn p_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn p_char<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     alt((
         single(is_unreserved).map(|c| vec![c]),
         pct_encoded,

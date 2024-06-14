@@ -7,14 +7,16 @@ use crate::parser::property::{
     prop_request_status, prop_sequence, prop_status, prop_summary, prop_unique_identifier,
     prop_url, prop_x,
 };
-use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
-pub fn component_journal(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_journal<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VJOURNAL\r\n"),
         many0(alt((
@@ -62,12 +64,13 @@ mod tests {
         Date, DateOrDateTime, DateTime, DateTimeStampProperty, DateTimeStartProperty,
         DescriptionProperty, SummaryProperty, Time, UniqueIdentifierProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_journal() {
         let input = b"BEGIN:VJOURNAL\r\nUID:19970901T130000Z-123405@example.com\r\nDTSTAMP:19970901T130000Z\r\nDTSTART;VALUE=DATE:19970317\r\nSUMMARY:Staff meeting minutes\r\nDESCRIPTION:1. Staff meeting: Participants include Joe\\,\r\n  Lisa\\, and Bob. Aurora project plans were reviewed.\r\n  There is currently no budget reserves for this project.\r\n  Lisa will escalate to management. Next meeting on Tuesday.\\n\r\n 2. Telephone Conference: ABC Corp. sales representative\r\n  called to discuss new printer. Promised to get us a demo by\r\n  Friday.\\n3. Henry Miller (Handsoff Insurance): Car was\r\n  totaled by tree. Is looking into a loaner car. 555-2323\r\n  (tel).\r\nEND:VJOURNAL\r\n";
-        let (rem, component) = component_journal(input).unwrap();
+        let (rem, component) = component_journal::<Error>(input).unwrap();
         check_rem(rem, 0);
 
         match component {

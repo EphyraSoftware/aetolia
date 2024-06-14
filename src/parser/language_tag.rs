@@ -9,6 +9,7 @@ use nom::combinator::{opt, peek, recognize, verify};
 use nom::multi::{many0, many1, many_m_n};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use nom::error::ParseError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LanguageTag {
@@ -41,7 +42,7 @@ const fn is_singleton(b: u8) -> bool {
     matches!(b, b'\x30'..=b'\x39' | b'\x41'..=b'\x57' | b'\x59'..=b'\x5A' | b'\x61'..=b'\x77' | b'\x79'..=b'\x7A')
 }
 
-fn private_use(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn private_use<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     recognize(tuple((
         char('x'),
         many1(tuple((char('-'), take_while_m_n(1, 8, is_alphanumeric)))),
@@ -49,7 +50,7 @@ fn private_use(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 }
 
 // TODO Use own error?
-pub fn language_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
+pub fn language_tag<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E> {
     let (input, grandfathered_irregular) = opt(alt((
         tag("en-GB-oed"),
         tag("i-ami"),
@@ -107,14 +108,14 @@ pub fn language_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
 ///   - If the next byte is alphanumeric, then reject
 ///
 /// This can be used to prevent bad matches that end in the middle of a component.
-fn clip(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn clip<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
     peek(verify(
         take_while_m_n(0, 1, |c| c == b'-' || is_alphanumeric(c)),
         |m: &[u8]| m == [b'-'] || m.is_empty(),
     ))(input)
 }
 
-pub fn lang_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
+pub fn lang_tag<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E> {
     let (input, (language, ext_lang)) = alt((
         tuple((
             take_while_m_n(2, 3, is_alphabetic),

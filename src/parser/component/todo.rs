@@ -9,15 +9,17 @@ use crate::parser::property::{
     prop_recurrence_rule, prop_related_to, prop_request_status, prop_resources, prop_sequence,
     prop_status, prop_summary, prop_unique_identifier, prop_url, prop_x,
 };
-use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_todo<'a, E: ParseError<&'a [u8]>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
     let (input, (_, properties, alarms, _)) = tuple((
         tag("BEGIN:VTODO\r\n"),
         many0(alt((
@@ -75,12 +77,13 @@ mod tests {
         DateTimeDueProperty, DateTimeStampProperty, Status, StatusProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_todo() {
         let input = b"BEGIN:VTODO\r\nUID:20070313T123432Z-456553@example.com\r\nDTSTAMP:20070313T123432Z\r\nDUE;VALUE=DATE:20070501\r\nSUMMARY:Submit Quebec Income Tax Return for 2006\r\nCLASS:CONFIDENTIAL\r\nCATEGORIES:FAMILY,FINANCE\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\n";
-        let (rem, component) = component_todo(input).unwrap();
+        let (rem, component) = component_todo::<Error>(input).unwrap();
         check_rem(rem, 0);
 
         match component {

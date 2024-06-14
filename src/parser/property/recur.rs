@@ -9,6 +9,7 @@ use nom::combinator::{map_res, opt};
 use nom::multi::separated_list1;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use nom::error::ParseError;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RecurRulePart {
@@ -56,11 +57,11 @@ pub struct OffsetWeekday {
     pub weekday: Weekday,
 }
 
-pub fn recur(input: &[u8]) -> IResult<&[u8], Vec<RecurRulePart>, Error> {
+pub fn recur<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E> {
     separated_list1(char(';'), recur_rule_part)(input)
 }
 
-fn recur_rule_part(input: &[u8]) -> IResult<&[u8], RecurRulePart, Error> {
+fn recur_rule_part<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], RecurRulePart, E> {
     let (input, (name, _)) = tuple((take_while1(is_alphabetic), char('=')))(input)?;
 
     match std::str::from_utf8(name).map_err(|e| {
@@ -98,7 +99,7 @@ fn recur_rule_part(input: &[u8]) -> IResult<&[u8], RecurRulePart, Error> {
     }
 }
 
-fn recur_freq(input: &[u8]) -> IResult<&[u8], RecurFreq, Error> {
+fn recur_freq<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], RecurFreq, E> {
     let (input, freq) = alt((
         tag("SECONDLY").map(|_| RecurFreq::Secondly),
         tag("MINUTELY").map(|_| RecurFreq::Minutely),
@@ -112,7 +113,7 @@ fn recur_freq(input: &[u8]) -> IResult<&[u8], RecurFreq, Error> {
     Ok((input, freq))
 }
 
-fn end_date(input: &[u8]) -> IResult<&[u8], DateTime, Error> {
+fn end_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E> {
     let (input, (date, opt_time)) =
         tuple((prop_value_date, opt(tuple((char('T'), prop_value_time)))))(input)?;
 
@@ -121,7 +122,7 @@ fn end_date(input: &[u8]) -> IResult<&[u8], DateTime, Error> {
     Ok((input, DateTime { date, time }))
 }
 
-fn read_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
+fn read_num<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
     let (input, c) = take_while1(is_digit)(input)?;
 
     let v = std::str::from_utf8(c).map_err(|e| {
@@ -138,7 +139,7 @@ fn read_num(input: &[u8]) -> IResult<&[u8], u64, Error> {
     ))
 }
 
-fn recur_by_time_list(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn recur_by_time_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     separated_list1(
         char(','),
         map_res(take_while_m_n(1, 2, is_digit), |s| {
@@ -155,7 +156,7 @@ fn recur_by_time_list(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     )(input)
 }
 
-fn weekday(input: &[u8]) -> IResult<&[u8], Weekday, Error> {
+fn weekday<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Weekday, E> {
     alt((
         tag("MO").map(|_| Weekday::Monday),
         tag("TU").map(|_| Weekday::Tuesday),
@@ -167,7 +168,7 @@ fn weekday(input: &[u8]) -> IResult<&[u8], Weekday, Error> {
     ))(input)
 }
 
-fn recur_by_weekday_list(input: &[u8]) -> IResult<&[u8], Vec<OffsetWeekday>, Error> {
+fn recur_by_weekday_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<OffsetWeekday>, E> {
     separated_list1(
         char(','),
         tuple((
@@ -212,7 +213,7 @@ fn recur_by_weekday_list(input: &[u8]) -> IResult<&[u8], Vec<OffsetWeekday>, Err
     .parse(input)
 }
 
-fn recur_by_month_day_list(input: &[u8]) -> IResult<&[u8], Vec<i8>, Error> {
+fn recur_by_month_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E> {
     separated_list1(
         char(','),
         map_res(
@@ -237,7 +238,7 @@ fn recur_by_month_day_list(input: &[u8]) -> IResult<&[u8], Vec<i8>, Error> {
     )(input)
 }
 
-fn recur_by_year_day_list(input: &[u8]) -> IResult<&[u8], Vec<i16>, Error> {
+fn recur_by_year_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i16>, E> {
     separated_list1(
         char(','),
         map_res(
@@ -262,7 +263,7 @@ fn recur_by_year_day_list(input: &[u8]) -> IResult<&[u8], Vec<i16>, Error> {
     )(input)
 }
 
-fn recur_by_week_number(input: &[u8]) -> IResult<&[u8], Vec<i8>, Error> {
+fn recur_by_week_number<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E> {
     separated_list1(
         char(','),
         map_res(
@@ -287,7 +288,7 @@ fn recur_by_week_number(input: &[u8]) -> IResult<&[u8], Vec<i8>, Error> {
     )(input)
 }
 
-fn recur_by_month_list(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn recur_by_month_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
     separated_list1(
         char(','),
         map_res(take_while_m_n(1, 2, is_digit), |num| {
