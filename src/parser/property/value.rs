@@ -20,7 +20,10 @@ const fn is_base64(c: u8) -> bool {
     matches!(c, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'/')
 }
 
-pub fn prop_value_binary<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+pub fn prop_value_binary<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, content) = recognize(tuple((
         many0(take_while_m_n(4, 4, is_base64)),
         opt(alt((
@@ -32,7 +35,10 @@ pub fn prop_value_binary<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResul
     Ok((input, content))
 }
 
-pub fn prop_value_boolean<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], bool, E> {
+pub fn prop_value_boolean<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], bool, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, value) = alt((
         tag_no_case("TRUE").map(|_| true),
         tag_no_case("FALSE").map(|_| false),
@@ -41,13 +47,21 @@ pub fn prop_value_boolean<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResu
     Ok((input, value))
 }
 
-pub fn prop_value_calendar_user_address<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E> {
+pub fn prop_value_calendar_user_address<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, uri) = param_value_uri(input)?;
 
     Ok((input, uri))
 }
 
-pub fn prop_value_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Date, E> {
+pub fn prop_value_date<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Date, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (year, month, day)) = tuple((
         take_while_m_n(4, 4, is_digit),
         take_while_m_n(2, 2, is_digit),
@@ -56,38 +70,50 @@ pub fn prop_value_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<
 
     let year = std::str::from_utf8(year)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid date year text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid date year text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum).into()))?;
 
     let month = std::str::from_utf8(month)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid date month text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid date month text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum).into()))?;
 
     let day = std::str::from_utf8(day)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid date day text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid date day text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum)))?;
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDateNum).into()))?;
 
     Ok((input, Date { year, month, day }))
 }
 
-pub fn prop_value_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Time, E> {
+pub fn prop_value_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Time, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (h, m, s, is_utc)) = tuple((
         take_while_m_n(2, 2, is_digit),
         take_while_m_n(2, 2, is_digit),
@@ -95,53 +121,66 @@ pub fn prop_value_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<
         opt(char('Z')).map(|x| x.is_some()),
     ))(input)?;
 
-    let read_time = |s: &[u8]| -> Result<u8, nom::Err<Error>> {
+    let read_time = |s: &[u8]| -> Result<u8, Error> {
         std::str::from_utf8(s)
             .map_err(|e| {
-                nom::Err::Error(Error::new(
+                Error::new(
                     input,
                     InnerError::EncodingError("Invalid time text".to_string(), e),
-                ))
+                )
             })?
             .parse()
-            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidTimeNum)))
+            .map_err(|_| Error::new(input, InnerError::InvalidTimeNum))
     };
 
     Ok((
         input,
         Time {
-            hour: read_time(h)?,
-            minute: read_time(m)?,
-            second: read_time(s)?,
+            hour: read_time(h).map_err(|e| nom::Err::Error(e.into()))?,
+            minute: read_time(m).map_err(|e| nom::Err::Error(e.into()))?,
+            second: read_time(s).map_err(|e| nom::Err::Error(e.into()))?,
             is_utc,
         },
     ))
 }
 
-pub fn prop_value_date_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E> {
+pub fn prop_value_date_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (date, _, time)) = tuple((prop_value_date, char('T'), prop_value_time))(input)?;
 
     Ok((input, DateTime { date, time }))
 }
 
-pub fn duration_num<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
+pub fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, v) = take_while1(is_digit)(input)?;
 
     let s = std::str::from_utf8(v).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Invalid duration number text".to_string(), e),
-        ))
+        nom::Err::Error(
+            Error::new(
+                input,
+                InnerError::EncodingError("Invalid duration number text".to_string(), e),
+            )
+            .into(),
+        )
     })?;
 
     Ok((
         input,
-        s.parse()
-            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidDurationNum)))?,
+        s.parse().map_err(|_| {
+            nom::Err::Error(Error::new(input, InnerError::InvalidDurationNum).into())
+        })?,
     ))
 }
 
-fn duration_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
+fn duration_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, num) = duration_num(input)?;
 
     let (input, time_branch) = one_of("HMS")(input)?;
@@ -170,7 +209,10 @@ fn duration_time<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u
     }
 }
 
-fn opt_sign<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], i8, E> {
+fn opt_sign<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], i8, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     opt(alt((char('+'), char('-'))))
         .map(|x| {
             match x {
@@ -183,7 +225,10 @@ fn opt_sign<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], i
         .parse(input)
 }
 
-pub fn prop_value_duration<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Duration, E> {
+pub fn prop_value_duration<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Duration, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (sign, _)) = tuple((opt_sign, char('P')))(input)?;
 
     let (input, t) = opt(char('T'))(input)?;
@@ -238,7 +283,10 @@ pub fn prop_value_duration<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IRes
     }
 }
 
-pub fn prop_value_float<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], f64, E> {
+pub fn prop_value_float<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], f64, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (sign, num)) = tuple((
         opt_sign,
         recognize(tuple((
@@ -249,29 +297,38 @@ pub fn prop_value_float<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult
 
     let num: f64 = std::str::from_utf8(num)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid float number text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid float number text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidFloatNum)))?;
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidFloatNum).into()))?;
 
     Ok((input, sign as f64 * num))
 }
 
-pub fn prop_value_integer<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], i32, E> {
+pub fn prop_value_integer<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], i32, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (sign, num)) = tuple((opt_sign, take_while1(is_digit)))(input)?;
 
     let num: i32 = std::str::from_utf8(num)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid integer number text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid integer number text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum)))?;
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum).into()))?;
 
     Ok((input, sign as i32 * num))
 }
@@ -281,11 +338,17 @@ const fn is_iso_8601_basic(c: u8) -> bool {
     matches!(c, b'0'..=b'9' | b'T' | b'Z' | b'-' | b'+' | b':')
 }
 
-fn iso_8601_basic<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn iso_8601_basic<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while_m_n(1, 21, is_iso_8601_basic)(input)
 }
 
-pub fn prop_value_period<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Period<'a>, E> {
+pub fn prop_value_period<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Period<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (start, _, end)) = tuple((
         iso_8601_basic,
         char('/'),
@@ -303,7 +366,10 @@ const fn is_text_safe_char(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\x21' | b'\x23'..=b'\x2B' | b'\x2D'..=b'\x39' | b'\x3C'..=b'\x5B' | b'\x5D'..=b'\x7E')
 }
 
-pub fn prop_value_text<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+pub fn prop_value_text<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, r) = fold_many0(
         alt((
             // Escaped characters
@@ -331,13 +397,21 @@ pub fn prop_value_text<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<
     Ok((input, r))
 }
 
-fn prop_value_uri<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E> {
+fn prop_value_uri<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, uri, _)) = tuple((char('"'), param_value_uri, char('"')))(input)?;
 
     Ok((input, uri))
 }
 
-pub fn prop_value_utc_offset<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], UtcOffset, E> {
+pub fn prop_value_utc_offset<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], UtcOffset, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (sign, h, m, s)) = tuple((
         one_of("+-"),
         take_while_m_n(2, 2, is_digit),
@@ -365,7 +439,8 @@ mod tests {
 
     #[test]
     fn base64() {
-        let (rem, value) = prop_value_binary(b"VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGluZyB0ZXh0;").unwrap();
+        let (rem, value) =
+            prop_value_binary::<Error>(b"VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGluZyB0ZXh0;").unwrap();
         check_rem(rem, 1);
         let r = base64::prelude::BASE64_STANDARD.decode(value).unwrap();
         assert_eq!(b"This is a base64 encoding text", r.as_slice());
@@ -373,14 +448,14 @@ mod tests {
 
     #[test]
     fn boolean() {
-        let (rem, value) = prop_value_boolean(b"TRUE;").unwrap();
+        let (rem, value) = prop_value_boolean::<Error>(b"TRUE;").unwrap();
         check_rem(rem, 1);
         assert!(value);
     }
 
     #[test]
     fn boolean_lower() {
-        let (rem, value) = prop_value_boolean(b"true;").unwrap();
+        let (rem, value) = prop_value_boolean::<Error>(b"true;").unwrap();
         check_rem(rem, 1);
         assert!(value);
     }
@@ -388,7 +463,7 @@ mod tests {
     #[test]
     fn calendar_user_address() {
         let (rem, value) =
-            prop_value_calendar_user_address(b"mailto:jane_doe@example.com`").unwrap();
+            prop_value_calendar_user_address::<Error>(b"mailto:jane_doe@example.com`").unwrap();
         check_rem(rem, 1);
         assert_eq!(value.scheme, b"mailto");
         assert_eq!(value.path, b"jane_doe@example.com")
@@ -396,7 +471,7 @@ mod tests {
 
     #[test]
     fn date() {
-        let (rem, value) = prop_value_date(b"19970714;").unwrap();
+        let (rem, value) = prop_value_date::<Error>(b"19970714;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Date {
@@ -410,7 +485,7 @@ mod tests {
 
     #[test]
     fn time() {
-        let (rem, value) = prop_value_time(b"230000;").unwrap();
+        let (rem, value) = prop_value_time::<Error>(b"230000;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Time {
@@ -425,7 +500,7 @@ mod tests {
 
     #[test]
     fn time_utc() {
-        let (rem, value) = prop_value_time(b"133000Z;").unwrap();
+        let (rem, value) = prop_value_time::<Error>(b"133000Z;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Time {
@@ -440,7 +515,7 @@ mod tests {
 
     #[test]
     fn date_time() {
-        let (rem, value) = prop_value_date_time(b"19980118T230000;").unwrap();
+        let (rem, value) = prop_value_date_time::<Error>(b"19980118T230000;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             DateTime {
@@ -462,7 +537,7 @@ mod tests {
 
     #[test]
     fn duration_seven_weeks() {
-        let (rem, value) = prop_value_duration(b"P7W;").unwrap();
+        let (rem, value) = prop_value_duration::<Error>(b"P7W;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Duration {
@@ -475,7 +550,7 @@ mod tests {
 
     #[test]
     fn duration_date_and_time() {
-        let (rem, value) = prop_value_duration(b"P15DT5H0M20S;").unwrap();
+        let (rem, value) = prop_value_duration::<Error>(b"P15DT5H0M20S;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Duration {
@@ -489,7 +564,7 @@ mod tests {
 
     #[test]
     fn duration_signed_time() {
-        let (rem, value) = prop_value_duration(b"-PT10M20S;").unwrap();
+        let (rem, value) = prop_value_duration::<Error>(b"-PT10M20S;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Duration {
@@ -503,35 +578,36 @@ mod tests {
 
     #[test]
     fn float() {
-        let (rem, value) = prop_value_float(b"1000000.0000001;").unwrap();
+        let (rem, value) = prop_value_float::<Error>(b"1000000.0000001;").unwrap();
         check_rem(rem, 1);
         assert_eq!(1000000.0000001f64, value);
     }
 
     #[test]
     fn float_negative() {
-        let (rem, value) = prop_value_float(b"-1.333;").unwrap();
+        let (rem, value) = prop_value_float::<Error>(b"-1.333;").unwrap();
         check_rem(rem, 1);
         assert_eq!(-1.333, value);
     }
 
     #[test]
     fn integer() {
-        let (rem, value) = prop_value_integer(b"1234567890;").unwrap();
+        let (rem, value) = prop_value_integer::<Error>(b"1234567890;").unwrap();
         check_rem(rem, 1);
         assert_eq!(1234567890, value);
     }
 
     #[test]
     fn integer_negative() {
-        let (rem, value) = prop_value_integer(b"-1234567890;").unwrap();
+        let (rem, value) = prop_value_integer::<Error>(b"-1234567890;").unwrap();
         check_rem(rem, 1);
         assert_eq!(-1234567890, value);
     }
 
     #[test]
     fn period() {
-        let (rem, value) = prop_value_period(b"19970101T180000Z/19970102T070000Z;").unwrap();
+        let (rem, value) =
+            prop_value_period::<Error>(b"19970101T180000Z/19970102T070000Z;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Period {
@@ -544,7 +620,7 @@ mod tests {
 
     #[test]
     fn period_duration() {
-        let (rem, value) = prop_value_period(b"19970101T180000Z/PT5H30M;").unwrap();
+        let (rem, value) = prop_value_period::<Error>(b"19970101T180000Z/PT5H30M;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             Period {
@@ -560,9 +636,10 @@ mod tests {
 
     #[test]
     fn text() {
-        let (rem, value) =
-            prop_value_text(br#"Project XYZ Final Review\nConference Room - 3B\nCome Prepared.;"#)
-                .unwrap();
+        let (rem, value) = prop_value_text::<Error>(
+            br#"Project XYZ Final Review\nConference Room - 3B\nCome Prepared.;"#,
+        )
+        .unwrap();
         check_rem(rem, 1);
         assert_eq!(
             br#"Project XYZ Final Review
@@ -574,7 +651,7 @@ Come Prepared."#,
 
     #[test]
     fn text_with_quoted_value() {
-        let (rem, value) = prop_value_text(br#"Hello\, "World";"#).unwrap();
+        let (rem, value) = prop_value_text::<Error>(br#"Hello\, "World";"#).unwrap();
         println!("{:?}", String::from_utf8(value.clone()).unwrap());
         check_rem(rem, 1);
         assert_eq!(br#"Hello, "World""#, value.as_slice());
@@ -582,7 +659,8 @@ Come Prepared."#,
 
     #[test]
     fn uri() {
-        let (rem, value) = prop_value_uri(b"\"http://example.com/my-report.txt\";").unwrap();
+        let (rem, value) =
+            prop_value_uri::<Error>(b"\"http://example.com/my-report.txt\";").unwrap();
         check_rem(rem, 1);
         assert_eq!(value.scheme, b"http");
         assert_eq!(
@@ -594,7 +672,7 @@ Come Prepared."#,
 
     #[test]
     fn utc_offset_negative() {
-        let (rem, value) = prop_value_utc_offset(b"-0500;").unwrap();
+        let (rem, value) = prop_value_utc_offset::<Error>(b"-0500;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             UtcOffset {
@@ -609,7 +687,7 @@ Come Prepared."#,
 
     #[test]
     fn utc_offset_positive() {
-        let (rem, value) = prop_value_utc_offset(b"+0130;").unwrap();
+        let (rem, value) = prop_value_utc_offset::<Error>(b"+0130;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             UtcOffset {

@@ -18,7 +18,12 @@ use nom::Parser;
 
 pub mod types;
 
-pub fn ical_stream<'a, E: ParseError<&'a [u8]>>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E> {
+pub fn ical_stream<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let mut out = Vec::new();
 
     loop {
@@ -35,7 +40,12 @@ pub fn ical_stream<'a, E: ParseError<&'a [u8]>>(mut input: &'a [u8]) -> IResult<
     Ok((input, out))
 }
 
-pub fn ical_object<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E> {
+pub fn ical_object<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, body, _)) = tuple((
         tag("BEGIN:VCALENDAR\r\n"),
         ical_body,
@@ -45,7 +55,12 @@ pub fn ical_object<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a 
     Ok((input, body))
 }
 
-fn ical_body<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E> {
+fn ical_body<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (properties, components)) = tuple((many0(ical_cal_prop), many1(component)))(input)?;
 
     Ok((
@@ -57,7 +72,12 @@ fn ical_body<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], 
     ))
 }
 
-fn ical_cal_prop<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarProperty<'a>, E> {
+fn ical_cal_prop<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     alt((
         prop_product_id.map(CalendarProperty::ProductId),
         prop_version.map(CalendarProperty::Version),
@@ -69,7 +89,12 @@ fn ical_cal_prop<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u
     .parse(input)
 }
 
-fn component<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+fn component<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     alt((
         component_event,
         component_todo,
@@ -81,7 +106,10 @@ fn component<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], 
     ))(input)
 }
 
-fn iana_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+fn iana_comp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, name, _, lines, _, end_name, _)) = tuple((
         tag("BEGIN:"),
         iana_token,
@@ -93,16 +121,22 @@ fn iana_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], 
     ))(input)?;
 
     if name != end_name {
-        return Err(nom::Err::Error(Error::new(
-            input,
-            InnerError::MismatchedComponentEnd(name.to_vec(), end_name.to_vec()),
-        )));
+        return Err(nom::Err::Error(
+            Error::new(
+                input,
+                InnerError::MismatchedComponentEnd(name.to_vec(), end_name.to_vec()),
+            )
+            .into(),
+        ));
     }
 
     Ok((input, CalendarComponent::IanaComp { name, lines }))
 }
 
-fn x_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+fn x_comp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, name, _, lines, _, end_name, _)) = tuple((
         tag("BEGIN:"),
         x_name,
@@ -114,10 +148,13 @@ fn x_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Cal
     ))(input)?;
 
     if name != end_name {
-        return Err(nom::Err::Error(Error::new(
-            input,
-            InnerError::MismatchedComponentEnd(name.to_vec(), end_name.to_vec()),
-        )));
+        return Err(nom::Err::Error(
+            Error::new(
+                input,
+                InnerError::MismatchedComponentEnd(name.to_vec(), end_name.to_vec()),
+            )
+            .into(),
+        ));
     }
 
     Ok((input, CalendarComponent::XComp { name, lines }))
@@ -126,14 +163,13 @@ fn x_comp<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Cal
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::pre::content_line_first_pass;
     use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
 
     #[test]
     fn minimal_ical_stream_test() {
         let input = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\nBEGIN:x-com\r\nx-prop:I'm a property\r\nEND:x-com\r\nEND:VCALENDAR\r\n";
-        let (rem, ical) = ical_stream(input).unwrap();
+        let (rem, ical) = ical_stream::<Error>(input).unwrap();
         check_rem(rem, 0);
         assert_eq!(ical.len(), 1);
         assert_eq!(ical[0].properties.len(), 2);

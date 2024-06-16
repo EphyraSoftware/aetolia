@@ -6,10 +6,10 @@ use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
 use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt};
+use nom::error::ParseError;
 use nom::multi::separated_list1;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use nom::error::ParseError;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RecurRulePart {
@@ -57,18 +57,31 @@ pub struct OffsetWeekday {
     pub weekday: Weekday,
 }
 
-pub fn recur<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E> {
+pub fn recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(char(';'), recur_rule_part)(input)
 }
 
-fn recur_rule_part<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], RecurRulePart, E> {
+fn recur_rule_part<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RecurRulePart, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (name, _)) = tuple((take_while1(is_alphabetic), char('=')))(input)?;
 
     match std::str::from_utf8(name).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Recur part name".to_string(), e),
-        ))
+        nom::Err::Error(
+            Error::new(
+                input,
+                InnerError::EncodingError("Recur part name".to_string(), e),
+            )
+            .into(),
+        )
     })? {
         "FREQ" => recur_freq.map(RecurRulePart::Freq).parse(input),
         "UNTIL" => end_date.map(RecurRulePart::Until).parse(input),
@@ -92,14 +105,16 @@ fn recur_rule_part<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a 
             .map(RecurRulePart::BySetPos)
             .parse(input),
         "WKST" => weekday.map(RecurRulePart::WeekStart).parse(input),
-        n => Err(nom::Err::Error(Error::new(
-            input,
-            InnerError::InvalidRecurPart(n.to_string()),
-        ))),
+        n => Err(nom::Err::Error(
+            Error::new(input, InnerError::InvalidRecurPart(n.to_string())).into(),
+        )),
     }
 }
 
-fn recur_freq<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], RecurFreq, E> {
+fn recur_freq<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RecurFreq, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, freq) = alt((
         tag("SECONDLY").map(|_| RecurFreq::Secondly),
         tag("MINUTELY").map(|_| RecurFreq::Minutely),
@@ -113,7 +128,10 @@ fn recur_freq<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8],
     Ok((input, freq))
 }
 
-fn end_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E> {
+fn end_date<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (date, opt_time)) =
         tuple((prop_value_date, opt(tuple((char('T'), prop_value_time)))))(input)?;
 
@@ -122,41 +140,54 @@ fn end_date<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], D
     Ok((input, DateTime { date, time }))
 }
 
-fn read_num<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], u64, E> {
+fn read_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, c) = take_while1(is_digit)(input)?;
 
     let v = std::str::from_utf8(c).map_err(|e| {
-        nom::Err::Error(Error::new(
-            input,
-            InnerError::EncodingError("Recur num".to_string(), e),
-        ))
+        nom::Err::Error(
+            Error::new(input, InnerError::EncodingError("Recur num".to_string(), e)).into(),
+        )
     })?;
 
     Ok((
         input,
         v.parse()
-            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))?,
+            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into()))?,
     ))
 }
 
-fn recur_by_time_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+fn recur_by_time_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         map_res(take_while_m_n(1, 2, is_digit), |s| {
             std::str::from_utf8(s)
                 .map_err(|e| {
-                    nom::Err::Error(Error::new(
-                        input,
-                        InnerError::EncodingError("Recur time list".to_string(), e),
-                    ))
+                    nom::Err::Error(
+                        Error::new(
+                            input,
+                            InnerError::EncodingError("Recur time list".to_string(), e),
+                        )
+                        .into(),
+                    )
                 })?
                 .parse()
-                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))
+                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into()))
         }),
     )(input)
 }
 
-fn weekday<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Weekday, E> {
+fn weekday<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Weekday, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((
         tag("MO").map(|_| Weekday::Monday),
         tag("TU").map(|_| Weekday::Tuesday),
@@ -168,7 +199,12 @@ fn weekday<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], We
     ))(input)
 }
 
-fn recur_by_weekday_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<OffsetWeekday>, E> {
+fn recur_by_weekday_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<OffsetWeekday>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         tuple((
@@ -186,14 +222,17 @@ fn recur_by_weekday_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResul
                 |(sign, num)| {
                     std::str::from_utf8(num)
                         .map_err(|e| {
-                            nom::Err::Error(Error::new(
-                                input,
-                                InnerError::EncodingError("Recur weekday list".to_string(), e),
-                            ))
+                            nom::Err::Error(
+                                Error::new(
+                                    input,
+                                    InnerError::EncodingError("Recur weekday list".to_string(), e),
+                                )
+                                .into(),
+                            )
                         })?
                         .parse::<i8>()
                         .map_err(|_| {
-                            nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum))
+                            nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into())
                         })
                         .map(|num| sign * num)
                 },
@@ -213,7 +252,12 @@ fn recur_by_weekday_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResul
     .parse(input)
 }
 
-fn recur_by_month_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E> {
+fn recur_by_month_day_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         map_res(
@@ -225,20 +269,30 @@ fn recur_by_month_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IRes
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
-                        nom::Err::Error(Error::new(
-                            input,
-                            InnerError::EncodingError("Recur month day list".to_string(), e),
-                        ))
+                        nom::Err::Error(
+                            Error::new(
+                                input,
+                                InnerError::EncodingError("Recur month day list".to_string(), e),
+                            )
+                            .into(),
+                        )
                     })?
                     .parse::<i8>()
-                    .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))
+                    .map_err(|_| {
+                        nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into())
+                    })
                     .map(|num| sign * num)
             },
         ),
     )(input)
 }
 
-fn recur_by_year_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i16>, E> {
+fn recur_by_year_day_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i16>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         map_res(
@@ -250,20 +304,30 @@ fn recur_by_year_day_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResu
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
-                        nom::Err::Error(Error::new(
-                            input,
-                            InnerError::EncodingError("Recur year day list".to_string(), e),
-                        ))
+                        nom::Err::Error(
+                            Error::new(
+                                input,
+                                InnerError::EncodingError("Recur year day list".to_string(), e),
+                            )
+                            .into(),
+                        )
                     })?
                     .parse::<i16>()
-                    .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))
+                    .map_err(|_| {
+                        nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into())
+                    })
                     .map(|num| sign * num)
             },
         ),
     )(input)
 }
 
-fn recur_by_week_number<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E> {
+fn recur_by_week_number<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         map_res(
@@ -275,32 +339,45 @@ fn recur_by_week_number<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
-                        nom::Err::Error(Error::new(
-                            input,
-                            InnerError::EncodingError("Recur week number list".to_string(), e),
-                        ))
+                        nom::Err::Error(
+                            Error::new(
+                                input,
+                                InnerError::EncodingError("Recur week number list".to_string(), e),
+                            )
+                            .into(),
+                        )
                     })?
                     .parse::<i8>()
-                    .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))
+                    .map_err(|_| {
+                        nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into())
+                    })
                     .map(|num| sign * num)
             },
         ),
     )(input)
 }
 
-fn recur_by_month_list<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+fn recur_by_month_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     separated_list1(
         char(','),
         map_res(take_while_m_n(1, 2, is_digit), |num| {
             std::str::from_utf8(num)
                 .map_err(|e| {
-                    nom::Err::Error(Error::new(
-                        input,
-                        InnerError::EncodingError("Recur month list".to_string(), e),
-                    ))
+                    nom::Err::Error(
+                        Error::new(
+                            input,
+                            InnerError::EncodingError("Recur month list".to_string(), e),
+                        )
+                        .into(),
+                    )
                 })?
                 .parse::<u8>()
-                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum)))
+                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into()))
         }),
     )(input)
 }
@@ -312,7 +389,7 @@ mod tests {
 
     #[test]
     fn daily_rule() {
-        let (rem, rule) = recur(b"FREQ=DAILY;COUNT=10;INTERVAL=2;").unwrap();
+        let (rem, rule) = recur::<Error>(b"FREQ=DAILY;COUNT=10;INTERVAL=2;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,
@@ -326,7 +403,8 @@ mod tests {
 
     #[test]
     fn monthly_rule() {
-        let (rem, rule) = recur(b"FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;").unwrap();
+        let (rem, rule) =
+            recur::<Error>(b"FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,
@@ -362,7 +440,8 @@ mod tests {
     #[test]
     fn yearly_rule() {
         let (rem, rule) =
-            recur(b"FREQ=YEARLY;INTERVAL=2;BYMONTH=1;BYDAY=SU;BYHOUR=8,9;BYMINUTE=30;").unwrap();
+            recur::<Error>(b"FREQ=YEARLY;INTERVAL=2;BYMONTH=1;BYDAY=SU;BYHOUR=8,9;BYMINUTE=30;")
+                .unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,

@@ -1,3 +1,4 @@
+use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::error::ParseError;
@@ -11,9 +12,12 @@ use crate::parser::property::{
     prop_repeat_count, prop_summary, prop_trigger, prop_x,
 };
 
-pub fn component_alarm<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_alarm<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VALARM\r\n"),
         many0(alt((

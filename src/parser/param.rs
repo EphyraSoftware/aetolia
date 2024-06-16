@@ -9,22 +9,37 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
 use nom::combinator::map_res;
+use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{IResult, Parser};
-use nom::error::ParseError;
 pub use types::*;
 pub use values::*;
 
-pub fn params<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E> {
+pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     many0(tuple((char(';'), known_param)).map(|(_, p)| p)).parse(input)
 }
 
-pub fn param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
+pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     alt((known_param, iana_param, x_param))(input)
 }
 
-fn known_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
+fn known_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (name, _)) = tuple((param_name, char('=')))(input)?;
 
     let name_s = read_string(name, "param_name")?;
@@ -182,10 +197,9 @@ fn known_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8]
             (input, ParamValue::Value { value })
         }
         _ => {
-            return Err(nom::Err::Error(Error::new(
-                input,
-                InnerError::UnknownParamName(name.to_vec()),
-            )));
+            return Err(nom::Err::Error(
+                Error::new(input, InnerError::UnknownParamName(name.to_vec())).into(),
+            ));
         }
     };
 
@@ -198,15 +212,24 @@ fn known_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8]
     ))
 }
 
-pub fn other_params<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E> {
+pub fn other_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     many0(tuple((char(';'), other_param)).map(|(_, p)| p)).parse(input)
 }
 
-pub fn other_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
+pub fn other_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((iana_param, x_param))(input)
 }
 
-fn iana_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
+fn iana_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (name, _, values)) = tuple((
         param_name,
         char('='),
@@ -222,7 +245,10 @@ fn iana_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8],
     ))
 }
 
-fn x_param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E> {
+fn x_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (name, _, values)) =
         tuple((x_name, char('='), separated_list1(char(','), param_value)))(input)?;
 
@@ -243,7 +269,8 @@ mod tests {
 
     #[test]
     fn param_altrep() {
-        let (rem, param) = known_param(b"ALTREP=\"http://example.com/calendar\";").unwrap();
+        let (rem, param) =
+            known_param::<Error>(b"ALTREP=\"http://example.com/calendar\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("ALTREP", param.name);
         assert_eq!(
@@ -256,7 +283,7 @@ mod tests {
 
     #[test]
     fn param_cn() {
-        let (rem, param) = known_param(b"CN=\"John Smith\";").unwrap();
+        let (rem, param) = known_param::<Error>(b"CN=\"John Smith\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("CN", param.name);
         assert_eq!(
@@ -269,7 +296,7 @@ mod tests {
 
     #[test]
     fn param_cn_not_quoted() {
-        let (rem, param) = known_param(b"CN=Danny;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CN=Danny;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CN", param.name);
         assert_eq!(
@@ -282,7 +309,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_individual() {
-        let (rem, param) = known_param(b"CUTYPE=INDIVIDUAL;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=INDIVIDUAL;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -295,7 +322,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_group() {
-        let (rem, param) = known_param(b"CUTYPE=GROUP;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=GROUP;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -308,7 +335,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_resource() {
-        let (rem, param) = known_param(b"CUTYPE=RESOURCE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=RESOURCE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -321,7 +348,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_room() {
-        let (rem, param) = known_param(b"CUTYPE=ROOM;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=ROOM;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -334,7 +361,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_unknown() {
-        let (rem, param) = known_param(b"CUTYPE=UNKNOWN;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=UNKNOWN;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -347,7 +374,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_x_name() {
-        let (rem, param) = known_param(b"CUTYPE=X-esl-special;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=X-esl-special;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -360,7 +387,7 @@ mod tests {
 
     #[test]
     fn param_cu_type_iana_token() {
-        let (rem, param) = known_param(b"CUTYPE=other;").unwrap();
+        let (rem, param) = known_param::<Error>(b"CUTYPE=other;").unwrap();
         check_rem(rem, 1);
         assert_eq!("CUTYPE", param.name);
         assert_eq!(
@@ -373,7 +400,8 @@ mod tests {
 
     #[test]
     fn param_delegated_from() {
-        let (rem, param) = known_param(b"DELEGATED-FROM=\"mailto:jsmith@example.com\";").unwrap();
+        let (rem, param) =
+            known_param::<Error>(b"DELEGATED-FROM=\"mailto:jsmith@example.com\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("DELEGATED-FROM", param.name);
         assert_eq!(
@@ -386,7 +414,7 @@ mod tests {
 
     #[test]
     fn param_delegated_from_multi() {
-        let (rem, param) = known_param(
+        let (rem, param) = known_param::<Error>(
             b"DELEGATED-FROM=\"mailto:jsmith@example.com\",\"mailto:danny@example.com\";",
         )
         .unwrap();
@@ -405,7 +433,8 @@ mod tests {
 
     #[test]
     fn param_delegated_to() {
-        let (rem, param) = known_param(b"DELEGATED-TO=\"mailto:jsmith@example.com\";").unwrap();
+        let (rem, param) =
+            known_param::<Error>(b"DELEGATED-TO=\"mailto:jsmith@example.com\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("DELEGATED-TO", param.name);
         assert_eq!(
@@ -418,7 +447,7 @@ mod tests {
 
     #[test]
     fn param_delegated_to_multi() {
-        let (rem, param) = known_param(
+        let (rem, param) = known_param::<Error>(
             b"DELEGATED-TO=\"mailto:jsmith@example.com\",\"mailto:danny@example.com\";",
         )
         .unwrap();
@@ -437,7 +466,7 @@ mod tests {
 
     #[test]
     fn param_dir() {
-        let (rem, param) = known_param(
+        let (rem, param) = known_param::<Error>(
             b"DIR=\"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)\";",
         )
         .unwrap();
@@ -454,7 +483,7 @@ mod tests {
 
     #[test]
     fn param_encoding_8bit() {
-        let (rem, param) = known_param(b"ENCODING=8BIT;").unwrap();
+        let (rem, param) = known_param::<Error>(b"ENCODING=8BIT;").unwrap();
         check_rem(rem, 1);
         assert_eq!("ENCODING", param.name);
         assert_eq!(
@@ -467,7 +496,7 @@ mod tests {
 
     #[test]
     fn param_encoding_base64() {
-        let (rem, param) = known_param(b"ENCODING=BASE64;").unwrap();
+        let (rem, param) = known_param::<Error>(b"ENCODING=BASE64;").unwrap();
         check_rem(rem, 1);
         assert_eq!("ENCODING", param.name);
         assert_eq!(
@@ -480,7 +509,7 @@ mod tests {
 
     #[test]
     fn param_fmt_type() {
-        let (rem, param) = known_param(b"FMTTYPE=application/msword;").unwrap();
+        let (rem, param) = known_param::<Error>(b"FMTTYPE=application/msword;").unwrap();
         check_rem(rem, 1);
         assert_eq!("FMTTYPE", param.name);
         assert_eq!(
@@ -494,7 +523,7 @@ mod tests {
 
     #[test]
     fn param_fb_type_free() {
-        let (rem, param) = known_param(b"FBTYPE=FREE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"FBTYPE=FREE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("FBTYPE", param.name);
         assert_eq!(
@@ -507,7 +536,7 @@ mod tests {
 
     #[test]
     fn param_fb_type_busy() {
-        let (rem, param) = known_param(b"FBTYPE=BUSY;").unwrap();
+        let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY;").unwrap();
         check_rem(rem, 1);
         assert_eq!("FBTYPE", param.name);
         assert_eq!(
@@ -520,7 +549,7 @@ mod tests {
 
     #[test]
     fn param_fb_type_busy_unavailable() {
-        let (rem, param) = known_param(b"FBTYPE=BUSY-UNAVAILABLE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY-UNAVAILABLE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("FBTYPE", param.name);
         assert_eq!(
@@ -533,7 +562,7 @@ mod tests {
 
     #[test]
     fn param_fb_type_busy_tentative() {
-        let (rem, param) = known_param(b"FBTYPE=BUSY-TENTATIVE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY-TENTATIVE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("FBTYPE", param.name);
         assert_eq!(
@@ -546,7 +575,7 @@ mod tests {
 
     #[test]
     fn param_language() {
-        let (rem, param) = known_param(b"LANGUAGE=en-US;").unwrap();
+        let (rem, param) = known_param::<Error>(b"LANGUAGE=en-US;").unwrap();
         check_rem(rem, 1);
         assert_eq!("LANGUAGE", param.name);
         assert_eq!(
@@ -563,7 +592,8 @@ mod tests {
 
     #[test]
     fn param_member() {
-        let (rem, param) = known_param(b"MEMBER=\"mailto:ietf-calsch@example.org\";").unwrap();
+        let (rem, param) =
+            known_param::<Error>(b"MEMBER=\"mailto:ietf-calsch@example.org\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("MEMBER", param.name);
         assert_eq!(
@@ -576,9 +606,10 @@ mod tests {
 
     #[test]
     fn param_member_multi() {
-        let (rem, param) =
-            known_param(b"MEMBER=\"mailto:projectA@example.com\",\"mailto:projectB@example.com\";")
-                .unwrap();
+        let (rem, param) = known_param::<Error>(
+            b"MEMBER=\"mailto:projectA@example.com\",\"mailto:projectB@example.com\";",
+        )
+        .unwrap();
         check_rem(rem, 1);
         assert_eq!("MEMBER", param.name);
         assert_eq!(
@@ -594,7 +625,7 @@ mod tests {
 
     #[test]
     fn param_part_stat_declined() {
-        let (rem, param) = known_param(b"PARTSTAT=DECLINED;").unwrap();
+        let (rem, param) = known_param::<Error>(b"PARTSTAT=DECLINED;").unwrap();
         check_rem(rem, 1);
         assert_eq!("PARTSTAT", param.name);
         assert_eq!(
@@ -607,7 +638,7 @@ mod tests {
 
     #[test]
     fn param_range() {
-        let (rem, param) = known_param(b"RANGE=THISANDFUTURE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RANGE=THISANDFUTURE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RANGE", param.name);
         assert_eq!(
@@ -620,7 +651,7 @@ mod tests {
 
     #[test]
     fn param_related_start() {
-        let (rem, param) = known_param(b"RELATED=START;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RELATED=START;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RELATED", param.name);
         assert_eq!(
@@ -633,7 +664,7 @@ mod tests {
 
     #[test]
     fn param_related_end() {
-        let (rem, param) = known_param(b"RELATED=END;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RELATED=END;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RELATED", param.name);
         assert_eq!(
@@ -646,7 +677,7 @@ mod tests {
 
     #[test]
     fn param_rel_type() {
-        let (rem, param) = known_param(b"RELTYPE=SIBLING;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RELTYPE=SIBLING;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RELTYPE", param.name);
         assert_eq!(
@@ -659,7 +690,7 @@ mod tests {
 
     #[test]
     fn param_role() {
-        let (rem, param) = known_param(b"ROLE=CHAIR;").unwrap();
+        let (rem, param) = known_param::<Error>(b"ROLE=CHAIR;").unwrap();
         check_rem(rem, 1);
         assert_eq!("ROLE", param.name);
         assert_eq!(ParamValue::Role { role: Role::Chair }, param.value);
@@ -667,7 +698,7 @@ mod tests {
 
     #[test]
     fn param_rsvp_true() {
-        let (rem, param) = known_param(b"RSVP=TRUE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RSVP=TRUE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RSVP", param.name);
         assert_eq!(ParamValue::Rsvp { rsvp: true }, param.value);
@@ -675,7 +706,7 @@ mod tests {
 
     #[test]
     fn param_rsvp_false() {
-        let (rem, param) = known_param(b"RSVP=FALSE;").unwrap();
+        let (rem, param) = known_param::<Error>(b"RSVP=FALSE;").unwrap();
         check_rem(rem, 1);
         assert_eq!("RSVP", param.name);
         assert_eq!(ParamValue::Rsvp { rsvp: false }, param.value);
@@ -683,7 +714,7 @@ mod tests {
 
     #[test]
     fn param_sent_by() {
-        let (rem, param) = known_param(b"SENT-BY=\"mailto:sray@example.com\";").unwrap();
+        let (rem, param) = known_param::<Error>(b"SENT-BY=\"mailto:sray@example.com\";").unwrap();
         check_rem(rem, 1);
         assert_eq!("SENT-BY", param.name);
         assert_eq!(
@@ -696,7 +727,7 @@ mod tests {
 
     #[test]
     fn param_tz_id() {
-        let (rem, param) = known_param(b"TZID=America/New_York;").unwrap();
+        let (rem, param) = known_param::<Error>(b"TZID=America/New_York;").unwrap();
         check_rem(rem, 1);
         assert_eq!("TZID", param.name);
         assert_eq!(
@@ -710,7 +741,7 @@ mod tests {
 
     #[test]
     fn param_tz_id_unique() {
-        let (rem, param) = known_param(b"TZID=/America/New_York;").unwrap();
+        let (rem, param) = known_param::<Error>(b"TZID=/America/New_York;").unwrap();
         check_rem(rem, 1);
         assert_eq!("TZID", param.name);
         assert_eq!(
@@ -724,7 +755,7 @@ mod tests {
 
     #[test]
     fn param_value_binary() {
-        let (rem, param) = known_param(b"VALUE=BINARY;").unwrap();
+        let (rem, param) = known_param::<Error>(b"VALUE=BINARY;").unwrap();
         check_rem(rem, 1);
         assert_eq!("VALUE", param.name);
         assert_eq!(

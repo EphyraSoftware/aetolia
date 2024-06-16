@@ -4,6 +4,7 @@ use crate::parser::property::{
     prop_date_time_start, prop_free_busy_time, prop_iana, prop_organizer, prop_request_status,
     prop_unique_identifier, prop_url, prop_x,
 };
+use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::error::ParseError;
@@ -12,9 +13,12 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_free_busy<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_free_busy<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VFREEBUSY\r\n"),
         many0(alt((

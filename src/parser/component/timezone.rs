@@ -4,6 +4,7 @@ use crate::parser::property::{
     prop_recurrence_rule, prop_time_zone_id, prop_time_zone_name, prop_time_zone_offset_from,
     prop_time_zone_offset_to, prop_time_zone_url, prop_x,
 };
+use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::error::ParseError;
@@ -12,9 +13,12 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_timezone<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_timezone<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VTIMEZONE\r\n"),
         many0(alt((
@@ -34,27 +38,36 @@ pub fn component_timezone<'a, E: ParseError<&'a [u8]>>(
     Ok((input, CalendarComponent::TimeZone { properties }))
 }
 
-pub fn component_standard<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_standard<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) =
         tuple((tag("BEGIN:STANDARD\r\n"), tz_props, tag("END:STANDARD\r\n")))(input)?;
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
 
-pub fn component_daylight<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_daylight<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) =
         tuple((tag("BEGIN:DAYLIGHT\r\n"), tz_props, tag("END:DAYLIGHT\r\n")))(input)?;
 
     Ok((input, CalendarComponent::Daylight { properties }))
 }
 
-fn tz_props<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], Vec<ComponentProperty<'a>>, E> {
+fn tz_props<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ComponentProperty<'a>>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     many0(alt((
         alt((
             prop_date_time_start.map(ComponentProperty::DateTimeStart),

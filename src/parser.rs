@@ -107,11 +107,17 @@ const fn is_control(b: u8) -> bool {
     matches!(b, b'\0'..=b'\x08' | b'\x0A'..=b'\x1F' | b'\x7F')
 }
 
-fn param_text<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn param_text<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while(|c| c != b'\"' && c != b';' && c != b':' && c != b',' && !is_control(c))(input)
 }
 
-fn quoted_string<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn quoted_string<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, content, _)) = tuple((
         char('"'),
         take_while(|c| c != b'\"' && !is_control(c)),
@@ -121,21 +127,33 @@ fn quoted_string<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u
     Ok((input, content))
 }
 
-fn param_value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn param_value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, value) = alt((quoted_string, param_text))(input)?;
 
     Ok((input, value))
 }
 
-fn safe_char<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn safe_char<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while(|c| c != b'\"' && !is_control(c))(input)
 }
 
-fn iana_token<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn iana_token<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while1(|c: u8| c.is_alphanum() || c == b'-')(input)
 }
 
-fn vendor_id<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn vendor_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (rest, id) = alphanumeric1(input)?;
 
     // if id.len() < 3 {
@@ -148,7 +166,10 @@ fn vendor_id<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], 
     Ok((rest, id))
 }
 
-fn x_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn x_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, x_name) = recognize(tuple((
         tag_no_case("X-"),
         opt(tuple((vendor_id, char('-')))),
@@ -158,11 +179,17 @@ fn x_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a
     Ok((input, x_name))
 }
 
-fn name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((iana_token, x_name))(input)
 }
 
-fn param_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn param_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((iana_token, x_name))(input)
 }
 
@@ -172,34 +199,51 @@ const fn is_reg_name_char(b: u8) -> bool {
 }
 
 // See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
-fn reg_name<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E> {
+fn reg_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while_m_n(1, 127, is_reg_name_char)(input)
 }
 
-fn read_string<'a, E: ParseError<&'a [u8]>>(input: &'a [u8], context: &str) -> Result<String, nom::Err<E>> {
+fn read_string<'a, E>(input: &'a [u8], context: &str) -> Result<String, nom::Err<E>>
+where
+    E: ParseError<&'a [u8]>,
+    E: From<Error<'a>>,
+{
     Ok(std::str::from_utf8(input)
         .map_err(|e| {
-            nom::Err::Failure(Error::new(
-                input,
-                InnerError::EncodingError(context.to_string(), e),
-            ))
+            nom::Err::Failure(
+                Error::new(input, InnerError::EncodingError(context.to_string(), e)).into(),
+            )
         })?
         .to_string())
 }
 
-pub fn read_int<'a, E: ParseError<&'a [u8]>, N: FromStr>(input: &'a [u8]) -> Result<N, nom::Err<E>> {
+pub fn read_int<'a, E, N>(input: &'a [u8]) -> Result<N, nom::Err<E>>
+where
+    E: ParseError<&'a [u8]>,
+    E: From<Error<'a>>,
+    N: FromStr,
+{
     std::str::from_utf8(input)
         .map_err(|e| {
-            nom::Err::Error(Error::new(
-                input,
-                InnerError::EncodingError("Invalid integer number text".to_string(), e),
-            ))
+            nom::Err::Error(
+                Error::new(
+                    input,
+                    InnerError::EncodingError("Invalid integer number text".to_string(), e),
+                )
+                .into(),
+            )
         })?
         .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum)))
+        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum).into()))
 }
 
-fn line_value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+fn line_value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, v) = fold_many0(
         alt((
             tuple((tag("\r\n"), one_of(" \t"))).map(|_| vec![]),
@@ -215,21 +259,30 @@ fn line_value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8],
     Ok((input, v))
 }
 
-fn value_char<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+fn value_char<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((
         single(|b| matches!(b, b' ' | b'\t' | b'\x21'..=b'\x7E')).map(|c| vec![c]),
         utf8_seq.map(|c| c.to_vec()),
     ))(input)
 }
 
-pub fn value<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E> {
+pub fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     fold_many0(value_char, Vec::new, |mut acc, item| {
         acc.extend_from_slice(&item);
         acc
     })(input)
 }
 
-fn param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], param::Param<'a>, E> {
+fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], param::Param<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (name, values)) = separated_pair(
         param_name,
         char('='),
@@ -245,7 +298,10 @@ fn param<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], para
     ))
 }
 
-fn content_line<'a, E: ParseError<&'a [u8]>>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E> {
+fn content_line<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (property_name, params, _, value, _)) = tuple((
         name,
         many0(tuple((char(';'), param)).map(|(_, p)| p)),
@@ -271,28 +327,28 @@ mod tests {
 
     #[test]
     fn iana_token_desc() {
-        let (rem, token) = iana_token(b"DESCRIPTION").unwrap();
+        let (rem, token) = iana_token::<Error>(b"DESCRIPTION").unwrap();
         check_rem(rem, 0);
         assert_eq!(b"DESCRIPTION", token);
     }
 
     #[test]
     fn simple_x_name() {
-        let (rem, x_name) = x_name(b"X-TEST ").unwrap();
+        let (rem, x_name) = x_name::<Error>(b"X-TEST ").unwrap();
         check_rem(rem, 1);
         assert_eq!(b"X-TEST", x_name);
     }
 
     #[test]
     fn simple_x_name_with_vendor() {
-        let (rem, x_name) = x_name(b"X-ESL-TEST ").unwrap();
+        let (rem, x_name) = x_name::<Error>(b"X-ESL-TEST ").unwrap();
         check_rem(rem, 1);
         assert_eq!(b"X-ESL-TEST", x_name);
     }
 
     #[test]
     fn simple_content_line() {
-        let (rem, content_line) = content_line(
+        let (rem, content_line) = content_line::<Error>(
             b"DESCRIPTION:This is a long description that exists on a long line.\r\nnext",
         )
         .unwrap();
@@ -306,7 +362,7 @@ mod tests {
 
     #[test]
     fn content_line_multi_line() {
-        let (rem, content_line) = content_line(
+        let (rem, content_line) = content_line::<Error>(
             b"DESCRIPTION:This is a lo\r\n ng description\r\n  that exists on a long line.\r\nnext",
         )
         .unwrap();
@@ -323,7 +379,7 @@ mod tests {
     #[test]
     fn content_line_multi_line_with_tab() {
         let (rem, content_line) =
-            content_line(b"DESCRIPTION:This is a lo\r\n ng description\r\n\t that exists on a long line.\r\nnext")
+            content_line::<Error>(b"DESCRIPTION:This is a lo\r\n ng description\r\n\t that exists on a long line.\r\nnext")
                 .unwrap();
         check_rem(rem, 4);
         assert_eq!(b"DESCRIPTION", content_line.property_name);

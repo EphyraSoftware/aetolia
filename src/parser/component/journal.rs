@@ -7,6 +7,7 @@ use crate::parser::property::{
     prop_request_status, prop_sequence, prop_status, prop_summary, prop_unique_identifier,
     prop_url, prop_x,
 };
+use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::error::ParseError;
@@ -14,9 +15,12 @@ use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
-pub fn component_journal<'a, E: ParseError<&'a [u8]>>(
-    input: &'a [u8],
-) -> IResult<&'a [u8], CalendarComponent<'a>, E> {
+pub fn component_journal<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VJOURNAL\r\n"),
         many0(alt((
