@@ -2,17 +2,19 @@
 
 use crate::parser::param::ParamValue;
 use crate::{single, utf8_seq};
+use lazy_static::lazy_static;
 use nom::branch::alt;
 use nom::bytes::complete::{take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::{tag, tag_no_case};
 use nom::character::complete::one_of;
 use nom::character::streaming::{alphanumeric1, char, crlf};
 use nom::combinator::{opt, recognize};
-use nom::error::{ErrorKind, FromExternalError, ParseError};
+use nom::error::{ErrorKind, FromExternalError, ParseError, VerboseError, VerboseErrorKind};
 use nom::multi::{fold_many0, many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
 use nom::{AsChar, IResult, Parser};
 use std::str::FromStr;
+use std::sync::Mutex;
 
 mod component;
 mod language_tag;
@@ -90,6 +92,31 @@ impl<'a> From<(&'a [u8], ErrorKind)> for Error<'a> {
         Error {
             input,
             error: InnerError::Nom(kind),
+        }
+    }
+}
+
+lazy_static! {
+    static ref ERROR_HOLD: Mutex<Vec<(usize, usize)>> = Mutex::new(Vec::new());
+}
+
+pub unsafe fn clear_errors() {
+    for (ptr, len) in ERROR_HOLD.lock().unwrap().drain(..) {
+        unsafe { String::from_raw_parts(ptr as *mut u8, len, len) };
+    }
+}
+
+impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
+    fn from(value: Error<'a>) -> Self {
+        let ctx = Box::leak(format!("{:?}", value.error).to_string().into_boxed_str());
+
+        ERROR_HOLD
+            .lock()
+            .unwrap()
+            .push((ctx.as_ptr() as usize, ctx.len()));
+
+        VerboseError {
+            errors: vec![(value.input, VerboseErrorKind::Context(ctx))],
         }
     }
 }

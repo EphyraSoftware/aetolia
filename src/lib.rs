@@ -100,7 +100,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nom::error::VerboseError;
     use nom::multi::many1;
 
     #[test]
@@ -110,15 +109,15 @@ mod tests {
         assert_eq!(seq, "👍".as_bytes());
     }
 
-    // #[test]
-    // fn invalid_utf8() {
-    //     let mut input = "👍👌".as_bytes().to_vec();
-    //     input.extend_from_slice(&[1, 3, 4, 5, 2, 1]);
-    //     let (rem, seq) = many1(utf8_seq::<VerboseError<&[u8]>>)(input.as_slice()).unwrap();
-    //     test_utils::check_rem(rem, 6);
-    //     assert_eq!(
-    //         seq.into_iter().flatten().cloned().collect::<Vec<_>>(),
-    //         "👍👌".as_bytes().to_vec()
-    //     );
-    // }
+    #[test]
+    fn invalid_utf8() {
+        let mut input = "👍👌".as_bytes().to_vec();
+        input.extend_from_slice(&[1, 3, 4, 5, 2, 1]);
+        let (rem, seq) = many1(utf8_seq::<Error>)(input.as_slice()).unwrap();
+        test_utils::check_rem(rem, 6);
+        assert_eq!(
+            seq.into_iter().flatten().cloned().collect::<Vec<_>>(),
+            "👍👌".as_bytes().to_vec()
+        );
+    }
 }
