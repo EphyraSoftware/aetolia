@@ -8,7 +8,7 @@ use crate::parser::{
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
-use nom::combinator::map_res;
+use nom::combinator::{cut, map_res};
 use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{separated_pair, tuple};
@@ -22,7 +22,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    many0(tuple((char(';'), known_param)).map(|(_, p)| p)).parse(input)
+    many0(tuple((char(';'), cut(param))).map(|(_, p)| p)).parse(input)
 }
 
 pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
@@ -198,7 +198,7 @@ where
         }
         _ => {
             return Err(nom::Err::Error(
-                Error::new(input, InnerError::UnknownParamName(name.to_vec())).into(),
+                Error::new(input, InnerError::UnknownParamName(String::from_utf8_lossy(name).to_string())).into(),
             ));
         }
     };
