@@ -45,7 +45,7 @@ pub enum InnerError {
     InvalidIpv6,
     InvalidPort,
     MismatchedComponentEnd(Vec<u8>, Vec<u8>),
-    UnknownParamName(Vec<u8>),
+    UnknownParamName(String),
     InvalidValueParam,
 }
 
