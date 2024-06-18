@@ -114,8 +114,7 @@ mod tests {
                     properties[2],
                     ComponentProperty::DateTimeStart(DateTimeStartProperty {
                         params: vec![Param {
-                            name: "VALUE".to_string(),
-                            value: ParamValue::Value { value: Value::Date }
+                            value: ParamValue::ValueType { value: Value::Date }
                         }],
                         value: DateOrDateTime::Date(Date {
                             year: 1997,

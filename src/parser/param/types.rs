@@ -2,7 +2,6 @@ use crate::parser::language_tag::LanguageTag;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Param<'a> {
-    pub name: String,
     pub value: ParamValue<'a>,
 }
 
@@ -18,13 +17,13 @@ pub enum ParamValue<'a> {
         cu_type: CalendarUserType,
     },
     DelegatedFrom {
-        delegators: Vec<String>,
+        delegators: Vec<&'a [u8]>,
     },
     DelegatedTo {
-        delegates: Vec<String>,
+        delegates: Vec<&'a [u8]>,
     },
     Dir {
-        uri: String,
+        uri: &'a [u8],
     },
     Encoding {
         encoding: Encoding,
@@ -41,7 +40,7 @@ pub enum ParamValue<'a> {
         language: LanguageTag,
     },
     Members {
-        members: Vec<String>,
+        members: Vec<&'a [u8]>,
     },
     ParticipationStatus {
         // TODO convert to ParticipationStatusKind when context is available
@@ -63,19 +62,21 @@ pub enum ParamValue<'a> {
         rsvp: bool,
     },
     SentBy {
-        address: String,
+        address: &'a [u8],
     },
     TimeZoneId {
         tz_id: String,
         unique: bool,
     },
-    Value {
+    ValueType {
         value: Value,
     },
     Other {
+        name: &'a [u8],
         value: &'a [u8],
     },
     Others {
+        name: &'a [u8],
         values: Vec<&'a [u8]>,
     },
 }

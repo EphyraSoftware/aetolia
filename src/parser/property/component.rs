@@ -9,7 +9,7 @@ use crate::parser::property::{
 };
 use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
 use nom::branch::alt;
-use nom::bytes::complete::take_while1;
+use nom::bytes::complete::{tag_no_case, take_while1};
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
@@ -40,7 +40,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag("ATTACH"), cut(params), char(':')))(input)?;
+    let (input, (_, params, _)) = tuple((tag_no_case("ATTACH"), cut(params), char(':')))(input)?;
 
     let is_base_64 = params.iter().any(|p| {
         matches!(
@@ -54,7 +54,7 @@ where
     let is_binary = params.iter().any(|p| {
         matches!(
             p.value,
-            ParamValue::Value {
+            ParamValue::ValueType {
                 value: Value::Binary,
             }
         )
@@ -99,7 +99,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("CATEGORIES"),
+        tag_no_case("CATEGORIES"),
         cut(params),
         char(':'),
         separated_list1(char(','), prop_value_text),
@@ -134,13 +134,13 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("CLASS"),
+        tag_no_case("CLASS"),
         cut(other_params),
         char(':'),
         alt((
-            tag("PUBLIC").map(|_| Classification::Public),
-            tag("PRIVATE").map(|_| Classification::Private),
-            tag("CONFIDENTIAL").map(|_| Classification::Confidential),
+            tag_no_case("PUBLIC").map(|_| Classification::Public),
+            tag_no_case("PRIVATE").map(|_| Classification::Private),
+            tag_no_case("CONFIDENTIAL").map(|_| Classification::Confidential),
             x_name.map(Classification::XName),
             iana_token.map(Classification::IanaToken),
         )),
@@ -172,7 +172,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("COMMENT"),
+        tag_no_case("COMMENT"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -198,7 +198,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("DESCRIPTION"),
+        tag_no_case("DESCRIPTION"),
         cut(params),
         char(':'),
         prop_value_text.map(|v| v),
@@ -225,7 +225,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
-        tag("GEO"),
+        tag_no_case("GEO"),
         cut(other_params),
         char(':'),
         tuple((prop_value_float, char(';'), prop_value_float)),
@@ -258,7 +258,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("LOCATION"),
+        tag_no_case("LOCATION"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -284,7 +284,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("PERCENT-COMPLETE"),
+        tag_no_case("PERCENT-COMPLETE"),
         cut(other_params),
         char(':'),
         verify(prop_value_integer, |v| 0 <= *v && *v <= 100).map(|v| v as u8),
@@ -314,7 +314,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("PRIORITY"),
+        tag_no_case("PRIORITY"),
         cut(other_params),
         char(':'),
         verify(prop_value_integer, |v| 0 <= *v && *v <= 9).map(|v| v as u8),
@@ -346,7 +346,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("RESOURCES"),
+        tag_no_case("RESOURCES"),
         cut(params),
         char(':'),
         separated_list1(char(','), prop_value_text),
@@ -382,18 +382,18 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("STATUS"),
+        tag_no_case("STATUS"),
         cut(other_params),
         char(':'),
         alt((
-            tag("TENTATIVE").map(|_| Status::Tentative),
-            tag("CONFIRMED").map(|_| Status::Confirmed),
-            tag("CANCELLED").map(|_| Status::Cancelled),
-            tag("NEEDS-ACTION").map(|_| Status::NeedsAction),
-            tag("COMPLETED").map(|_| Status::Completed),
-            tag("IN-PROCESS").map(|_| Status::InProcess),
-            tag("DRAFT").map(|_| Status::Draft),
-            tag("FINAL").map(|_| Status::Final),
+            tag_no_case("TENTATIVE").map(|_| Status::Tentative),
+            tag_no_case("CONFIRMED").map(|_| Status::Confirmed),
+            tag_no_case("CANCELLED").map(|_| Status::Cancelled),
+            tag_no_case("NEEDS-ACTION").map(|_| Status::NeedsAction),
+            tag_no_case("COMPLETED").map(|_| Status::Completed),
+            tag_no_case("IN-PROCESS").map(|_| Status::InProcess),
+            tag_no_case("DRAFT").map(|_| Status::Draft),
+            tag_no_case("FINAL").map(|_| Status::Final),
         )),
         tag("\r\n"),
     ))(input)?;
@@ -423,7 +423,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("SUMMARY"),
+        tag_no_case("SUMMARY"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -449,7 +449,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("COMPLETED"),
+        tag_no_case("COMPLETED"),
         cut(other_params),
         char(':'),
         prop_value_date_time,
@@ -481,7 +481,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("DTEND"),
+        tag_no_case("DTEND"),
         cut(params),
         char(':'),
         alt((
@@ -510,7 +510,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("DUE"),
+        tag_no_case("DUE"),
         cut(params),
         char(':'),
         alt((
@@ -541,7 +541,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("DTSTART"),
+        tag_no_case("DTSTART"),
         cut(params),
         char(':'),
         alt((
@@ -568,7 +568,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("DURATION"),
+        tag_no_case("DURATION"),
         cut(other_params),
         char(':'),
         prop_value_duration,
@@ -600,7 +600,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("FREEBUSY"),
+        tag_no_case("FREEBUSY"),
         cut(params),
         char(':'),
         separated_list1(char(','), prop_value_period),
@@ -632,12 +632,12 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("TRANSP"),
+        tag_no_case("TRANSP"),
         cut(other_params),
         char(':'),
         alt((
-            tag("OPAQUE").map(|_| TimeTransparency::Opaque),
-            tag("TRANSPARENT").map(|_| TimeTransparency::Transparent),
+            tag_no_case("OPAQUE").map(|_| TimeTransparency::Opaque),
+            tag_no_case("TRANSPARENT").map(|_| TimeTransparency::Transparent),
         )),
         tag("\r\n"),
     ))(input)?;
@@ -665,7 +665,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("TZID"),
+        tag_no_case("TZID"),
         cut(other_params),
         char(':'),
         tuple((opt(char('/')), prop_value_text)).map(|(prefix, mut value)| {
@@ -703,7 +703,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("TZNAME"),
+        tag_no_case("TZNAME"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -729,7 +729,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("TZOFFSETFROM"),
+        tag_no_case("TZOFFSETFROM"),
         cut(other_params),
         char(':'),
         prop_value_utc_offset,
@@ -755,7 +755,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("TZOFFSETTO"),
+        tag_no_case("TZOFFSETTO"),
         cut(other_params),
         char(':'),
         prop_value_utc_offset,
@@ -787,7 +787,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("TZURL"),
+        tag_no_case("TZURL"),
         cut(other_params),
         char(':'),
         recognize(param_value_uri),
@@ -819,7 +819,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, uri, _)) = tuple((
-        tag("ATTENDEE"),
+        tag_no_case("ATTENDEE"),
         cut(params),
         char(':'),
         recognize(prop_value_calendar_user_address),
@@ -845,7 +845,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("CONTACT"),
+        tag_no_case("CONTACT"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -871,7 +871,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, uri, _)) = tuple((
-        tag("ORGANIZER"),
+        tag_no_case("ORGANIZER"),
         cut(params),
         char(':'),
         recognize(prop_value_calendar_user_address),
@@ -897,7 +897,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("RECURRENCE-ID"),
+        tag_no_case("RECURRENCE-ID"),
         cut(params),
         char(':'),
         alt((
@@ -926,7 +926,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("RELATED-TO"),
+        tag_no_case("RELATED-TO"),
         cut(params),
         char(':'),
         prop_value_text,
@@ -952,7 +952,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("URL"),
+        tag_no_case("URL"),
         cut(other_params),
         char(':'),
         param_value_uri,
@@ -984,7 +984,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("UID"),
+        tag_no_case("UID"),
         cut(other_params),
         char(':'),
         prop_value_text,
@@ -1018,7 +1018,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("EXDATE"),
+        tag_no_case("EXDATE"),
         cut(params),
         char(':'),
         separated_list1(
@@ -1052,7 +1052,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("RDATE"),
+        tag_no_case("RDATE"),
         cut(params),
         char(':'),
         separated_list1(
@@ -1087,7 +1087,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("RRULE"),
+        tag_no_case("RRULE"),
         cut(other_params),
         char(':'),
         recur,
@@ -1126,13 +1126,13 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("ACTION"),
+        tag_no_case("ACTION"),
         cut(other_params),
         char(':'),
         alt((
-            tag("AUDIO").map(|_| Action::Audio),
-            tag("DISPLAY").map(|_| Action::Display),
-            tag("EMAIL").map(|_| Action::Email),
+            tag_no_case("AUDIO").map(|_| Action::Audio),
+            tag_no_case("DISPLAY").map(|_| Action::Display),
+            tag_no_case("EMAIL").map(|_| Action::Email),
             x_name.map(Action::XName),
             iana_token.map(Action::IanaToken),
         )),
@@ -1162,7 +1162,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("REPEAT"),
+        tag_no_case("REPEAT"),
         cut(other_params),
         char(':'),
         prop_value_integer.map(|v| v as u32),
@@ -1199,15 +1199,15 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag("TRIGGER"), cut(params), char(':')))(input)?;
+    let (input, (_, params, _)) = tuple((tag_no_case("TRIGGER"), cut(params), char(':')))(input)?;
 
     let value_choice = params
         .iter()
         .filter_map(|p| match p.value {
-            ParamValue::Value {
+            ParamValue::ValueType {
                 value: Value::Duration,
             } => Some(1),
-            ParamValue::Value {
+            ParamValue::ValueType {
                 value: Value::DateTime,
             } => Some(2),
             _ => None,
@@ -1247,7 +1247,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("CREATED"),
+        tag_no_case("CREATED"),
         cut(other_params),
         char(':'),
         prop_value_date_time,
@@ -1279,7 +1279,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("DTSTAMP"),
+        tag_no_case("DTSTAMP"),
         cut(other_params),
         char(':'),
         prop_value_date_time,
@@ -1309,7 +1309,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("LAST-MODIFIED"),
+        tag_no_case("LAST-MODIFIED"),
         cut(other_params),
         char(':'),
         prop_value_date_time,
@@ -1339,7 +1339,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) = tuple((
-        tag("SEQUENCE"),
+        tag_no_case("SEQUENCE"),
         cut(other_params),
         char(':'),
         prop_value_integer.map(|v| v as u32),
@@ -1404,7 +1404,7 @@ where
     }
 
     let (input, (_, params, _, status_code, _, status_description, extra_data, _)) = tuple((
-        tag("REQUEST-STATUS"),
+        tag_no_case("REQUEST-STATUS"),
         cut(params),
         char(':'),
         status_code,
@@ -1466,13 +1466,11 @@ mod tests {
             AttachProperty {
                 params: vec![
                     Param {
-                        name: "VALUE".to_string(),
-                        value: ParamValue::Value {
+                        value: ParamValue::ValueType {
                             value: Value::Binary
                         },
                     },
                     Param {
-                        name: "ENCODING".to_string(),
                         value: ParamValue::Encoding {
                             encoding: Encoding::Base64,
                         },
@@ -1576,7 +1574,6 @@ RSVP to team leader."#
             prop,
             LocationProperty {
                 params: vec![Param {
-                    name: "ALTREP".to_string(),
                     value: ParamValue::AltRep {
                         uri: "http://xyzcorp.com/conf-rooms/f123.vcf".to_string(),
                     },
@@ -1685,8 +1682,7 @@ RSVP to team leader."#
             prop,
             DateTimeEndProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value { value: Value::Date },
+                    value: ParamValue::ValueType { value: Value::Date },
                 },],
                 value: DateOrDateTime::Date(Date {
                     year: 1998,
@@ -1730,8 +1726,7 @@ RSVP to team leader."#
             prop,
             DateTimeDueProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value { value: Value::Date },
+                    value: ParamValue::ValueType { value: Value::Date },
                 },],
                 value: DateOrDateTime::Date(Date {
                     year: 1998,
@@ -1838,7 +1833,6 @@ RSVP to team leader."#
             prop,
             FreeBusyTimeProperty {
                 params: vec![Param {
-                    name: "FBTYPE".to_string(),
                     value: ParamValue::FreeBusyTimeType {
                         fb_type: FreeBusyTimeType::BusyUnavailable,
                     },
@@ -1867,7 +1861,6 @@ RSVP to team leader."#
             prop,
             FreeBusyTimeProperty {
                 params: vec![Param {
-                    name: "FBTYPE".to_string(),
                     value: ParamValue::FreeBusyTimeType {
                         fb_type: FreeBusyTimeType::Free,
                     },
@@ -1970,7 +1963,6 @@ RSVP to team leader."#
             prop,
             TimeZoneNameProperty {
                 params: vec![Param {
-                    name: "LANGUAGE".to_string(),
                     value: ParamValue::Language {
                         language: LanguageTag {
                             language: "fr".to_string(),
@@ -2045,25 +2037,21 @@ RSVP to team leader."#
             AttendeeProperty {
                 params: vec![
                     Param {
-                        name: "ROLE".to_string(),
                         value: ParamValue::Role {
                             role: Role::RequiredParticipant,
                         },
                     },
                     Param {
-                        name: "DELEGATED-FROM".to_string(),
                         value: ParamValue::DelegatedFrom {
-                            delegators: vec!["mailto:bob@example.com".to_string()],
+                            delegators: vec![b"mailto:bob@example.com"],
                         },
                     },
                     Param {
-                        name: "PARTSTAT".to_string(),
                         value: ParamValue::ParticipationStatus {
                             status: ParticipationStatusUnknown::Accepted,
                         },
                     },
                     Param {
-                        name: "CN".to_string(),
                         value: ParamValue::CommonName {
                             name: "Jane Doe".to_string(),
                         },
@@ -2098,7 +2086,6 @@ RSVP to team leader."#
             prop,
             ContactProperty {
                 params: vec![Param {
-                    name: "ALTREP".to_string(),
                     value: ParamValue::AltRep {
                         uri:
                             "ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
@@ -2120,7 +2107,6 @@ RSVP to team leader."#
             prop,
             OrganizerProperty {
                 params: vec![Param {
-                    name: "CN".to_string(),
                     value: ParamValue::CommonName {
                         name: "John Smith".to_string(),
                     },
@@ -2139,17 +2125,14 @@ RSVP to team leader."#
             OrganizerProperty {
                 params: vec![
                     Param {
-                        name: "CN".to_string(),
                         value: ParamValue::CommonName {
                             name: "JohnSmith".to_string(),
                         },
                     },
                     Param {
-                        name: "DIR".to_string(),
                         value: ParamValue::Dir {
                             uri:
-                                "ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)"
-                                    .to_string(),
+                                b"ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)",
                         },
                     },
                 ],
@@ -2169,9 +2152,8 @@ RSVP to team leader."#
             prop,
             OrganizerProperty {
                 params: vec![Param {
-                    name: "SENT-BY".to_string(),
                     value: ParamValue::SentBy {
-                        address: "mailto:jane_doe@example.com".to_string(),
+                        address: b"mailto:jane_doe@example.com",
                     },
                 }],
                 value: b"mailto:jsmith@example.com",
@@ -2188,8 +2170,7 @@ RSVP to team leader."#
             prop,
             RecurrenceIdProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value { value: Value::Date },
+                    value: ParamValue::ValueType { value: Value::Date },
                 }],
                 value: DateOrDateTime::Date(Date {
                     year: 1996,
@@ -2210,7 +2191,6 @@ RSVP to team leader."#
             prop,
             RecurrenceIdProperty {
                 params: vec![Param {
-                    name: "RANGE".to_string(),
                     value: ParamValue::Range {
                         range: Range::ThisAndFuture,
                     },
@@ -2356,7 +2336,6 @@ RSVP to team leader."#
             prop,
             RecurrenceDateTimesProperty {
                 params: vec![Param {
-                    name: "TZID".to_string(),
                     value: ParamValue::TimeZoneId {
                         tz_id: "America/New_York".to_string(),
                         unique: false,
@@ -2390,8 +2369,7 @@ RSVP to team leader."#
             prop,
             RecurrenceDateTimesProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value {
+                    value: ParamValue::ValueType {
                         value: Value::Period
                     },
                 }],
@@ -2425,8 +2403,7 @@ RSVP to team leader."#
             prop,
             RecurrenceDateTimesProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value { value: Value::Date },
+                    value: ParamValue::ValueType { value: Value::Date },
                 }],
                 value: vec![
                     DateOrDateTimeOrPeriod::Date(Date {
@@ -2547,7 +2524,6 @@ RSVP to team leader."#
             prop,
             TriggerProperty {
                 params: vec![Param {
-                    name: "RELATED".to_string(),
                     value: ParamValue::Related {
                         related: Related::End,
                     },
@@ -2571,8 +2547,7 @@ RSVP to team leader."#
             prop,
             TriggerProperty {
                 params: vec![Param {
-                    name: "VALUE".to_string(),
-                    value: ParamValue::Value {
+                    value: ParamValue::ValueType {
                         value: Value::DateTime,
                     },
                 }],

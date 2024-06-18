@@ -1,7 +1,7 @@
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::value_types::Date;
 use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
-use crate::parser::{Error, InnerError};
+use crate::parser::{read_int, Error, InnerError};
 use crate::utf8_seq;
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
@@ -317,18 +317,7 @@ where
 {
     let (input, (sign, num)) = tuple((opt_sign, take_while1(is_digit)))(input)?;
 
-    let num: i32 = std::str::from_utf8(num)
-        .map_err(|e| {
-            nom::Err::Error(
-                Error::new(
-                    input,
-                    InnerError::EncodingError("Invalid integer number text".to_string(), e),
-                )
-                .into(),
-            )
-        })?
-        .parse()
-        .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidIntegerNum).into()))?;
+    let num: i32 = read_int(num)?;
 
     Ok((input, sign as i32 * num))
 }

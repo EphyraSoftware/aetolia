@@ -52,7 +52,6 @@ where
     )))(input)
 }
 
-// TODO Use own error?
 pub fn language_tag<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,

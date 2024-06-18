@@ -1,17 +1,17 @@
 mod types;
 mod values;
 
-use crate::parser::{
-    language_tag, param_name, param_value, quoted_string, read_string, reg_name, x_name, Error,
-    InnerError,
-};
+use crate::parser::language_tag::language_tag;
+use crate::parser::property::uri::param_value_uri;
+use crate::parser::{param_name, param_value, quoted_string, read_string, reg_name, x_name, Error};
 use nom::branch::alt;
+use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
-use nom::combinator::{cut, map_res};
+use nom::combinator::{cut, map_res, recognize};
 use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
-use nom::sequence::{separated_pair, tuple};
+use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
 pub use types::*;
 pub use values::*;
@@ -34,186 +34,400 @@ where
     alt((known_param, iana_param, x_param))(input)
 }
 
+/// Parse an ALTREP param
+///
+/// RFC 5545, section 3.2.1
+fn param_alternate_text_representation<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
+    let (input, (_, _, uri)) =
+        tuple((tag_no_case("ALTREP"), char('='), cut(quoted_string)))(input)?;
+
+    Ok((
+        input,
+        ParamValue::AltRep {
+            uri: read_string(uri, "uri")?,
+        },
+    ))
+}
+
+/// Parse a CN param
+///
+/// RFC 5545, section 3.2.2
+fn param_common_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
+    let (input, (_, _, value)) = tuple((tag_no_case("CN"), char('='), cut(param_value)))(input)?;
+
+    Ok((
+        input,
+        ParamValue::CommonName {
+            name: read_string(value, "common_name")?,
+        },
+    ))
+}
+
+/// Parse a CUTYPE param
+///
+/// RFC 5545, section 3.2.3
+fn param_calendar_user_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, cu_type)) = tuple((
+        tag_no_case("CUTYPE"),
+        char('='),
+        cut(param_value_calendar_user_type),
+    ))(input)?;
+
+    Ok((input, ParamValue::CalendarUserType { cu_type }))
+}
+
+/// Parse a DELEGATED-FROM param
+///
+/// RFC 5545, section 3.2.4
+fn param_delegated_from<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, delegators)) = tuple((
+        tag_no_case("DELEGATED-FROM"),
+        char('='),
+        cut(separated_list1(
+            char(','),
+            delimited(char('"'), recognize(param_value_uri), char('"')),
+        )),
+    ))(input)?;
+
+    Ok((input, ParamValue::DelegatedFrom { delegators }))
+}
+
+/// Parse a DELEGATED-TO param
+///
+/// RFC 5545, section 3.2.5
+fn param_delegated_to<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, delegates)) = tuple((
+        tag_no_case("DELEGATED-TO"),
+        char('='),
+        cut(separated_list1(
+            char(','),
+            delimited(char('"'), recognize(param_value_uri), char('"')),
+        )),
+    ))(input)?;
+
+    Ok((input, ParamValue::DelegatedTo { delegates }))
+}
+
+/// Parse a DIR param
+///
+/// RFC 5545, section 3.2.6
+fn param_dir<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, uri)) = tuple((
+        tag_no_case("DIR"),
+        char('='),
+        cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
+    ))(input)?;
+
+    Ok((input, ParamValue::Dir { uri }))
+}
+
+/// Parse an ENCODING param
+///
+/// RFC 5545, section 3.2.7
+fn param_encoding<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, encoding)) = tuple((
+        tag_no_case("ENCODING"),
+        char('='),
+        cut(param_value_encoding),
+    ))(input)?;
+
+    Ok((input, ParamValue::Encoding { encoding }))
+}
+
+/// Parse an FMTTYPE param
+///
+/// RFC 5545, section 3.2.8
+fn param_format_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, (type_name, sub_type_name))) = tuple((
+        tag_no_case("FMTTYPE"),
+        char('='),
+        cut(separated_pair(
+            map_res(reg_name, |t| read_string(t, "FMTTYPE type-name")),
+            char('/'),
+            map_res(reg_name, |t| read_string(t, "FMTTYPE subtype-name")),
+        )),
+    ))(input)?;
+
+    Ok((
+        input,
+        ParamValue::FormatType {
+            type_name,
+            sub_type_name,
+        },
+    ))
+}
+
+/// Parse an FBTYPE param
+///
+/// RFC 5545, section 3.2.9
+fn param_free_busy_time_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, fb_type)) = tuple((
+        tag_no_case("FBTYPE"),
+        char('='),
+        cut(param_value_free_busy_time_type),
+    ))(input)?;
+
+    Ok((input, ParamValue::FreeBusyTimeType { fb_type }))
+}
+
+/// Parse a LANGUAGE param
+///
+/// RFC 5545, section 3.2.10
+fn param_language<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, language)) =
+        tuple((tag_no_case("LANGUAGE"), char('='), cut(language_tag)))(input)?;
+
+    Ok((input, ParamValue::Language { language }))
+}
+
+/// Parse a MEMBER param
+///
+/// RFC 5545, section 3.2.11
+fn param_member<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, members)) = tuple((
+        tag_no_case("MEMBER"),
+        char('='),
+        cut(separated_list1(
+            char(','),
+            delimited(char('"'), recognize(param_value_uri), char('"')),
+        )),
+    ))(input)?;
+
+    Ok((input, ParamValue::Members { members }))
+}
+
+/// Parse a PARTSTAT param
+///
+/// RFC 5545, section 3.2.12
+fn param_participation_status<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, status)) = tuple((
+        tag_no_case("PARTSTAT"),
+        char('='),
+        cut(param_value_particpation_status),
+    ))(input)?;
+
+    Ok((input, ParamValue::ParticipationStatus { status }))
+}
+
+/// Parse a RANGE param
+///
+/// RFC 5545, section 3.2.13
+fn param_range<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, _)) =
+        tuple((tag_no_case("RANGE"), char('='), cut(tag("THISANDFUTURE"))))(input)?;
+
+    Ok((
+        input,
+        ParamValue::Range {
+            range: Range::ThisAndFuture,
+        },
+    ))
+}
+
+/// Parse a RELATED param
+///
+/// RFC 5545, section 3.2.14
+fn param_related<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, related)) =
+        tuple((tag_no_case("RELATED"), char('='), cut(param_value_related)))(input)?;
+
+    Ok((input, ParamValue::Related { related }))
+}
+
+/// Parse a RELTYPE param
+///
+/// RFC 5545, section 3.2.15
+fn param_relationship_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, relationship)) = tuple((
+        tag_no_case("RELTYPE"),
+        char('='),
+        cut(param_value_relationship_type),
+    ))(input)?;
+
+    Ok((input, ParamValue::RelationshipType { relationship }))
+}
+
+/// Parse a ROLE param
+///
+/// RFC 5545, section 3.2.16
+fn param_role<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, role)) =
+        tuple((tag_no_case("ROLE"), char('='), cut(param_value_role)))(input)?;
+
+    Ok((input, ParamValue::Role { role }))
+}
+
+/// Parse an RSVP param
+///
+/// RFC 5545, section 3.2.17
+fn param_rsvp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, rsvp)) =
+        tuple((tag_no_case("RSVP"), char('='), cut(param_value_rsvp)))(input)?;
+
+    Ok((input, ParamValue::Rsvp { rsvp }))
+}
+
+/// Parse an SENT-BY param
+///
+/// RFC 5545, section 3.2.18
+fn param_sent_by<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, address)) = tuple((
+        tag_no_case("SENT-BY"),
+        char('='),
+        cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
+    ))(input)?;
+
+    Ok((input, ParamValue::SentBy { address }))
+}
+
+/// Parse a TZID param
+///
+/// RFC 5545, section 3.2.19
+fn param_time_zone_identifier<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, (tz_id, unique))) =
+        tuple((tag_no_case("TZID"), char('='), cut(param_value_tz_id)))(input)?;
+
+    Ok((input, ParamValue::TimeZoneId { tz_id, unique }))
+}
+
+/// Parse a VALUE param
+///
+/// RFC 5545, section 3.2.20
+fn param_value_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, _, value)) =
+        tuple((tag_no_case("VALUE"), char('='), cut(param_value_value_type)))(input)?;
+
+    Ok((input, ParamValue::ValueType { value }))
+}
+
 fn known_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (name, _)) = tuple((param_name, char('=')))(input)?;
+    let (input, param_value) = alt((
+        param_alternate_text_representation,
+        param_common_name,
+        param_calendar_user_type,
+        param_delegated_from,
+        param_delegated_to,
+        param_dir,
+        param_encoding,
+        param_format_type,
+        param_free_busy_time_type,
+        param_language,
+        param_member,
+        param_participation_status,
+        param_range,
+        param_related,
+        param_relationship_type,
+        param_role,
+        param_rsvp,
+        param_sent_by,
+        param_time_zone_identifier,
+        param_value_type,
+    ))(input)?;
 
-    let name_s = read_string(name, "param_name")?;
-    let (input, param_value) = match name_s.as_str() {
-        "ALTREP" => {
-            // Requires a quoted string rather than a param-value
-            let (input, uri) = cut(quoted_string)(input)?;
-
-            (
-                input,
-                ParamValue::AltRep {
-                    uri: read_string(uri, "uri")?,
-                },
-            )
-        }
-        "CN" => {
-            let (input, value) = cut(param_value)(input)?;
-
-            (
-                input,
-                ParamValue::CommonName {
-                    name: read_string(value, "common_name")?,
-                },
-            )
-        }
-        "CUTYPE" => {
-            let (input, cu_type) = cut(param_calendar_user_type)(input)?;
-
-            (input, ParamValue::CalendarUserType { cu_type })
-        }
-        "DELEGATED-FROM" => {
-            // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
-            let (input, delegators) = cut(separated_list1(
-                char(','),
-                map_res(quoted_string, |d| {
-                    read_string(d, "DELEGATED-FROM cal-address")
-                }),
-            ))(input)?;
-
-            (input, ParamValue::DelegatedFrom { delegators })
-        }
-        "DELEGATED-TO" => {
-            // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
-            let (input, delegates) = cut(separated_list1(
-                char(','),
-                map_res(quoted_string, |d| {
-                    read_string(d, "DELEGATED-TO cal-address")
-                }),
-            ))(input)?;
-
-            (input, ParamValue::DelegatedTo { delegates })
-        }
-        "DIR" => {
-            let (input, uri) = cut(quoted_string)(input)?;
-
-            (
-                input,
-                ParamValue::Dir {
-                    uri: read_string(uri, "dir")?,
-                },
-            )
-        }
-        "ENCODING" => {
-            let (input, encoding) = cut(param_encoding)(input)?;
-
-            (input, ParamValue::Encoding { encoding })
-        }
-        "FMTTYPE" => {
-            let (input, (type_name, sub_type_name)) = cut(separated_pair(
-                map_res(reg_name, |t| read_string(t, "FMTTYPE type-name")),
-                char('/'),
-                map_res(reg_name, |t| read_string(t, "FMTTYPE subtype-name")),
-            ))(input)?;
-
-            (
-                input,
-                ParamValue::FormatType {
-                    type_name,
-                    sub_type_name,
-                },
-            )
-        }
-        "FBTYPE" => {
-            let (input, fb_type) = cut(param_free_busy_time_type)(input)?;
-
-            (input, ParamValue::FreeBusyTimeType { fb_type })
-        }
-        "LANGUAGE" => {
-            let (input, language) = cut(language_tag::language_tag)(input)?;
-
-            (input, ParamValue::Language { language })
-        }
-        "MEMBER" => {
-            let (input, members) = cut(separated_list1(
-                char(','),
-                map_res(quoted_string, |m| read_string(m, "MEMBER cal-address")),
-            ))(input)?;
-
-            (input, ParamValue::Members { members })
-        }
-        "PARTSTAT" => {
-            let (input, status) = cut(param_part_stat)(input)?;
-
-            (input, ParamValue::ParticipationStatus { status })
-        }
-        "RANGE" => {
-            let (input, _) = cut(tag("THISANDFUTURE"))(input)?;
-
-            (
-                input,
-                ParamValue::Range {
-                    range: Range::ThisAndFuture,
-                },
-            )
-        }
-        // TRIGREL
-        "RELATED" => {
-            let (input, related) = cut(param_related)(input)?;
-
-            (input, ParamValue::Related { related })
-        }
-        "RELTYPE" => {
-            let (input, relationship) = cut(param_rel_type)(input)?;
-
-            (input, ParamValue::RelationshipType { relationship })
-        }
-        "ROLE" => {
-            let (input, role) = cut(param_role)(input)?;
-
-            (input, ParamValue::Role { role })
-        }
-        "RSVP" => {
-            let (input, rsvp) = cut(param_rsvp)(input)?;
-
-            (input, ParamValue::Rsvp { rsvp })
-        }
-        "SENT-BY" => {
-            let (input, address) = cut(quoted_string)(input)?;
-
-            (
-                input,
-                ParamValue::SentBy {
-                    address: read_string(address, "SENT-BY address")?,
-                },
-            )
-        }
-        "TZID" => {
-            let (input, (tz_id, unique)) = cut(param_tz_id)(input)?;
-
-            (input, ParamValue::TimeZoneId { tz_id, unique })
-        }
-        "VALUE" => {
-            let (input, value) = cut(param_value_type)(input)?;
-
-            (input, ParamValue::Value { value })
-        }
-        _ => {
-            return Err(nom::Err::Error(
-                Error::new(
-                    input,
-                    InnerError::UnknownParamName(String::from_utf8_lossy(name).to_string()),
-                )
-                .into(),
-            ));
-        }
-    };
-
-    Ok((
-        input,
-        Param {
-            name: name_s,
-            value: param_value,
-        },
-    ))
+    Ok((input, Param { value: param_value }))
 }
 
 pub fn other_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
@@ -243,8 +457,7 @@ where
     Ok((
         input,
         Param {
-            name: read_string(name, "iana-param name")?,
-            value: ParamValue::Others { values },
+            value: ParamValue::Others { name, values },
         },
     ))
 }
@@ -259,8 +472,7 @@ where
     Ok((
         input,
         Param {
-            name: read_string(name, "x-param name")?,
-            value: ParamValue::Others { values },
+            value: ParamValue::Others { name, values },
         },
     ))
 }
@@ -276,7 +488,6 @@ mod tests {
         let (rem, param) =
             known_param::<Error>(b"ALTREP=\"http://example.com/calendar\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("ALTREP", param.name);
         assert_eq!(
             ParamValue::AltRep {
                 uri: "http://example.com/calendar".to_string()
@@ -289,7 +500,6 @@ mod tests {
     fn param_cn() {
         let (rem, param) = known_param::<Error>(b"CN=\"John Smith\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CN", param.name);
         assert_eq!(
             ParamValue::CommonName {
                 name: "John Smith".to_string()
@@ -302,7 +512,6 @@ mod tests {
     fn param_cn_not_quoted() {
         let (rem, param) = known_param::<Error>(b"CN=Danny;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CN", param.name);
         assert_eq!(
             ParamValue::CommonName {
                 name: "Danny".to_string()
@@ -315,7 +524,6 @@ mod tests {
     fn param_cu_type_individual() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=INDIVIDUAL;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Individual
@@ -328,7 +536,6 @@ mod tests {
     fn param_cu_type_group() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=GROUP;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Group
@@ -341,7 +548,6 @@ mod tests {
     fn param_cu_type_resource() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=RESOURCE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Resource
@@ -354,7 +560,6 @@ mod tests {
     fn param_cu_type_room() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=ROOM;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Room
@@ -367,7 +572,6 @@ mod tests {
     fn param_cu_type_unknown() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=UNKNOWN;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Unknown
@@ -380,7 +584,6 @@ mod tests {
     fn param_cu_type_x_name() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=X-esl-special;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::XName("X-esl-special".to_string())
@@ -393,7 +596,6 @@ mod tests {
     fn param_cu_type_iana_token() {
         let (rem, param) = known_param::<Error>(b"CUTYPE=other;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("CUTYPE", param.name);
         assert_eq!(
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::IanaToken("other".to_string())
@@ -407,10 +609,9 @@ mod tests {
         let (rem, param) =
             known_param::<Error>(b"DELEGATED-FROM=\"mailto:jsmith@example.com\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("DELEGATED-FROM", param.name);
         assert_eq!(
             ParamValue::DelegatedFrom {
-                delegators: vec!["mailto:jsmith@example.com".to_string()],
+                delegators: vec![b"mailto:jsmith@example.com"],
             },
             param.value
         );
@@ -423,13 +624,9 @@ mod tests {
         )
         .unwrap();
         check_rem(rem, 1);
-        assert_eq!("DELEGATED-FROM", param.name);
         assert_eq!(
             ParamValue::DelegatedFrom {
-                delegators: vec![
-                    "mailto:jsmith@example.com".to_string(),
-                    "mailto:danny@example.com".to_string()
-                ],
+                delegators: vec![b"mailto:jsmith@example.com", b"mailto:danny@example.com",],
             },
             param.value
         );
@@ -440,10 +637,9 @@ mod tests {
         let (rem, param) =
             known_param::<Error>(b"DELEGATED-TO=\"mailto:jsmith@example.com\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("DELEGATED-TO", param.name);
         assert_eq!(
             ParamValue::DelegatedTo {
-                delegates: vec!["mailto:jsmith@example.com".to_string()],
+                delegates: vec![b"mailto:jsmith@example.com"],
             },
             param.value
         );
@@ -456,13 +652,9 @@ mod tests {
         )
         .unwrap();
         check_rem(rem, 1);
-        assert_eq!("DELEGATED-TO", param.name);
         assert_eq!(
             ParamValue::DelegatedTo {
-                delegates: vec![
-                    "mailto:jsmith@example.com".to_string(),
-                    "mailto:danny@example.com".to_string()
-                ],
+                delegates: vec![b"mailto:jsmith@example.com", b"mailto:danny@example.com",],
             },
             param.value
         );
@@ -475,11 +667,9 @@ mod tests {
         )
         .unwrap();
         check_rem(rem, 1);
-        assert_eq!("DIR", param.name);
         assert_eq!(
             ParamValue::Dir {
-                uri: "ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
-                    .to_string()
+                uri: b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
             },
             param.value
         );
@@ -489,7 +679,6 @@ mod tests {
     fn param_encoding_8bit() {
         let (rem, param) = known_param::<Error>(b"ENCODING=8BIT;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("ENCODING", param.name);
         assert_eq!(
             ParamValue::Encoding {
                 encoding: Encoding::EightBit
@@ -502,7 +691,6 @@ mod tests {
     fn param_encoding_base64() {
         let (rem, param) = known_param::<Error>(b"ENCODING=BASE64;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("ENCODING", param.name);
         assert_eq!(
             ParamValue::Encoding {
                 encoding: Encoding::Base64
@@ -515,11 +703,10 @@ mod tests {
     fn param_fmt_type() {
         let (rem, param) = known_param::<Error>(b"FMTTYPE=application/msword;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("FMTTYPE", param.name);
         assert_eq!(
             ParamValue::FormatType {
                 type_name: "application".to_string(),
-                sub_type_name: "msword".to_string()
+                sub_type_name: "msword".to_string(),
             },
             param.value
         );
@@ -529,7 +716,6 @@ mod tests {
     fn param_fb_type_free() {
         let (rem, param) = known_param::<Error>(b"FBTYPE=FREE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("FBTYPE", param.name);
         assert_eq!(
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::Free
@@ -542,7 +728,6 @@ mod tests {
     fn param_fb_type_busy() {
         let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("FBTYPE", param.name);
         assert_eq!(
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::Busy
@@ -555,7 +740,6 @@ mod tests {
     fn param_fb_type_busy_unavailable() {
         let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY-UNAVAILABLE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("FBTYPE", param.name);
         assert_eq!(
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::BusyUnavailable
@@ -568,7 +752,6 @@ mod tests {
     fn param_fb_type_busy_tentative() {
         let (rem, param) = known_param::<Error>(b"FBTYPE=BUSY-TENTATIVE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("FBTYPE", param.name);
         assert_eq!(
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::BusyTentative
@@ -581,7 +764,6 @@ mod tests {
     fn param_language() {
         let (rem, param) = known_param::<Error>(b"LANGUAGE=en-US;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("LANGUAGE", param.name);
         assert_eq!(
             ParamValue::Language {
                 language: LanguageTag {
@@ -599,10 +781,9 @@ mod tests {
         let (rem, param) =
             known_param::<Error>(b"MEMBER=\"mailto:ietf-calsch@example.org\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("MEMBER", param.name);
         assert_eq!(
             ParamValue::Members {
-                members: vec!["mailto:ietf-calsch@example.org".to_string()],
+                members: vec![b"mailto:ietf-calsch@example.org"],
             },
             param.value
         );
@@ -615,12 +796,11 @@ mod tests {
         )
         .unwrap();
         check_rem(rem, 1);
-        assert_eq!("MEMBER", param.name);
         assert_eq!(
             ParamValue::Members {
                 members: vec![
-                    "mailto:projectA@example.com".to_string(),
-                    "mailto:projectB@example.com".to_string()
+                    b"mailto:projectA@example.com",
+                    b"mailto:projectB@example.com",
                 ],
             },
             param.value
@@ -631,7 +811,6 @@ mod tests {
     fn param_part_stat_declined() {
         let (rem, param) = known_param::<Error>(b"PARTSTAT=DECLINED;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("PARTSTAT", param.name);
         assert_eq!(
             ParamValue::ParticipationStatus {
                 status: ParticipationStatusUnknown::Declined
@@ -644,7 +823,6 @@ mod tests {
     fn param_range() {
         let (rem, param) = known_param::<Error>(b"RANGE=THISANDFUTURE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RANGE", param.name);
         assert_eq!(
             ParamValue::Range {
                 range: Range::ThisAndFuture
@@ -657,7 +835,6 @@ mod tests {
     fn param_related_start() {
         let (rem, param) = known_param::<Error>(b"RELATED=START;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RELATED", param.name);
         assert_eq!(
             ParamValue::Related {
                 related: Related::Start
@@ -670,7 +847,6 @@ mod tests {
     fn param_related_end() {
         let (rem, param) = known_param::<Error>(b"RELATED=END;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RELATED", param.name);
         assert_eq!(
             ParamValue::Related {
                 related: Related::End
@@ -683,7 +859,6 @@ mod tests {
     fn param_rel_type() {
         let (rem, param) = known_param::<Error>(b"RELTYPE=SIBLING;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RELTYPE", param.name);
         assert_eq!(
             ParamValue::RelationshipType {
                 relationship: RelationshipType::Sibling
@@ -696,7 +871,6 @@ mod tests {
     fn param_role() {
         let (rem, param) = known_param::<Error>(b"ROLE=CHAIR;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("ROLE", param.name);
         assert_eq!(ParamValue::Role { role: Role::Chair }, param.value);
     }
 
@@ -704,7 +878,6 @@ mod tests {
     fn param_rsvp_true() {
         let (rem, param) = known_param::<Error>(b"RSVP=TRUE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RSVP", param.name);
         assert_eq!(ParamValue::Rsvp { rsvp: true }, param.value);
     }
 
@@ -712,7 +885,6 @@ mod tests {
     fn param_rsvp_false() {
         let (rem, param) = known_param::<Error>(b"RSVP=FALSE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("RSVP", param.name);
         assert_eq!(ParamValue::Rsvp { rsvp: false }, param.value);
     }
 
@@ -720,10 +892,9 @@ mod tests {
     fn param_sent_by() {
         let (rem, param) = known_param::<Error>(b"SENT-BY=\"mailto:sray@example.com\";").unwrap();
         check_rem(rem, 1);
-        assert_eq!("SENT-BY", param.name);
         assert_eq!(
             ParamValue::SentBy {
-                address: "mailto:sray@example.com".to_string()
+                address: b"mailto:sray@example.com"
             },
             param.value
         );
@@ -733,11 +904,10 @@ mod tests {
     fn param_tz_id() {
         let (rem, param) = known_param::<Error>(b"TZID=America/New_York;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("TZID", param.name);
         assert_eq!(
             ParamValue::TimeZoneId {
                 tz_id: "America/New_York".to_string(),
-                unique: false
+                unique: false,
             },
             param.value
         );
@@ -747,11 +917,10 @@ mod tests {
     fn param_tz_id_unique() {
         let (rem, param) = known_param::<Error>(b"TZID=/America/New_York;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("TZID", param.name);
         assert_eq!(
             ParamValue::TimeZoneId {
                 tz_id: "America/New_York".to_string(),
-                unique: true
+                unique: true,
             },
             param.value
         );
@@ -761,9 +930,8 @@ mod tests {
     fn param_value_binary() {
         let (rem, param) = known_param::<Error>(b"VALUE=BINARY;").unwrap();
         check_rem(rem, 1);
-        assert_eq!("VALUE", param.name);
         assert_eq!(
-            ParamValue::Value {
+            ParamValue::ValueType {
                 value: Value::Binary
             },
             param.value

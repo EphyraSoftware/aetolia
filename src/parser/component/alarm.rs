@@ -64,8 +64,7 @@ mod tests {
                     properties[0],
                     ComponentProperty::Trigger(TriggerProperty {
                         params: vec![Param {
-                            name: "VALUE".to_string(),
-                            value: ParamValue::Value {
+                            value: ParamValue::ValueType {
                                 value: Value::DateTime,
                             },
                         }],
@@ -118,7 +117,6 @@ mod tests {
                     properties[4],
                     ComponentProperty::Attach(AttachProperty {
                         params: vec![Param {
-                            name: "FMTTYPE".to_string(),
                             value: ParamValue::FormatType {
                                 type_name: "audio".to_string(),
                                 sub_type_name: "basic".to_string(),

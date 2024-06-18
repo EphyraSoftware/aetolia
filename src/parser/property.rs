@@ -1,7 +1,7 @@
 mod component;
 mod recur;
 pub mod types;
-mod uri;
+pub(crate) mod uri;
 mod value;
 mod value_types;
 
@@ -13,6 +13,7 @@ use crate::parser::{iana_token, value, x_name, Error};
 use crate::single;
 pub use component::*;
 use nom::branch::alt;
+use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
@@ -28,7 +29,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("PRODID"),
+        tag_no_case("PRODID"),
         cut(other_params),
         char(':'),
         prop_value_text,
@@ -49,7 +50,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, params, _, (min_ver, max_ver), _)) = tuple((
-        tag("VERSION"),
+        tag_no_case("VERSION"),
         cut(other_params),
         char(':'),
         alt((
@@ -82,7 +83,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("CALSCALE"),
+        tag_no_case("CALSCALE"),
         cut(other_params),
         char(':'),
         prop_value_text,
@@ -103,7 +104,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (_, params, _, value, _)) = tuple((
-        tag("METHOD"),
+        tag_no_case("METHOD"),
         cut(other_params),
         char(':'),
         iana_token,
@@ -189,10 +190,10 @@ mod tests {
         .unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
-        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
             ParamValue::Others {
+                name: b"x-prop",
                 values: vec![b"val"]
             }
         );
@@ -215,10 +216,10 @@ mod tests {
         let (rem, prop) = prop_version::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
-        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
             ParamValue::Others {
+                name: b"x-prop",
                 values: vec![b"val"]
             }
         );
@@ -261,10 +262,10 @@ mod tests {
         let (rem, prop) = prop_calendar_scale::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
-        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
             ParamValue::Others {
+                name: b"x-prop",
                 values: vec![b"val"]
             }
         );
@@ -286,10 +287,10 @@ mod tests {
         let (rem, prop) = prop_method::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
-        assert_eq!(prop.other_params[0].name, "x-prop".to_string());
         assert_eq!(
             prop.other_params[0].value,
             ParamValue::Others {
+                name: b"x-prop",
                 values: vec![b"val"]
             }
         );
@@ -304,12 +305,10 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.name, b"X-ABC-MMSUBJ");
         assert_eq!(prop.params.len(), 2);
-        assert_eq!(prop.params[0].name, "VALUE".to_string());
         assert_eq!(
             prop.params[0].value,
-            ParamValue::Value { value: Value::Uri }
+            ParamValue::ValueType { value: Value::Uri }
         );
-        assert_eq!(prop.params[1].name, "FMTTYPE".to_string());
         assert_eq!(
             prop.params[1].value,
             ParamValue::FormatType {
@@ -337,10 +336,9 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.name, b"NON-SMOKING");
         assert_eq!(prop.params.len(), 1);
-        assert_eq!(prop.params[0].name, "VALUE".to_string());
         assert_eq!(
             prop.params[0].value,
-            ParamValue::Value {
+            ParamValue::ValueType {
                 value: Value::Boolean
             }
         );

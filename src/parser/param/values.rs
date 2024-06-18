@@ -4,7 +4,7 @@ use crate::parser::param::{
 };
 use crate::parser::{iana_token, param_text, read_string, x_name, Error};
 use nom::branch::alt;
-use nom::bytes::streaming::tag;
+use nom::bytes::complete::tag_no_case;
 use nom::character::streaming::char;
 use nom::combinator::{map_res, opt};
 use nom::error::ParseError;
@@ -12,18 +12,20 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn param_calendar_user_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarUserType, E>
+pub fn param_value_calendar_user_type<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarUserType, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, cu_type) = alt((
-        tag("INDIVIDUAL").map(|_| CalendarUserType::Individual),
-        tag("GROUP").map(|_| CalendarUserType::Group),
-        tag("RESOURCE").map(|_| CalendarUserType::Resource),
-        tag("ROOM").map(|_| CalendarUserType::Room),
-        tag("UNKNOWN").map(|_| CalendarUserType::Unknown),
+        tag_no_case("INDIVIDUAL").map(|_| CalendarUserType::Individual),
+        tag_no_case("GROUP").map(|_| CalendarUserType::Group),
+        tag_no_case("RESOURCE").map(|_| CalendarUserType::Resource),
+        tag_no_case("ROOM").map(|_| CalendarUserType::Room),
+        tag_no_case("UNKNOWN").map(|_| CalendarUserType::Unknown),
         map_res(x_name, |x_name| {
             Ok(CalendarUserType::XName(read_string(
                 x_name,
@@ -41,30 +43,32 @@ where
     Ok((input, cu_type))
 }
 
-pub fn param_encoding<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Encoding, E>
+pub fn param_value_encoding<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Encoding, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, encoding) = alt((
-        tag("8BIT").map(|_| Encoding::EightBit),
-        tag("BASE64").map(|_| Encoding::Base64),
+        tag_no_case("8BIT").map(|_| Encoding::EightBit),
+        tag_no_case("BASE64").map(|_| Encoding::Base64),
     ))(input)?;
 
     Ok((input, encoding))
 }
 
 /// See https://www.rfc-editor.org/rfc/rfc5545 section 3.2.9
-pub fn param_free_busy_time_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], FreeBusyTimeType, E>
+pub fn param_value_free_busy_time_type<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], FreeBusyTimeType, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, fb_type) = alt((
-        tag("FREE").map(|_| FreeBusyTimeType::Free),
-        tag("BUSY-UNAVAILABLE").map(|_| FreeBusyTimeType::BusyUnavailable),
-        tag("BUSY-TENTATIVE").map(|_| FreeBusyTimeType::BusyTentative),
-        tag("BUSY").map(|_| FreeBusyTimeType::Busy),
+        tag_no_case("FREE").map(|_| FreeBusyTimeType::Free),
+        tag_no_case("BUSY-UNAVAILABLE").map(|_| FreeBusyTimeType::BusyUnavailable),
+        tag_no_case("BUSY-TENTATIVE").map(|_| FreeBusyTimeType::BusyTentative),
+        tag_no_case("BUSY").map(|_| FreeBusyTimeType::Busy),
         map_res(x_name, |x_name| {
             Ok(FreeBusyTimeType::XName(read_string(
                 x_name,
@@ -79,25 +83,25 @@ where
         }),
     ))(input)?;
 
-    println!("fb_type: {:?}", fb_type);
-
     Ok((input, fb_type))
 }
 
-pub fn param_part_stat<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParticipationStatusUnknown, E>
+pub fn param_value_particpation_status<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], ParticipationStatusUnknown, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, part_stat) = alt((
-        tag("NEEDS-ACTION").map(|_| ParticipationStatusUnknown::NeedsAction),
-        tag("ACCEPTED").map(|_| ParticipationStatusUnknown::Accepted),
-        tag("DECLINED").map(|_| ParticipationStatusUnknown::Declined),
-        tag("TENTATIVE").map(|_| ParticipationStatusUnknown::Tentative),
-        tag("DELEGATED").map(|_| ParticipationStatusUnknown::Delegated),
-        tag("COMPLETED").map(|_| ParticipationStatusUnknown::Completed),
-        tag("IN-PROCESS").map(|_| ParticipationStatusUnknown::InProcess),
+        tag_no_case("NEEDS-ACTION").map(|_| ParticipationStatusUnknown::NeedsAction),
+        tag_no_case("ACCEPTED").map(|_| ParticipationStatusUnknown::Accepted),
+        tag_no_case("DECLINED").map(|_| ParticipationStatusUnknown::Declined),
+        tag_no_case("TENTATIVE").map(|_| ParticipationStatusUnknown::Tentative),
+        tag_no_case("DELEGATED").map(|_| ParticipationStatusUnknown::Delegated),
+        tag_no_case("COMPLETED").map(|_| ParticipationStatusUnknown::Completed),
+        tag_no_case("IN-PROCESS").map(|_| ParticipationStatusUnknown::InProcess),
         map_res(x_name, |x_name| {
             Ok(ParticipationStatusUnknown::XName(read_string(
                 x_name,
@@ -115,28 +119,30 @@ where
     Ok((input, part_stat))
 }
 
-pub fn param_related<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Related, E>
+pub fn param_value_related<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Related, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, related) = alt((
-        tag("START").map(|_| Related::Start),
-        tag("END").map(|_| Related::End),
+        tag_no_case("START").map(|_| Related::Start),
+        tag_no_case("END").map(|_| Related::End),
     ))(input)?;
 
     Ok((input, related))
 }
 
-pub fn param_rel_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RelationshipType, E>
+pub fn param_value_relationship_type<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], RelationshipType, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, rel_type) = alt((
-        tag("PARENT").map(|_| RelationshipType::Parent),
-        tag("CHILD").map(|_| RelationshipType::Child),
-        tag("SIBLING").map(|_| RelationshipType::Sibling),
+        tag_no_case("PARENT").map(|_| RelationshipType::Parent),
+        tag_no_case("CHILD").map(|_| RelationshipType::Child),
+        tag_no_case("SIBLING").map(|_| RelationshipType::Sibling),
         map_res(x_name, |x_name| {
             Ok(RelationshipType::XName(read_string(
                 x_name,
@@ -154,17 +160,17 @@ where
     Ok((input, rel_type))
 }
 
-pub fn param_role<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Role, E>
+pub fn param_value_role<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Role, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, role) = alt((
-        tag("CHAIR").map(|_| Role::Chair),
-        tag("REQ-PARTICIPANT").map(|_| Role::RequiredParticipant),
-        tag("OPT-PARTICIPANT").map(|_| Role::OptionalParticipant),
-        tag("NON-PARTICIPANT").map(|_| Role::NonParticipant),
+        tag_no_case("CHAIR").map(|_| Role::Chair),
+        tag_no_case("REQ-PARTICIPANT").map(|_| Role::RequiredParticipant),
+        tag_no_case("OPT-PARTICIPANT").map(|_| Role::OptionalParticipant),
+        tag_no_case("NON-PARTICIPANT").map(|_| Role::NonParticipant),
         map_res(x_name, |x_name| {
             Ok(Role::XName(read_string(x_name, "ROLE x-name")?))
         }),
@@ -176,16 +182,19 @@ where
     Ok((input, role))
 }
 
-pub fn param_rsvp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], bool, E>
+pub fn param_value_rsvp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], bool, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, rsvp) = alt((tag("TRUE").map(|_| true), tag("FALSE").map(|_| false)))(input)?;
+    let (input, rsvp) = alt((
+        tag_no_case("TRUE").map(|_| true),
+        tag_no_case("FALSE").map(|_| false),
+    ))(input)?;
 
     Ok((input, rsvp))
 }
 
-pub fn param_tz_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (String, bool), E>
+pub fn param_value_tz_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (String, bool), E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -194,27 +203,27 @@ where
     Ok((input, (read_string(tz_id, "TZID")?, unique)))
 }
 
-pub fn param_value_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Value, E>
+pub fn param_value_value_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Value, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
     let (input, value) = alt((
-        tag("BINARY").map(|_| Value::Binary),
-        tag("BOOLEAN").map(|_| Value::Boolean),
-        tag("CAL-ADDRESS").map(|_| Value::CalendarAddress),
-        tag("DATE-TIME").map(|_| Value::DateTime),
-        tag("DATE").map(|_| Value::Date),
-        tag("DURATION").map(|_| Value::Duration),
-        tag("FLOAT").map(|_| Value::Float),
-        tag("INTEGER").map(|_| Value::Integer),
-        tag("PERIOD").map(|_| Value::Period),
-        tag("RECUR").map(|_| Value::Recurrence),
-        tag("TEXT").map(|_| Value::Text),
-        tag("TIME").map(|_| Value::Time),
-        tag("URI").map(|_| Value::Uri),
-        tag("UTC-OFFSET").map(|_| Value::UtcOffset),
+        tag_no_case("BINARY").map(|_| Value::Binary),
+        tag_no_case("BOOLEAN").map(|_| Value::Boolean),
+        tag_no_case("CAL-ADDRESS").map(|_| Value::CalendarAddress),
+        tag_no_case("DATE-TIME").map(|_| Value::DateTime),
+        tag_no_case("DATE").map(|_| Value::Date),
+        tag_no_case("DURATION").map(|_| Value::Duration),
+        tag_no_case("FLOAT").map(|_| Value::Float),
+        tag_no_case("INTEGER").map(|_| Value::Integer),
+        tag_no_case("PERIOD").map(|_| Value::Period),
+        tag_no_case("RECUR").map(|_| Value::Recurrence),
+        tag_no_case("TEXT").map(|_| Value::Text),
+        tag_no_case("TIME").map(|_| Value::Time),
+        tag_no_case("URI").map(|_| Value::Uri),
+        tag_no_case("UTC-OFFSET").map(|_| Value::UtcOffset),
         map_res(x_name, |x_name| {
             Ok(Value::XName(read_string(x_name, "VALUE x-name")?))
         }),
