@@ -46,7 +46,7 @@ where
     let (input, param_value) = match name_s.as_str() {
         "ALTREP" => {
             // Requires a quoted string rather than a param-value
-            let (input, uri) = quoted_string(input)?;
+            let (input, uri) = cut(quoted_string)(input)?;
 
             (
                 input,
@@ -56,7 +56,7 @@ where
             )
         }
         "CN" => {
-            let (input, value) = param_value(input)?;
+            let (input, value) = cut(param_value)(input)?;
 
             (
                 input,
@@ -66,34 +66,34 @@ where
             )
         }
         "CUTYPE" => {
-            let (input, cu_type) = param_calendar_user_type(input)?;
+            let (input, cu_type) = cut(param_calendar_user_type)(input)?;
 
             (input, ParamValue::CalendarUserType { cu_type })
         }
         "DELEGATED-FROM" => {
             // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
-            let (input, delegators) = separated_list1(
+            let (input, delegators) = cut(separated_list1(
                 char(','),
                 map_res(quoted_string, |d| {
                     read_string(d, "DELEGATED-FROM cal-address")
                 }),
-            )(input)?;
+            ))(input)?;
 
             (input, ParamValue::DelegatedFrom { delegators })
         }
         "DELEGATED-TO" => {
             // Technically should be 'cal-address' but that's not defined at this point in the spec. Different to quoted string?
-            let (input, delegates) = separated_list1(
+            let (input, delegates) = cut(separated_list1(
                 char(','),
                 map_res(quoted_string, |d| {
                     read_string(d, "DELEGATED-TO cal-address")
                 }),
-            )(input)?;
+            ))(input)?;
 
             (input, ParamValue::DelegatedTo { delegates })
         }
         "DIR" => {
-            let (input, uri) = quoted_string(input)?;
+            let (input, uri) = cut(quoted_string)(input)?;
 
             (
                 input,
@@ -103,16 +103,16 @@ where
             )
         }
         "ENCODING" => {
-            let (input, encoding) = param_encoding(input)?;
+            let (input, encoding) = cut(param_encoding)(input)?;
 
             (input, ParamValue::Encoding { encoding })
         }
         "FMTTYPE" => {
-            let (input, (type_name, sub_type_name)) = separated_pair(
+            let (input, (type_name, sub_type_name)) = cut(separated_pair(
                 map_res(reg_name, |t| read_string(t, "FMTTYPE type-name")),
                 char('/'),
                 map_res(reg_name, |t| read_string(t, "FMTTYPE subtype-name")),
-            )(input)?;
+            ))(input)?;
 
             (
                 input,
@@ -123,30 +123,30 @@ where
             )
         }
         "FBTYPE" => {
-            let (input, fb_type) = param_free_busy_time_type(input)?;
+            let (input, fb_type) = cut(param_free_busy_time_type)(input)?;
 
             (input, ParamValue::FreeBusyTimeType { fb_type })
         }
         "LANGUAGE" => {
-            let (input, language) = language_tag::language_tag(input)?;
+            let (input, language) = cut(language_tag::language_tag)(input)?;
 
             (input, ParamValue::Language { language })
         }
         "MEMBER" => {
-            let (input, members) = separated_list1(
+            let (input, members) = cut(separated_list1(
                 char(','),
                 map_res(quoted_string, |m| read_string(m, "MEMBER cal-address")),
-            )(input)?;
+            ))(input)?;
 
             (input, ParamValue::Members { members })
         }
         "PARTSTAT" => {
-            let (input, status) = param_part_stat(input)?;
+            let (input, status) = cut(param_part_stat)(input)?;
 
             (input, ParamValue::ParticipationStatus { status })
         }
         "RANGE" => {
-            let (input, _) = tag("THISANDFUTURE")(input)?;
+            let (input, _) = cut(tag("THISANDFUTURE"))(input)?;
 
             (
                 input,
@@ -157,27 +157,27 @@ where
         }
         // TRIGREL
         "RELATED" => {
-            let (input, related) = param_related(input)?;
+            let (input, related) = cut(param_related)(input)?;
 
             (input, ParamValue::Related { related })
         }
         "RELTYPE" => {
-            let (input, relationship) = param_rel_type(input)?;
+            let (input, relationship) = cut(param_rel_type)(input)?;
 
             (input, ParamValue::RelationshipType { relationship })
         }
         "ROLE" => {
-            let (input, role) = param_role(input)?;
+            let (input, role) = cut(param_role)(input)?;
 
             (input, ParamValue::Role { role })
         }
         "RSVP" => {
-            let (input, rsvp) = param_rsvp(input)?;
+            let (input, rsvp) = cut(param_rsvp)(input)?;
 
             (input, ParamValue::Rsvp { rsvp })
         }
         "SENT-BY" => {
-            let (input, address) = quoted_string(input)?;
+            let (input, address) = cut(quoted_string)(input)?;
 
             (
                 input,
@@ -187,12 +187,12 @@ where
             )
         }
         "TZID" => {
-            let (input, (tz_id, unique)) = param_tz_id(input)?;
+            let (input, (tz_id, unique)) = cut(param_tz_id)(input)?;
 
             (input, ParamValue::TimeZoneId { tz_id, unique })
         }
         "VALUE" => {
-            let (input, value) = param_value_type(input)?;
+            let (input, value) = cut(param_value_type)(input)?;
 
             (input, ParamValue::Value { value })
         }
