@@ -45,8 +45,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:STANDARD\r\n"), cut(tz_props), tag("END:STANDARD\r\n")))(input)?;
+    let (input, (_, properties, _)) = tuple((
+        tag("BEGIN:STANDARD\r\n"),
+        cut(tz_props),
+        tag("END:STANDARD\r\n"),
+    ))(input)?;
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
@@ -57,8 +60,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:DAYLIGHT\r\n"), cut(tz_props), tag("END:DAYLIGHT\r\n")))(input)?;
+    let (input, (_, properties, _)) = tuple((
+        tag("BEGIN:DAYLIGHT\r\n"),
+        cut(tz_props),
+        tag("END:DAYLIGHT\r\n"),
+    ))(input)?;
 
     Ok((input, CalendarComponent::Daylight { properties }))
 }

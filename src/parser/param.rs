@@ -198,7 +198,11 @@ where
         }
         _ => {
             return Err(nom::Err::Error(
-                Error::new(input, InnerError::UnknownParamName(String::from_utf8_lossy(name).to_string())).into(),
+                Error::new(
+                    input,
+                    InnerError::UnknownParamName(String::from_utf8_lossy(name).to_string()),
+                )
+                .into(),
             ));
         }
     };

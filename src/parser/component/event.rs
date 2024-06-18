@@ -12,11 +12,11 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use nom::combinator::cut;
 
 pub fn component_event<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where

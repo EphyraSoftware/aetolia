@@ -1086,8 +1086,13 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) =
-        tuple((tag("RRULE"), cut(other_params), char(':'), recur, tag("\r\n")))(input)?;
+    let (input, (_, other_params, _, value, _)) = tuple((
+        tag("RRULE"),
+        cut(other_params),
+        char(':'),
+        recur,
+        tag("\r\n"),
+    ))(input)?;
 
     Ok((
         input,
