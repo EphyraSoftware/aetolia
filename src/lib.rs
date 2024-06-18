@@ -38,7 +38,10 @@ where
     }
 }
 
-fn utf8_seq(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn utf8_seq<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, seq) = alt((
         // Utf-8 2-byte sequence
         recognize(tuple((
@@ -92,4 +95,29 @@ fn utf8_seq(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     ))(input)?;
 
     Ok((input, seq))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nom::multi::many1;
+
+    #[test]
+    fn valid_utf8() {
+        let (rem, seq) = utf8_seq::<Error>("👍".as_bytes()).unwrap();
+        test_utils::check_rem(rem, 0);
+        assert_eq!(seq, "👍".as_bytes());
+    }
+
+    #[test]
+    fn invalid_utf8() {
+        let mut input = "👍👌".as_bytes().to_vec();
+        input.extend_from_slice(&[1, 3, 4, 5, 2, 1]);
+        let (rem, seq) = many1(utf8_seq::<Error>)(input.as_slice()).unwrap();
+        test_utils::check_rem(rem, 6);
+        assert_eq!(
+            seq.into_iter().flatten().cloned().collect::<Vec<_>>(),
+            "👍👌".as_bytes().to_vec()
+        );
+    }
 }

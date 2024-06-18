@@ -2,10 +2,14 @@ use crate::parser::Error;
 use nom::bytes::streaming::{tag, take_until};
 use nom::character::streaming::one_of;
 use nom::combinator::opt;
+use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::IResult;
 
-pub fn content_line_first_pass(mut input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+pub fn content_line_first_pass<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let mut out = Vec::new();
 
     loop {
@@ -47,7 +51,7 @@ mod tests {
 
     #[test]
     fn general_line() {
-        let (rem, line) = content_line_first_pass(
+        let (rem, line) = content_line_first_pass::<Error>(
             b"DESCRIP\r\n TION;BRE\r\n NT\r\n =\r\n sent\r\n :\r\n Meeting \"\r\n A\"\r\n",
         )
         .unwrap();

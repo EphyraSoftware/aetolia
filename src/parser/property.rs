@@ -16,16 +16,20 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
-use nom::combinator::{recognize, verify};
+use nom::combinator::{cut, recognize, verify};
+use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 pub use value::*;
 pub use value_types::*;
 
-pub fn prop_product_id(input: &[u8]) -> IResult<&[u8], ProductId, Error> {
+pub fn prop_product_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ProductId<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, params, _, value, _)) = tuple((
         tag("PRODID"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -40,10 +44,13 @@ pub fn prop_product_id(input: &[u8]) -> IResult<&[u8], ProductId, Error> {
     ))
 }
 
-pub fn prop_version(input: &[u8]) -> IResult<&[u8], VersionProperty, Error> {
+pub fn prop_version<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], VersionProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, params, _, (min_ver, max_ver), _)) = tuple((
         tag("VERSION"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tuple((
@@ -68,10 +75,15 @@ pub fn prop_version(input: &[u8]) -> IResult<&[u8], VersionProperty, Error> {
     ))
 }
 
-pub fn prop_calendar_scale(input: &[u8]) -> IResult<&[u8], CalendarScaleProperty, Error> {
+pub fn prop_calendar_scale<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], CalendarScaleProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, params, _, value, _)) = tuple((
         tag("CALSCALE"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -86,10 +98,13 @@ pub fn prop_calendar_scale(input: &[u8]) -> IResult<&[u8], CalendarScaleProperty
     ))
 }
 
-pub fn prop_method(input: &[u8]) -> IResult<&[u8], MethodProperty, Error> {
+pub fn prop_method<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], MethodProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (_, params, _, value, _)) = tuple((
         tag("METHOD"),
-        other_params,
+        cut(other_params),
         char(':'),
         iana_token,
         tag("\r\n"),
@@ -104,9 +119,14 @@ pub fn prop_method(input: &[u8]) -> IResult<&[u8], MethodProperty, Error> {
     ))
 }
 
-pub fn prop_x(input: &[u8]) -> IResult<&[u8], XProperty, Error> {
+pub fn prop_x<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], XProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (name, params, _, value, _)) =
-        tuple((x_name, params, char(':'), value, tag("\r\n")))(input)?;
+        tuple((x_name, cut(params), char(':'), value, tag("\r\n")))(input)?;
 
     Ok((
         input,
@@ -118,13 +138,18 @@ pub fn prop_x(input: &[u8]) -> IResult<&[u8], XProperty, Error> {
     ))
 }
 
-pub fn prop_iana(input: &[u8]) -> IResult<&[u8], IanaProperty, Error> {
+pub fn prop_iana<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], IanaProperty<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (name, params, _, value, _)) = tuple((
         verify(iana_token, |t: &[u8]| {
             // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out
             t != b"BEGIN" && t != b"END"
         }),
-        params,
+        cut(params),
         char(':'),
         value,
         tag("\r\n"),
@@ -149,7 +174,8 @@ mod tests {
     #[test]
     fn product_id_property() {
         let (rem, prop) =
-            prop_product_id(b"PRODID:-//ABC Corporation//NONSGML My Product//EN\r\n;").unwrap();
+            prop_product_id::<Error>(b"PRODID:-//ABC Corporation//NONSGML My Product//EN\r\n;")
+                .unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.value, b"-//ABC Corporation//NONSGML My Product//EN");
@@ -157,9 +183,10 @@ mod tests {
 
     #[test]
     fn product_id_property_with_params() {
-        let (rem, prop) =
-            prop_product_id(b"PRODID;x-prop=val:-//ABC Corporation//NONSGML My Product//EN\r\n;")
-                .unwrap();
+        let (rem, prop) = prop_product_id::<Error>(
+            b"PRODID;x-prop=val:-//ABC Corporation//NONSGML My Product//EN\r\n;",
+        )
+        .unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
@@ -175,7 +202,7 @@ mod tests {
     #[test]
     fn version_property() {
         let input = b"VERSION:2.0\r\n;";
-        let (rem, prop) = prop_version(input).unwrap();
+        let (rem, prop) = prop_version::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.min_version, None);
@@ -185,7 +212,7 @@ mod tests {
     #[test]
     fn version_property_with_param() {
         let input = b"VERSION;x-prop=val:2.0\r\n;";
-        let (rem, prop) = prop_version(input).unwrap();
+        let (rem, prop) = prop_version::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
@@ -202,7 +229,7 @@ mod tests {
     #[test]
     fn version_property_with_newer_version() {
         let input = b"VERSION:3.1\r\n;";
-        let (rem, prop) = prop_version(input).unwrap();
+        let (rem, prop) = prop_version::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.min_version, None);
@@ -212,7 +239,7 @@ mod tests {
     #[test]
     fn version_property_with_version_range() {
         let input = b"VERSION:3.2;3.5\r\n;";
-        let (rem, prop) = prop_version(input).unwrap();
+        let (rem, prop) = prop_version::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.min_version.unwrap(), b"3.2");
@@ -222,7 +249,7 @@ mod tests {
     #[test]
     fn cal_scale() {
         let input = b"CALSCALE:GREGORIAN\r\n;";
-        let (rem, prop) = prop_calendar_scale(input).unwrap();
+        let (rem, prop) = prop_calendar_scale::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.value, b"GREGORIAN");
@@ -231,7 +258,7 @@ mod tests {
     #[test]
     fn cal_scale_with_param() {
         let input = b"CALSCALE;x-prop=val:GREGORIAN\r\n;";
-        let (rem, prop) = prop_calendar_scale(input).unwrap();
+        let (rem, prop) = prop_calendar_scale::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
@@ -247,7 +274,7 @@ mod tests {
     #[test]
     fn method() {
         let input = b"METHOD:REQUEST\r\n;";
-        let (rem, prop) = prop_method(input).unwrap();
+        let (rem, prop) = prop_method::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert!(prop.other_params.is_empty());
         assert_eq!(prop.value, b"REQUEST");
@@ -256,7 +283,7 @@ mod tests {
     #[test]
     fn method_with_param() {
         let input = b"METHOD;x-prop=val:REQUEST\r\n;";
-        let (rem, prop) = prop_method(input).unwrap();
+        let (rem, prop) = prop_method::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(prop.other_params[0].name, "x-prop".to_string());
@@ -273,7 +300,7 @@ mod tests {
     fn x_prop() {
         let input =
             b"X-ABC-MMSUBJ;VALUE=URI;FMTTYPE=audio/basic:http://www.example.org/mysubj.au\r\n;";
-        let (rem, prop) = prop_x(input).unwrap();
+        let (rem, prop) = prop_x::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.name, b"X-ABC-MMSUBJ");
         assert_eq!(prop.params.len(), 2);
@@ -296,7 +323,7 @@ mod tests {
     #[test]
     fn iana_prop() {
         let input = b"DRESSCODE:CASUAL\r\n;";
-        let (rem, prop) = prop_iana(input).unwrap();
+        let (rem, prop) = prop_iana::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.name, b"DRESSCODE");
         assert!(prop.params.is_empty());
@@ -306,7 +333,7 @@ mod tests {
     #[test]
     fn iana_prop_with_params() {
         let input = b"NON-SMOKING;VALUE=BOOLEAN:TRUE\r\n;";
-        let (rem, prop) = prop_iana(input).unwrap();
+        let (rem, prop) = prop_iana::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(prop.name, b"NON-SMOKING");
         assert_eq!(prop.params.len(), 1);

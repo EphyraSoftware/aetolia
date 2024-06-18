@@ -12,14 +12,21 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
-pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_event<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, alarms, _)) = tuple((
         tag("BEGIN:VEVENT\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_date_time_stamp.map(ComponentProperty::DateTimeStamp),
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
@@ -56,7 +63,7 @@ pub fn component_event(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error>
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         many0(component_alarm),
         tag("END:VEVENT\r\n"),
     ))(input)?;
@@ -72,12 +79,13 @@ mod tests {
         DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_event() {
         let input = b"BEGIN:VEVENT\r\nUID:19970901T130000Z-123401@example.com\r\nDTSTAMP:19970901T130000Z\r\nDTSTART:19970903T163000Z\r\nDTEND:19970903T190000Z\r\nSUMMARY:Annual Employee Review\r\nCLASS:PRIVATE\r\nCATEGORIES:BUSINESS,HUMAN RESOURCES\r\nEND:VEVENT\r\n";
-        let (rem, component) = component_event(input).unwrap();
+        let (rem, component) = component_event::<Error>(input).unwrap();
         check_rem(rem, 0);
 
         match component {

@@ -7,11 +7,17 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
 use nom::combinator::{map_res, opt};
+use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn param_calendar_user_type(input: &[u8]) -> IResult<&[u8], CalendarUserType, Error> {
+pub fn param_calendar_user_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarUserType, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, cu_type) = alt((
         tag("INDIVIDUAL").map(|_| CalendarUserType::Individual),
         tag("GROUP").map(|_| CalendarUserType::Group),
@@ -35,7 +41,10 @@ pub fn param_calendar_user_type(input: &[u8]) -> IResult<&[u8], CalendarUserType
     Ok((input, cu_type))
 }
 
-pub fn param_encoding(input: &[u8]) -> IResult<&[u8], Encoding, Error> {
+pub fn param_encoding<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Encoding, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, encoding) = alt((
         tag("8BIT").map(|_| Encoding::EightBit),
         tag("BASE64").map(|_| Encoding::Base64),
@@ -45,7 +54,12 @@ pub fn param_encoding(input: &[u8]) -> IResult<&[u8], Encoding, Error> {
 }
 
 /// See https://www.rfc-editor.org/rfc/rfc5545 section 3.2.9
-pub fn param_free_busy_time_type(input: &[u8]) -> IResult<&[u8], FreeBusyTimeType, Error> {
+pub fn param_free_busy_time_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], FreeBusyTimeType, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, fb_type) = alt((
         tag("FREE").map(|_| FreeBusyTimeType::Free),
         tag("BUSY-UNAVAILABLE").map(|_| FreeBusyTimeType::BusyUnavailable),
@@ -70,7 +84,12 @@ pub fn param_free_busy_time_type(input: &[u8]) -> IResult<&[u8], FreeBusyTimeTyp
     Ok((input, fb_type))
 }
 
-pub fn param_part_stat(input: &[u8]) -> IResult<&[u8], ParticipationStatusUnknown, Error> {
+pub fn param_part_stat<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParticipationStatusUnknown, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, part_stat) = alt((
         tag("NEEDS-ACTION").map(|_| ParticipationStatusUnknown::NeedsAction),
         tag("ACCEPTED").map(|_| ParticipationStatusUnknown::Accepted),
@@ -96,7 +115,10 @@ pub fn param_part_stat(input: &[u8]) -> IResult<&[u8], ParticipationStatusUnknow
     Ok((input, part_stat))
 }
 
-pub fn param_related(input: &[u8]) -> IResult<&[u8], Related, Error> {
+pub fn param_related<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Related, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, related) = alt((
         tag("START").map(|_| Related::Start),
         tag("END").map(|_| Related::End),
@@ -105,7 +127,12 @@ pub fn param_related(input: &[u8]) -> IResult<&[u8], Related, Error> {
     Ok((input, related))
 }
 
-pub fn param_rel_type(input: &[u8]) -> IResult<&[u8], RelationshipType, Error> {
+pub fn param_rel_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RelationshipType, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, rel_type) = alt((
         tag("PARENT").map(|_| RelationshipType::Parent),
         tag("CHILD").map(|_| RelationshipType::Child),
@@ -127,7 +154,12 @@ pub fn param_rel_type(input: &[u8]) -> IResult<&[u8], RelationshipType, Error> {
     Ok((input, rel_type))
 }
 
-pub fn param_role(input: &[u8]) -> IResult<&[u8], Role, Error> {
+pub fn param_role<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Role, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, role) = alt((
         tag("CHAIR").map(|_| Role::Chair),
         tag("REQ-PARTICIPANT").map(|_| Role::RequiredParticipant),
@@ -144,19 +176,30 @@ pub fn param_role(input: &[u8]) -> IResult<&[u8], Role, Error> {
     Ok((input, role))
 }
 
-pub fn param_rsvp(input: &[u8]) -> IResult<&[u8], bool, Error> {
+pub fn param_rsvp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], bool, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, rsvp) = alt((tag("TRUE").map(|_| true), tag("FALSE").map(|_| false)))(input)?;
 
     Ok((input, rsvp))
 }
 
-pub fn param_tz_id(input: &[u8]) -> IResult<&[u8], (String, bool), Error> {
+pub fn param_tz_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (String, bool), E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (unique, tz_id)) = tuple((opt(char('/')).map(|p| p.is_some()), param_text))(input)?;
 
     Ok((input, (read_string(tz_id, "TZID")?, unique)))
 }
 
-pub fn param_value_type(input: &[u8]) -> IResult<&[u8], Value, Error> {
+pub fn param_value_type<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Value, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, value) = alt((
         tag("BINARY").map(|_| Value::Binary),
         tag("BOOLEAN").map(|_| Value::Boolean),

@@ -6,6 +6,7 @@ use nom::bytes::streaming::{tag, take_while_m_n};
 use nom::character::streaming::char;
 use nom::character::{is_alphabetic, is_alphanumeric, is_digit};
 use nom::combinator::{opt, peek, recognize, verify};
+use nom::error::ParseError;
 use nom::multi::{many0, many1, many_m_n};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
@@ -41,7 +42,10 @@ const fn is_singleton(b: u8) -> bool {
     matches!(b, b'\x30'..=b'\x39' | b'\x41'..=b'\x57' | b'\x59'..=b'\x5A' | b'\x61'..=b'\x77' | b'\x79'..=b'\x7A')
 }
 
-fn private_use(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn private_use<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(tuple((
         char('x'),
         many1(tuple((char('-'), take_while_m_n(1, 8, is_alphanumeric)))),
@@ -49,7 +53,10 @@ fn private_use(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
 }
 
 // TODO Use own error?
-pub fn language_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
+pub fn language_tag<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, grandfathered_irregular) = opt(alt((
         tag("en-GB-oed"),
         tag("i-ami"),
@@ -107,14 +114,20 @@ pub fn language_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
 ///   - If the next byte is alphanumeric, then reject
 ///
 /// This can be used to prevent bad matches that end in the middle of a component.
-fn clip(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn clip<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     peek(verify(
         take_while_m_n(0, 1, |c| c == b'-' || is_alphanumeric(c)),
         |m: &[u8]| m == [b'-'] || m.is_empty(),
     ))(input)
 }
 
-pub fn lang_tag(input: &[u8]) -> IResult<&[u8], LanguageTag, Error> {
+pub fn lang_tag<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     let (input, (language, ext_lang)) = alt((
         tuple((
             take_while_m_n(2, 3, is_alphabetic),
@@ -225,7 +238,7 @@ mod tests {
     #[test_case(b"ja;"; "Japanese")]
     #[test_case(b"i-enochian;"; "example of a grandfathered tag")]
     fn simple_lang_subtag(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
         assert_eq!(
             &input[..(input.len() - 1)],
@@ -245,7 +258,7 @@ mod tests {
     #[test_case(b"sr-Cyrl;"; "Serbian written using the Cyrillic script")]
     #[test_case(b"sr-Latn;"; "Serbian written using the Latin script")]
     fn language_subtag_plug_script_subtag(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         let str = String::from_utf8(input[..(input.len() - 1)].to_vec()).unwrap();
@@ -270,7 +283,7 @@ mod tests {
     #[test_case(b"zh-yue-HK;"; "Chinese, Cantonese, as used in Hong Kong SAR")]
     #[test_case(b"yue-HK;"; "Cantonese Chinese, as used in Hong Kong SAR")]
     fn extended_language_subtags_and_their_primary_language_subtag_counterparts(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -311,7 +324,7 @@ mod tests {
     #[test_case(b"zh-Hans-CN;"; "Chinese written using the Simplified script as used in mainland China")]
     #[test_case(b"sr-Latn-RS;"; "Serbian written using the Latin script as used in Serbia")]
     fn language_script_region(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -341,7 +354,7 @@ mod tests {
     #[test_case(b"sl-rozaj-biske;"; "San Giorgio dialect of Resian dialect of Slovenian")]
     #[test_case(b"sl-nedis;"; "Nadiza dialect of Slovenian")]
     fn language_variant(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -371,7 +384,7 @@ mod tests {
     #[test_case(b"de-CH-1901;"; "German as used in Switzerland using the 1901 variant [orthography]")]
     #[test_case(b"sl-IT-nedis;"; "Slovenian as used in Italy, Nadiza dialect")]
     fn language_region_variant(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -401,7 +414,7 @@ mod tests {
 
     #[test_case(b"hy-Latn-IT-arevela;"; "Eastern Armenian written in Latin script, as used in Italy")]
     fn language_script_region_variant(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -425,7 +438,7 @@ mod tests {
     #[test_case(b"en-US;"; "English as used in the United States")]
     #[test_case(b"es-419;"; "Spanish appropriate for the Latin America and Caribbean region using the UN region code")]
     fn language_region(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -451,7 +464,7 @@ mod tests {
     #[test_case(b"de-CH-x-phonebk;"; "phonebk")]
     #[test_case(b"az-Arab-x-AZE-derbend;"; "derbend")]
     fn private_use_subtags(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -483,7 +496,7 @@ mod tests {
     #[test_case(b"sr-Latn-QM;"; "Serbian, Latin script, private region")]
     #[test_case(b"sr-Qaaa-RS;"; "Serbian, private script, for Serbia")]
     fn private_use_registry_values(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -528,7 +541,7 @@ mod tests {
     #[test_case(b"zh-CN-a-myext-x-private;"; "myext and private")]
     #[test_case(b"en-a-myext-b-another;"; "myext and another")]
     fn tags_that_use_extensions(input: &[u8]) {
-        let (rem, language_tag) = language_tag(input).unwrap();
+        let (rem, language_tag) = language_tag::<Error>(input).unwrap();
         check_rem(rem, 1);
 
         match language_tag {
@@ -569,7 +582,7 @@ mod tests {
     #[test_case(b"a-DE;"; "use of a single-character subtag in primary position; note that there are a few grandfathered tags that start with \"i-\" that are valid")]
     // This is not a parser failure but a content validation failure -> #[test_case(b"ar-a-aaa-b-bbb-a-ccc;"; "two extensions with same single-letter prefix")]
     fn some_invalid_tags(input: &[u8]) {
-        let r = language_tag(input);
+        let r = language_tag::<Error>(input);
         match r {
             Err(nom::Err::Error(_)) => {}
             Ok((rem, lang)) => assert!(rem.len() > 1, "Created lang: {lang:?}"),

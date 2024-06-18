@@ -7,15 +7,22 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_timezone(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_timezone<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VTIMEZONE\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_time_zone_id.map(ComponentProperty::TimeZoneId),
                 prop_last_modified.map(ComponentProperty::LastModified),
@@ -25,28 +32,49 @@ pub fn component_timezone(input: &[u8]) -> IResult<&[u8], CalendarComponent, Err
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         tag("END:VTIMEZONE\r\n"),
     ))(input)?;
 
     Ok((input, CalendarComponent::TimeZone { properties }))
 }
 
-pub fn component_standard(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:STANDARD\r\n"), tz_props, tag("END:STANDARD\r\n")))(input)?;
+pub fn component_standard<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, properties, _)) = tuple((
+        tag("BEGIN:STANDARD\r\n"),
+        cut(tz_props),
+        tag("END:STANDARD\r\n"),
+    ))(input)?;
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
 
-pub fn component_daylight(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
-    let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:DAYLIGHT\r\n"), tz_props, tag("END:DAYLIGHT\r\n")))(input)?;
+pub fn component_daylight<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    let (input, (_, properties, _)) = tuple((
+        tag("BEGIN:DAYLIGHT\r\n"),
+        cut(tz_props),
+        tag("END:DAYLIGHT\r\n"),
+    ))(input)?;
 
     Ok((input, CalendarComponent::Daylight { properties }))
 }
 
-fn tz_props(input: &[u8]) -> IResult<&[u8], Vec<ComponentProperty>, Error> {
+fn tz_props<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ComponentProperty<'a>>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     many0(alt((
         alt((
             prop_date_time_start.map(ComponentProperty::DateTimeStart),
@@ -69,12 +97,13 @@ pub mod tests {
         Date, DateOrDateTime, DateTime, DateTimeStartProperty, LastModifiedProperty, Time,
         TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty, UtcOffset,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_timezone() {
         let input = b"BEGIN:VTIMEZONE\r\nTZID:America/New_York\r\nLAST-MODIFIED:20050809T050000Z\r\nBEGIN:STANDARD\r\nDTSTART:20071104T020000\r\nTZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500\r\nTZNAME:EST\r\nEND:STANDARD\r\nBEGIN:DAYLIGHT\r\nDTSTART:20070311T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400\r\nTZNAME:EDT\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n";
-        let (rem, component) = component_timezone(input).unwrap();
+        let (rem, component) = component_timezone::<Error>(input).unwrap();
         check_rem(rem, 0);
 
         match component {

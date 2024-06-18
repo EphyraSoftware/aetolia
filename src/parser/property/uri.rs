@@ -5,6 +5,7 @@ use nom::bytes::streaming::{tag, take_while, take_while1, take_while_m_n};
 use nom::character::streaming::char;
 use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt, recognize, verify};
+use nom::error::ParseError;
 use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
@@ -39,7 +40,12 @@ pub struct Uri<'a> {
     pub fragment: Option<&'a [u8]>,
 }
 
-pub fn param_value_uri(input: &[u8]) -> IResult<&[u8], Uri, Error> {
+pub fn param_value_uri<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (scheme, _, (authority, path), query, fragment)) = tuple((
         scheme,
         char(':'),
@@ -69,7 +75,10 @@ const fn is_scheme_char(b: u8) -> bool {
     matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'-' | b'.')
 }
 
-fn scheme(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn scheme<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     verify(take_while1(is_scheme_char), |sch: &[u8]| {
         is_alphabetic(sch[0])
     })(input)
@@ -90,7 +99,10 @@ const fn is_unreserved(b: u8) -> bool {
     matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~')
 }
 
-fn pct_encoded(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn pct_encoded<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     tuple((
         char('%'),
         take_while_m_n(2, 2, is_hex_digit_upper).map(|v| {
@@ -110,7 +122,12 @@ const fn is_sub_delim(b: u8) -> bool {
     )
 }
 
-fn authority(input: &[u8]) -> IResult<&[u8], Authority, Error> {
+fn authority<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Authority, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     tuple((
         opt(tuple((user_info, char('@'))).map(|(u, _)| u)),
         host,
@@ -124,22 +141,33 @@ fn authority(input: &[u8]) -> IResult<&[u8], Authority, Error> {
     .parse(input)
 }
 
-fn port(input: &[u8]) -> IResult<&[u8], u16, Error> {
+fn port<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u16, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     map_res(take_while(is_digit), |c| {
         std::str::from_utf8(c)
             .map_err(|e| {
-                nom::Err::Error(Error::new(
-                    input,
-                    InnerError::EncodingError("Recur month list".to_string(), e),
-                ))
+                nom::Err::Error(
+                    Error::new(
+                        input,
+                        InnerError::EncodingError("Recur month list".to_string(), e),
+                    )
+                    .into(),
+                )
             })?
             .parse::<u16>()
-            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidPort)))
+            .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidPort).into()))
     })
     .parse(input)
 }
 
-fn user_info(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn user_info<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     fold_many1(
         alt((
             single(is_unreserved).map(|c| vec![c]),
@@ -155,7 +183,12 @@ fn user_info(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     )(input)
 }
 
-fn host(input: &[u8]) -> IResult<&[u8], Host, Error> {
+fn host<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Host, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     alt((
         ip_literal.map(Host::IpAddr),
         ip_v4_addr
@@ -165,7 +198,12 @@ fn host(input: &[u8]) -> IResult<&[u8], Host, Error> {
     ))(input)
 }
 
-fn ip_literal(input: &[u8]) -> IResult<&[u8], IpAddr, Error> {
+fn ip_literal<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], IpAddr, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     tuple((
         tag("["),
         alt((
@@ -178,7 +216,10 @@ fn ip_literal(input: &[u8]) -> IResult<&[u8], IpAddr, Error> {
     .parse(input)
 }
 
-fn ip_v_future_addr(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn ip_v_future_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(tuple((
         char('v').map(|a| a as u8),
         take_while1(is_hex_digit),
@@ -191,11 +232,18 @@ fn ip_v_future_addr(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     )))(input)
 }
 
-fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
+fn ip_v6_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Ipv6Addr, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, prefix_parts) = separated_list0(char(':'), h_16)(input)?;
 
     if prefix_parts.len() > 7 {
-        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+        return Err(nom::Err::Error(
+            Error::new(input, InnerError::InvalidIpv6).into(),
+        ));
     }
 
     let (input, found_collapse) = opt(tag("::"))(input)?;
@@ -204,7 +252,9 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
     let (input, suffix_parts) = separated_list0(char(':'), h_16)(input)?;
 
     if suffix_parts.len() > 8 {
-        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+        return Err(nom::Err::Error(
+            Error::new(input, InnerError::InvalidIpv6).into(),
+        ));
     }
 
     let (input, ipv4_post) = opt(tuple((char(':'), ip_v4_addr)))(input)?;
@@ -215,7 +265,9 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
         prefix_parts.len() * 2 + suffix_parts.len() * 2 + if ipv4_post.is_some() { 4 } else { 0 };
 
     if provided_len > 16 || (provided_len < 16 && !fill_zeroes) {
-        return Err(nom::Err::Error(Error::new(input, InnerError::InvalidIpv6)));
+        return Err(nom::Err::Error(
+            Error::new(input, InnerError::InvalidIpv6).into(),
+        ));
     }
 
     let mut i = 0;
@@ -246,7 +298,10 @@ fn ip_v6_addr(input: &[u8]) -> IResult<&[u8], Ipv6Addr, Error> {
     Ok((input, Ipv6Addr::from(content)))
 }
 
-fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
+fn h_16<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], [u8; 2], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     take_while_m_n(1, 4, is_hex_digit)
         .map(|c: &[u8]| {
             let mut src = c.to_vec();
@@ -260,7 +315,12 @@ fn h_16(input: &[u8]) -> IResult<&[u8], [u8; 2], Error> {
         .parse(input)
 }
 
-fn ls_32(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn ls_32<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     alt((
         tuple((h_16, char(':'), h_16)).map(|(a, _, b)| {
             let mut r = Vec::with_capacity(4);
@@ -272,7 +332,12 @@ fn ls_32(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     ))(input)
 }
 
-fn ip_v4_addr(input: &[u8]) -> IResult<&[u8], [u8; 4], Error> {
+fn ip_v4_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], [u8; 4], E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     tuple((
         dec_octet,
         char('.'),
@@ -286,7 +351,12 @@ fn ip_v4_addr(input: &[u8]) -> IResult<&[u8], [u8; 4], Error> {
     .parse(input)
 }
 
-fn dec_octet(input: &[u8]) -> IResult<&[u8], u8, Error> {
+fn dec_octet<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u8, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     map_res(
         verify(take_while_m_n(1, 3, is_digit), |b: &[u8]| {
             // May not have a 0 prefix
@@ -306,12 +376,15 @@ fn dec_octet(input: &[u8]) -> IResult<&[u8], u8, Error> {
             std::str::from_utf8(b)
                 .unwrap()
                 .parse::<u8>()
-                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidOctet)))
+                .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidOctet).into()))
         },
     )(input)
 }
 
-fn reg_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn reg_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     fold_many0(
         alt((
             single(is_unreserved).map(|c| vec![c]),
@@ -326,33 +399,51 @@ fn reg_name(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
     )(input)
 }
 
-fn path_absolute_empty(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_absolute_empty<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(many0(tuple((char('/'), segment))))(input)
 }
 
-fn path_absolute(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_absolute<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(tuple((segment_nz, path_absolute_empty)))(input)
 }
 
-fn path_rootless(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn path_rootless<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(tuple((segment_nz, many0(tuple((char('/'), segment))))))(input)
 }
 
-fn segment(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn segment<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     fold_many0(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
     })(input)
 }
 
-fn segment_nz(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn segment_nz<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     fold_many1(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
     })(input)
 }
 
-fn query_or_fragment(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
+fn query_or_fragment<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     recognize(many0(alt((
         p_char,
         tag("/").map(|c: &[u8]| c.to_vec()),
@@ -360,7 +451,10 @@ fn query_or_fragment(input: &[u8]) -> IResult<&[u8], &[u8], Error> {
     ))))(input)
 }
 
-fn p_char(input: &[u8]) -> IResult<&[u8], Vec<u8>, Error> {
+fn p_char<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+where
+    E: ParseError<&'a [u8]> + From<Error<'a>>,
+{
     alt((
         single(is_unreserved).map(|c| vec![c]),
         pct_encoded,
@@ -377,7 +471,8 @@ mod tests {
 
     #[test]
     fn ftp() {
-        let (input, uri) = param_value_uri(b"ftp://ftp.is.co.za/rfc/rfc1808.txt`").unwrap();
+        let (input, uri) =
+            param_value_uri::<Error>(b"ftp://ftp.is.co.za/rfc/rfc1808.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ftp");
         assert_eq!(
@@ -389,7 +484,8 @@ mod tests {
 
     #[test]
     fn http() {
-        let (input, uri) = param_value_uri(b"http://www.ietf.org/rfc/rfc2396.txt`").unwrap();
+        let (input, uri) =
+            param_value_uri::<Error>(b"http://www.ietf.org/rfc/rfc2396.txt`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"http");
         assert_eq!(
@@ -401,14 +497,15 @@ mod tests {
 
     #[test]
     fn ip_v6() {
-        let (input, ipv6) = ip_v6_addr(b"2001:db8::7`").unwrap();
+        let (input, ipv6) = ip_v6_addr::<Error>(b"2001:db8::7`").unwrap();
         check_rem(input, 1);
         assert_eq!(ipv6, Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7));
     }
 
     #[test]
     fn ldap() {
-        let (input, uri) = param_value_uri(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
+        let (input, uri) =
+            param_value_uri::<Error>(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
         assert_eq!(
@@ -421,7 +518,7 @@ mod tests {
 
     #[test]
     fn mailto() {
-        let (input, uri) = param_value_uri(b"mailto:John.Doe@example.com`").unwrap();
+        let (input, uri) = param_value_uri::<Error>(b"mailto:John.Doe@example.com`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"mailto");
         assert_eq!(uri.path, b"John.Doe@example.com".to_vec());
@@ -429,7 +526,8 @@ mod tests {
 
     #[test]
     fn news() {
-        let (input, uri) = param_value_uri(b"news:comp.infosystems.www.servers.unix`").unwrap();
+        let (input, uri) =
+            param_value_uri::<Error>(b"news:comp.infosystems.www.servers.unix`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"news");
         assert_eq!(uri.path, b"comp.infosystems.www.servers.unix".to_vec());
@@ -437,7 +535,7 @@ mod tests {
 
     #[test]
     fn tel() {
-        let (input, uri) = param_value_uri(b"tel:+1-816-555-1212`").unwrap();
+        let (input, uri) = param_value_uri::<Error>(b"tel:+1-816-555-1212`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"tel");
         assert_eq!(uri.path, b"+1-816-555-1212".to_vec());
@@ -445,7 +543,7 @@ mod tests {
 
     #[test]
     fn telnet() {
-        let (input, uri) = param_value_uri(b"telnet://192.0.2.16:80/`").unwrap();
+        let (input, uri) = param_value_uri::<Error>(b"telnet://192.0.2.16:80/`").unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"telnet");
         let authority = uri.authority.unwrap();
@@ -459,7 +557,8 @@ mod tests {
     #[test]
     fn urn() {
         let (input, uri) =
-            param_value_uri(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`").unwrap();
+            param_value_uri::<Error>(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`")
+                .unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"urn");
         assert_eq!(

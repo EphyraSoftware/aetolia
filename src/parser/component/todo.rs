@@ -12,15 +12,22 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
+use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> {
+pub fn component_todo<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
     let (input, (_, properties, alarms, _)) = tuple((
         tag("BEGIN:VTODO\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_date_time_stamp.map(ComponentProperty::DateTimeStamp),
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
@@ -58,7 +65,7 @@ pub fn component_todo(input: &[u8]) -> IResult<&[u8], CalendarComponent, Error> 
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         many0(component_alarm),
         tag("END:VTODO\r\n"),
     ))(input)?;
@@ -75,12 +82,13 @@ mod tests {
         DateTimeDueProperty, DateTimeStampProperty, Status, StatusProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
     };
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_todo() {
         let input = b"BEGIN:VTODO\r\nUID:20070313T123432Z-456553@example.com\r\nDTSTAMP:20070313T123432Z\r\nDUE;VALUE=DATE:20070501\r\nSUMMARY:Submit Quebec Income Tax Return for 2006\r\nCLASS:CONFIDENTIAL\r\nCATEGORIES:FAMILY,FINANCE\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\n";
-        let (rem, component) = component_todo(input).unwrap();
+        let (rem, component) = component_todo::<Error>(input).unwrap();
         check_rem(rem, 0);
 
         match component {
