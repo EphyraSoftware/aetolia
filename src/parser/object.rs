@@ -13,8 +13,8 @@ use nom::combinator::{cut, eof, verify};
 use nom::error::{ParseError, VerboseError, VerboseErrorKind};
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
-use nom::{IResult, Offset};
 use nom::Parser;
+use nom::{IResult, Offset};
 
 pub mod types;
 
@@ -163,8 +163,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::pre::content_line_first_pass;
     use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
+    use nom::combinator::complete;
+    use nom::error::VerboseError;
 
     #[test]
     fn minimal_ical_stream_test() {
@@ -184,23 +187,152 @@ mod tests {
         assert_eq!(ical[0].components.len(), 1);
     }
 
-    // #[test]
-    // fn real_file() {
-    //     let input = std::fs::read_to_string("sample.ics").unwrap();
-    //
-    //     let (input, first) = content_line_first_pass(input.as_bytes()).unwrap();
-    //     check_rem(input, 0);
-    //
-    //     println!("{:?}", first.len());
-    //     println!("{:?}", first[0..100].to_vec());
-    //     let r = ical_stream(&first);
-    //     match r {
-    //         Err(e) => {
-    //             println!("{:?}", String::from_utf8_lossy(e.input));
-    //         }
-    //         _ => {}
-    //     }
-    //     let (rem, ical) = r.unwrap();
-    //     check_rem(rem, 0);
-    // }
+    #[test]
+    fn real_file() {
+        let input = std::fs::read_to_string("sample.ics").unwrap();
+
+        let (input, first) = content_line_first_pass::<Error>(input.as_bytes()).unwrap();
+        check_rem(input, 0);
+
+        let r = complete::<_, _, VerboseError<&[u8]>, _>(ical_stream).parse(&first);
+        match r {
+            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => {
+                println!("fail:\n\n {}", convert_error_mod(first.as_slice(), e));
+            }
+            Ok((rem, ical)) => {
+                println!("Got an OK result");
+                check_rem(rem, 0);
+                println!("Calendars: {:?}", ical.len());
+                println!("Components: {:?}", ical[0].components.len());
+            }
+            e => {
+                panic!("unexpected result: {:?}", e)
+            }
+        }
+    }
+}
+
+trait ReprStr {
+    fn repr_str(&self) -> &str;
+}
+
+impl ReprStr for &[u8] {
+    fn repr_str(&self) -> &str {
+        unsafe { std::str::from_utf8_unchecked(self) }
+    }
+}
+
+// Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
+fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
+    use std::fmt::Write;
+
+    let mut result = String::new();
+
+    let input = input.repr_str();
+
+    for (i, (substring, kind)) in e.errors.iter().enumerate() {
+        let substring = substring.repr_str();
+        let offset = input.offset(substring);
+
+        if input.is_empty() {
+            match kind {
+                VerboseErrorKind::Char(c) => {
+                    write!(&mut result, "{}: expected '{}', got empty input\n\n", i, c)
+                }
+                VerboseErrorKind::Context(s) => {
+                    write!(&mut result, "{}: in {}, got empty input\n\n", i, s)
+                }
+                VerboseErrorKind::Nom(e) => {
+                    write!(&mut result, "{}: in {:?}, got empty input\n\n", i, e)
+                }
+            }
+        } else {
+            let prefix = &input.as_bytes()[..offset];
+
+            // Count the number of newlines in the first `offset` bytes of input
+            let line_number = prefix.iter().filter(|&&b| b == b'\n').count() + 1;
+
+            // Find the line that includes the subslice:
+            // Find the *last* newline before the substring starts
+            let line_begin = prefix
+                .iter()
+                .rev()
+                .position(|&b| b == b'\n')
+                .map(|pos| offset - pos)
+                .unwrap_or(0);
+
+            // Find the full line after that newline
+            let line = input[line_begin..]
+                .lines()
+                .next()
+                .unwrap_or(&input[line_begin..])
+                .trim_end();
+
+            // The (1-indexed) column number is the offset of our substring into that line
+            let column_number = line.offset(substring) + 1;
+
+            match kind {
+                VerboseErrorKind::Char(c) => {
+                    if let Some(actual) = substring.chars().next() {
+                        write!(
+                            &mut result,
+                            "{i}: at line {line_number}:\n\
+               {line}\n\
+               {caret:>column$}\n\
+               expected '{expected}', found {actual}\n\n",
+                            i = i,
+                            line_number = line_number,
+                            line = line,
+                            caret = '^',
+                            column = column_number,
+                            expected = c,
+                            actual = actual,
+                        )
+                    } else {
+                        write!(
+                            &mut result,
+                            "{i}: at line {line_number}:\n\
+               {line}\n\
+               {caret:>column$}\n\
+               expected '{expected}', got end of input\n\n",
+                            i = i,
+                            line_number = line_number,
+                            line = line,
+                            caret = '^',
+                            column = column_number,
+                            expected = c,
+                        )
+                    }
+                }
+                VerboseErrorKind::Context(s) => write!(
+                    &mut result,
+                    "{i}: at line {line_number}, in {context}:\n\
+             {line}\n\
+             {caret:>column$}\n\n",
+                    i = i,
+                    line_number = line_number,
+                    context = s,
+                    line = line,
+                    caret = '^',
+                    column = column_number,
+                ),
+                VerboseErrorKind::Nom(e) => write!(
+                    &mut result,
+                    "{i}: at line {line_number}, in {nom_err:?}:\n\
+             {line}\n\
+             {caret:>column$}\n\n",
+                    i = i,
+                    line_number = line_number,
+                    nom_err = e,
+                    line = line,
+                    caret = '^',
+                    column = column_number,
+                ),
+            }
+        }
+        // Because `write!` to a `String` is infallible, this `unwrap` is fine.
+        .unwrap();
+    }
+
+    result
 }
