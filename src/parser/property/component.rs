@@ -13,7 +13,7 @@ use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
-use nom::combinator::{map_res, opt, recognize, verify};
+use nom::combinator::{cut, map_res, opt, recognize, verify};
 use nom::error::ParseError;
 use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
@@ -40,7 +40,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag("ATTACH"), params, char(':')))(input)?;
+    let (input, (_, params, _)) = tuple((tag("ATTACH"), cut(params), char(':')))(input)?;
 
     let is_base_64 = params.iter().any(|p| {
         matches!(
@@ -100,7 +100,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CATEGORIES"),
-        params,
+        cut(params),
         char(':'),
         separated_list1(char(','), prop_value_text),
         tag("\r\n"),
@@ -135,7 +135,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("CLASS"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tag("PUBLIC").map(|_| Classification::Public),
@@ -173,7 +173,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("COMMENT"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -199,7 +199,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DESCRIPTION"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text.map(|v| v),
         tag("\r\n"),
@@ -226,7 +226,7 @@ where
 {
     let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
         tag("GEO"),
-        other_params,
+        cut(other_params),
         char(':'),
         tuple((prop_value_float, char(';'), prop_value_float)),
         tag("\r\n"),
@@ -259,7 +259,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("LOCATION"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -285,7 +285,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("PERCENT-COMPLETE"),
-        other_params,
+        cut(other_params),
         char(':'),
         verify(prop_value_integer, |v| 0 <= *v && *v <= 100).map(|v| v as u8),
         tag("\r\n"),
@@ -315,7 +315,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("PRIORITY"),
-        other_params,
+        cut(other_params),
         char(':'),
         verify(prop_value_integer, |v| 0 <= *v && *v <= 9).map(|v| v as u8),
         tag("\r\n"),
@@ -347,7 +347,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RESOURCES"),
-        params,
+        cut(params),
         char(':'),
         separated_list1(char(','), prop_value_text),
         tag("\r\n"),
@@ -383,7 +383,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("STATUS"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tag("TENTATIVE").map(|_| Status::Tentative),
@@ -424,7 +424,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("SUMMARY"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -450,7 +450,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("COMPLETED"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_date_time,
         tag("\r\n"),
@@ -482,7 +482,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DTEND"),
-        params,
+        cut(params),
         char(':'),
         alt((
             prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -511,7 +511,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DUE"),
-        params,
+        cut(params),
         char(':'),
         alt((
             prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -542,7 +542,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("DTSTART"),
-        params,
+        cut(params),
         char(':'),
         alt((
             prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -569,7 +569,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DURATION"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_duration,
         tag("\r\n"),
@@ -601,7 +601,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("FREEBUSY"),
-        params,
+        cut(params),
         char(':'),
         separated_list1(char(','), prop_value_period),
         tag("\r\n"),
@@ -633,7 +633,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TRANSP"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tag("OPAQUE").map(|_| TimeTransparency::Opaque),
@@ -666,7 +666,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZID"),
-        other_params,
+        cut(other_params),
         char(':'),
         tuple((opt(char('/')), prop_value_text)).map(|(prefix, mut value)| {
             if let Some('/') = prefix {
@@ -704,7 +704,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("TZNAME"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -730,7 +730,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZOFFSETFROM"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_utc_offset,
         tag("\r\n"),
@@ -756,7 +756,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZOFFSETTO"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_utc_offset,
         tag("\r\n"),
@@ -788,7 +788,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("TZURL"),
-        other_params,
+        cut(other_params),
         char(':'),
         recognize(param_value_uri),
         tag("\r\n"),
@@ -820,7 +820,7 @@ where
 {
     let (input, (_, params, _, uri, _)) = tuple((
         tag("ATTENDEE"),
-        params,
+        cut(params),
         char(':'),
         recognize(prop_value_calendar_user_address),
         tag("\r\n"),
@@ -846,7 +846,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CONTACT"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -872,7 +872,7 @@ where
 {
     let (input, (_, params, _, uri, _)) = tuple((
         tag("ORGANIZER"),
-        params,
+        cut(params),
         char(':'),
         recognize(prop_value_calendar_user_address),
         tag("\r\n"),
@@ -898,7 +898,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RECURRENCE-ID"),
-        params,
+        cut(params),
         char(':'),
         alt((
             prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -927,7 +927,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RELATED-TO"),
-        params,
+        cut(params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -953,7 +953,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("URL"),
-        other_params,
+        cut(other_params),
         char(':'),
         param_value_uri,
         tag("\r\n"),
@@ -985,7 +985,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("UID"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -1019,7 +1019,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("EXDATE"),
-        params,
+        cut(params),
         char(':'),
         separated_list1(
             char(','),
@@ -1053,7 +1053,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("RDATE"),
-        params,
+        cut(params),
         char(':'),
         separated_list1(
             char(','),
@@ -1087,7 +1087,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, other_params, _, value, _)) =
-        tuple((tag("RRULE"), other_params, char(':'), recur, tag("\r\n")))(input)?;
+        tuple((tag("RRULE"), cut(other_params), char(':'), recur, tag("\r\n")))(input)?;
 
     Ok((
         input,
@@ -1122,7 +1122,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("ACTION"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tag("AUDIO").map(|_| Action::Audio),
@@ -1158,7 +1158,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("REPEAT"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_integer.map(|v| v as u32),
         tag("\r\n"),
@@ -1194,7 +1194,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag("TRIGGER"), params, char(':')))(input)?;
+    let (input, (_, params, _)) = tuple((tag("TRIGGER"), cut(params), char(':')))(input)?;
 
     let value_choice = params
         .iter()
@@ -1243,7 +1243,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("CREATED"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_date_time,
         tag("\r\n"),
@@ -1275,7 +1275,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("DTSTAMP"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_date_time,
         tag("\r\n"),
@@ -1305,7 +1305,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("LAST-MODIFIED"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_date_time,
         tag("\r\n"),
@@ -1335,7 +1335,7 @@ where
 {
     let (input, (_, other_params, _, value, _)) = tuple((
         tag("SEQUENCE"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_integer.map(|v| v as u32),
         tag("\r\n"),
@@ -1400,7 +1400,7 @@ where
 
     let (input, (_, params, _, status_code, _, status_description, extra_data, _)) = tuple((
         tag("REQUEST-STATUS"),
-        params,
+        cut(params),
         char(':'),
         status_code,
         char(';'),

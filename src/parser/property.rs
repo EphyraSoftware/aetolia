@@ -16,7 +16,7 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::is_digit;
 use nom::character::streaming::char;
-use nom::combinator::{recognize, verify};
+use nom::combinator::{cut, recognize, verify};
 use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
@@ -29,7 +29,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("PRODID"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -50,7 +50,7 @@ where
 {
     let (input, (_, params, _, (min_ver, max_ver), _)) = tuple((
         tag("VERSION"),
-        other_params,
+        cut(other_params),
         char(':'),
         alt((
             tuple((
@@ -83,7 +83,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("CALSCALE"),
-        other_params,
+        cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
@@ -104,7 +104,7 @@ where
 {
     let (input, (_, params, _, value, _)) = tuple((
         tag("METHOD"),
-        other_params,
+        cut(other_params),
         char(':'),
         iana_token,
         tag("\r\n"),
@@ -126,7 +126,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (name, params, _, value, _)) =
-        tuple((x_name, params, char(':'), value, tag("\r\n")))(input)?;
+        tuple((x_name, cut(params), char(':'), value, tag("\r\n")))(input)?;
 
     Ok((
         input,
@@ -149,7 +149,7 @@ where
             // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out
             t != b"BEGIN" && t != b"END"
         }),
-        params,
+        cut(params),
         char(':'),
         value,
         tag("\r\n"),

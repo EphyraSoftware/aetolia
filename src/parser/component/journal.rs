@@ -14,6 +14,7 @@ use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use nom::combinator::cut;
 
 pub fn component_journal<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where
@@ -23,7 +24,7 @@ where
 {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VJOURNAL\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_date_time_stamp.map(ComponentProperty::DateTimeStamp),
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
@@ -53,7 +54,7 @@ where
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         tag("END:VJOURNAL\r\n"),
     ))(input)?;
 

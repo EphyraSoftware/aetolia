@@ -7,6 +7,7 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
@@ -21,7 +22,7 @@ where
 {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VTIMEZONE\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_time_zone_id.map(ComponentProperty::TimeZoneId),
                 prop_last_modified.map(ComponentProperty::LastModified),
@@ -31,7 +32,7 @@ where
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         tag("END:VTIMEZONE\r\n"),
     ))(input)?;
 
@@ -45,7 +46,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:STANDARD\r\n"), tz_props, tag("END:STANDARD\r\n")))(input)?;
+        tuple((tag("BEGIN:STANDARD\r\n"), cut(tz_props), tag("END:STANDARD\r\n")))(input)?;
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
@@ -57,7 +58,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, properties, _)) =
-        tuple((tag("BEGIN:DAYLIGHT\r\n"), tz_props, tag("END:DAYLIGHT\r\n")))(input)?;
+        tuple((tag("BEGIN:DAYLIGHT\r\n"), cut(tz_props), tag("END:DAYLIGHT\r\n")))(input)?;
 
     Ok((input, CalendarComponent::Daylight { properties }))
 }

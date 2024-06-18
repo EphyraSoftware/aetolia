@@ -9,11 +9,11 @@ use crate::parser::{content_line, iana_token, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::crlf;
-use nom::combinator::{eof, verify};
-use nom::error::ParseError;
+use nom::combinator::{cut, eof, verify};
+use nom::error::{ParseError, VerboseError, VerboseErrorKind};
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
-use nom::IResult;
+use nom::{IResult, Offset};
 use nom::Parser;
 
 pub mod types;
@@ -114,7 +114,7 @@ where
         tag("BEGIN:"),
         iana_token,
         crlf,
-        many1(content_line),
+        cut(many1(content_line)),
         tag("END:"),
         iana_token,
         tag("\r\n"),
@@ -141,7 +141,7 @@ where
         tag("BEGIN:"),
         x_name,
         crlf,
-        many1(verify(content_line, |cl| cl.property_name != b"END")),
+        cut(many1(verify(content_line, |cl| cl.property_name != b"END"))),
         tag("END:"),
         x_name,
         crlf,

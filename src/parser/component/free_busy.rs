@@ -7,6 +7,7 @@ use crate::parser::property::{
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
+use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
@@ -21,7 +22,7 @@ where
 {
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:VFREEBUSY\r\n"),
-        many0(alt((
+        cut(many0(alt((
             alt((
                 prop_date_time_stamp.map(ComponentProperty::DateTimeStamp),
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
@@ -37,7 +38,7 @@ where
             )),
             prop_x.map(ComponentProperty::XProp),
             prop_iana.map(ComponentProperty::IanaProp),
-        ))),
+        )))),
         tag("END:VFREEBUSY\r\n"),
     ))(input)?;
 
