@@ -188,6 +188,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Requires a real file"]
     fn real_file() {
         let input = std::fs::read_to_string("sample.ics").unwrap();
 
