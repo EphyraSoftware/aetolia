@@ -1575,7 +1575,7 @@ RSVP to team leader."#
             LocationProperty {
                 params: vec![Param {
                     value: ParamValue::AltRep {
-                        uri: "http://xyzcorp.com/conf-rooms/f123.vcf".to_string(),
+                        uri: b"http://xyzcorp.com/conf-rooms/f123.vcf",
                     },
                 }],
                 value: b"Conference Room - F123, Bldg. 002".to_vec(),
@@ -2088,8 +2088,7 @@ RSVP to team leader."#
                 params: vec![Param {
                     value: ParamValue::AltRep {
                         uri:
-                            "ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
-                                .to_string(),
+                            b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)",
                     },
                 }],
                 value: b"Jim Dolittle, ABC Industries, +1-919-555-1234".to_vec(),

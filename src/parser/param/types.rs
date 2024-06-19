@@ -8,7 +8,7 @@ pub struct Param<'a> {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ParamValue<'a> {
     AltRep {
-        uri: String,
+        uri: &'a [u8],
     },
     CommonName {
         name: String,

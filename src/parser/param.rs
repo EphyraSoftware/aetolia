@@ -3,7 +3,7 @@ mod values;
 
 use crate::parser::language_tag::language_tag;
 use crate::parser::property::uri::param_value_uri;
-use crate::parser::{param_name, param_value, quoted_string, read_string, reg_name, x_name, Error};
+use crate::parser::{param_name, param_value, read_string, reg_name, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
@@ -41,17 +41,17 @@ fn param_alternate_text_representation<'a, E>(
     input: &'a [u8],
 ) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
-    E: ParseError<&'a [u8]> + From<Error<'a>>,
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
 {
-    let (input, (_, _, uri)) =
-        tuple((tag_no_case("ALTREP"), char('='), cut(quoted_string)))(input)?;
+    let (input, (_, _, uri)) = tuple((
+        tag_no_case("ALTREP"),
+        char('='),
+        cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
+    ))(input)?;
 
-    Ok((
-        input,
-        ParamValue::AltRep {
-            uri: read_string(uri, "uri")?,
-        },
-    ))
+    Ok((input, ParamValue::AltRep { uri }))
 }
 
 /// Parse a CN param
@@ -490,7 +490,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             ParamValue::AltRep {
-                uri: "http://example.com/calendar".to_string()
+                uri: b"http://example.com/calendar"
             },
             param.value
         );
