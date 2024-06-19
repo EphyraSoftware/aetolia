@@ -6,10 +6,15 @@ use nom::sequence::tuple;
 use nom::{IResult, InputIter, InputLength, InputTake};
 use std::num::NonZeroUsize;
 
+mod model;
 mod parser;
 
 #[cfg(test)]
 mod test_utils;
+
+pub mod prelude {
+    pub use crate::model::*;
+}
 
 /// Streaming, single character matching the predicate
 pub fn single<F, Input, Output, Error: ParseError<Input>>(
