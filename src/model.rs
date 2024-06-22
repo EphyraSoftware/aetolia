@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub struct ICalObject {
     properties: Vec<CalendarProperty>,
     components: Vec<CalendarComponent>,
