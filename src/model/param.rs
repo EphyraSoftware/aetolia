@@ -1,8 +1,30 @@
 pub enum Param {
     AltRep { uri: String },
     CommonName { name: String },
+    Value { value: Value },
+    TimeZoneId { tz_id: String, unique: bool },
     Other { name: String, value: String },
     Others { name: String, values: Vec<String> },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Value {
+    Binary,
+    Boolean,
+    CalendarAddress,
+    Date,
+    DateTime,
+    Duration,
+    Float,
+    Integer,
+    Period,
+    Recurrence,
+    Text,
+    Time,
+    Uri,
+    UtcOffset,
+    XName(String),
+    IanaToken(String),
 }
 
 pub trait OtherParamsBuilder {

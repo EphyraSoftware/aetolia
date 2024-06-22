@@ -108,6 +108,15 @@ mod tests {
             )
             .add_x_param("X-SOME-PROP", "X-SOME-VALUE")
             .finish_property()
+            .add_uid("some-uid")
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_date_time_start(
+                time::Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                Some(time::Time::from_hms(14, 30, 0).unwrap()),
+            )
+            .add_tz_id("America/New_York", true)
+            .finish_property()
             .finish_component()
             .build();
 
@@ -115,12 +124,24 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 1);
+                assert_eq!(e.properties.len(), 3);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected DateTimeStamp"),
+                }
+                match &e.properties[1] {
+                    ComponentProperty::UniqueIdentifier(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected UniqueIdentifier"),
+                }
+                match &e.properties[2] {
+                    ComponentProperty::DateTimeStart(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected DateTimeStart"),
                 }
             }
             _ => panic!("Expected EventComponent"),

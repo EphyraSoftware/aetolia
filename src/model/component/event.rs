@@ -6,6 +6,8 @@ use crate::model::property::{
     AddComponentProperty, ComponentProperty, DateTimeStampPropertyBuilder,
     XComponentPropertyBuilder,
 };
+use crate::model::DateTimeStartPropertyBuilder;
+use crate::prelude::UniqueIdentifierPropertyBuilder;
 
 pub struct EventComponent {
     pub(crate) properties: Vec<ComponentProperty>,
@@ -34,6 +36,21 @@ impl EventComponentBuilder {
         time: time::Time,
     ) -> DateTimeStampPropertyBuilder<EventComponentBuilder> {
         DateTimeStampPropertyBuilder::new(self, date, time)
+    }
+
+    pub fn add_uid<V: ToString>(
+        self,
+        value: V,
+    ) -> UniqueIdentifierPropertyBuilder<EventComponentBuilder> {
+        UniqueIdentifierPropertyBuilder::new(self, value.to_string())
+    }
+
+    pub fn add_date_time_start(
+        self,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> DateTimeStartPropertyBuilder<EventComponentBuilder> {
+        DateTimeStartPropertyBuilder::new(self, date, time)
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);

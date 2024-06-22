@@ -1,6 +1,7 @@
 use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
+use crate::model::{impl_other_component_properties, Value};
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
@@ -145,6 +146,8 @@ impl_other_params_builder!(MethodPropertyBuilder);
 
 pub enum ComponentProperty {
     DateTimeStamp(DateTimeStampProperty),
+    UniqueIdentifier(UniqueIdentifierProperty),
+    DateTimeStart(DateTimeStartProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -293,3 +296,79 @@ where
 }
 
 impl_other_component_params_builder!(DateTimeStampPropertyBuilder<P>);
+
+pub struct UniqueIdentifierProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct UniqueIdentifierPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: UniqueIdentifierProperty,
+}
+
+impl<P> UniqueIdentifierPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> UniqueIdentifierPropertyBuilder<P> {
+        UniqueIdentifierPropertyBuilder {
+            owner,
+            inner: UniqueIdentifierProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::UniqueIdentifier);
+}
+
+impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
+
+pub struct DateTimeStartProperty {
+    date: time::Date,
+    time: Option<time::Time>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct DateTimeStartPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DateTimeStartProperty,
+}
+
+impl<P> DateTimeStartPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> DateTimeStartPropertyBuilder<P> {
+        let mut params = Vec::new();
+
+        // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
+        // optional, this will default to setting the value here.
+        if time.is_none() {
+            params.push(Param::Value { value: Value::Date })
+        }
+
+        DateTimeStartPropertyBuilder {
+            owner,
+            inner: DateTimeStartProperty { date, time, params },
+        }
+    }
+
+    pub fn add_tz_id<V: ToString>(mut self, tz_id: V, unique: bool) -> Self {
+        self.inner.params.push(Param::TimeZoneId {
+            tz_id: tz_id.to_string(),
+            unique,
+        });
+        self
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::DateTimeStart);
+}
+
+impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
