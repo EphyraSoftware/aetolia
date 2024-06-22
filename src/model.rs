@@ -59,6 +59,10 @@ impl ICalObjectBuilder {
         IanaPropertyBuilder::new(self, name.to_string(), value.to_string())
     }
 
+    pub fn add_event_component(self) -> EventComponentBuilder {
+        EventComponentBuilder::new(self)
+    }
+
     pub fn add_iana_component<N: ToString>(
         self,
         name: N,
@@ -443,7 +447,7 @@ impl AddComponentProperty for XComponentBuilder {
     }
 }
 
-macro_rules! impl_component_properties {
+macro_rules! impl_other_component_properties {
     ($builder:ident, $inner:ty) => {
         fn add_x_property<N: ToString, V: ToString>(self, name: N, value: V) -> $builder<$inner> {
             $builder::new(self, name.to_string(), value.to_string())
@@ -475,7 +479,7 @@ impl XComponentBuilder {
         }
     }
 
-    impl_component_properties!(XComponentPropertyBuilder, XComponentBuilder);
+    impl_other_component_properties!(XComponentPropertyBuilder, XComponentBuilder);
 
     impl_finish_component_build!(CalendarComponent::XComponent);
 }
@@ -507,15 +511,81 @@ impl IanaComponentBuilder {
         }
     }
 
-    impl_component_properties!(IanaComponentPropertyBuilder, IanaComponentBuilder);
+    impl_other_component_properties!(IanaComponentPropertyBuilder, IanaComponentBuilder);
 
     impl_finish_component_build!(CalendarComponent::IanaComponent);
 }
 
+pub struct AlarmComponent {
+    properties: Vec<ComponentProperty>,
+}
+
+pub struct EventComponent {
+    properties: Vec<ComponentProperty>,
+    alarms: Vec<CalendarComponent>,
+}
+
+pub struct EventComponentBuilder {
+    owner: ICalObjectBuilder,
+    inner: EventComponent,
+}
+
+impl EventComponentBuilder {
+    fn new(owner: ICalObjectBuilder) -> EventComponentBuilder {
+        EventComponentBuilder {
+            owner,
+            inner: EventComponent {
+                properties: Vec::new(),
+                alarms: Vec::new(),
+            },
+        }
+    }
+
+    pub fn add_date_time_stamp(self, date: time::Date, time: time::Time) -> DateTimeStampPropertyBuilder<EventComponentBuilder> {
+        DateTimeStampPropertyBuilder::new(self, date, time)
+    }
+
+    impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);
+
+    impl_finish_component_build!(CalendarComponent::Event);
+}
+
+impl AddComponentProperty for EventComponentBuilder {
+    fn add_property(&mut self, property: ComponentProperty) {
+        self.inner.properties.push(property);
+    }
+}
+
+pub struct DateTimeStampProperty {
+    date: time::Date,
+    time: time::Time,
+    params: Vec<Param>,
+}
+
+pub struct DateTimeStampPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DateTimeStampProperty,
+}
+
+impl<P> DateTimeStampPropertyBuilder<P> where P: AddComponentProperty {
+    fn new(owner: P, date: time::Date, time: time::Time) -> DateTimeStampPropertyBuilder<P> {
+        DateTimeStampPropertyBuilder {
+            owner,
+            inner: DateTimeStampProperty {
+                date,
+                time,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::DateTimeStamp);
+}
+
+impl_other_component_params_builder!(DateTimeStampPropertyBuilder<P>);
+
 pub enum CalendarComponent {
-    // Event {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    Event(EventComponent),
     // ToDo {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -536,6 +606,7 @@ pub enum CalendarComponent {
 }
 
 pub enum ComponentProperty {
+    DateTimeStamp(DateTimeStampProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -621,6 +692,37 @@ mod tests {
                 }
             }
             _ => panic!("Expected IanaComponent"),
+        }
+    }
+
+    #[test]
+    fn event_component_cal_object() {
+        let obj = ICalObject::builder()
+            .add_product_id("event_component")
+            .finish_property()
+            .add_event_component()
+            .add_date_time_stamp(
+                time::Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                time::Time::from_hms(13, 0, 0).unwrap(),
+            )
+            .add_x_param("X-SOME-PROP", "X-SOME-VALUE")
+            .finish_property()
+            .finish_component()
+            .build();
+
+        assert_eq!(obj.components.len(), 1);
+
+        match &obj.components[0] {
+            CalendarComponent::Event(e) => {
+                assert_eq!(e.properties.len(), 1);
+                match &e.properties[0] {
+                    ComponentProperty::DateTimeStamp(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected DateTimeStamp"),
+                }
+            }
+            _ => panic!("Expected EventComponent"),
         }
     }
 }
