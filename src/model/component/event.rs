@@ -9,7 +9,8 @@ use crate::model::property::{
 use crate::model::{
     CreatedPropertyBuilder, DateTimeStartPropertyBuilder, GeographicPositionPropertyBuilder,
     LocationPropertyBuilder, OrganizerPropertyBuilder, PriorityPropertyBuilder,
-    SequencePropertyBuilder,
+    RecurrenceIdPropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
+    TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
     ClassPropertyBuilder, DescriptionPropertyBuilder, UniqueIdentifierPropertyBuilder,
@@ -90,6 +91,34 @@ impl EventComponentBuilder {
 
     pub fn add_sequence(self, value: u32) -> SequencePropertyBuilder<Self> {
         SequencePropertyBuilder::new(self, value)
+    }
+
+    pub fn add_request_status(
+        self,
+        status_code: &[u32],
+        description: String,
+        exception_data: Option<String>,
+    ) -> RequestStatusPropertyBuilder<Self> {
+        RequestStatusPropertyBuilder::new(self, status_code.to_vec(), description, exception_data)
+    }
+
+    pub fn add_time_transparency(
+        self,
+        value: TimeTransparency,
+    ) -> TimeTransparencyPropertyBuilder<Self> {
+        TimeTransparencyPropertyBuilder::new(self, value.to_string())
+    }
+
+    pub fn add_url(self, value: String) -> UrlPropertyBuilder<Self> {
+        UrlPropertyBuilder::new(self, value)
+    }
+
+    pub fn add_recurrence_id(
+        self,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> RecurrenceIdPropertyBuilder<Self> {
+        RecurrenceIdPropertyBuilder::new(self, date, time)
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);

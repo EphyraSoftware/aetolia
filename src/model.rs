@@ -15,6 +15,7 @@ mod tests {
     use super::*;
     use crate::model::object::ICalObject;
     use crate::model::param::OtherParamsBuilder;
+    use time::Date;
 
     #[test]
     fn all_cal_props_cal_object() {
@@ -144,6 +145,26 @@ mod tests {
             .add_priority(4)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_sequence(10)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_request_status(&[200, 4], "Success".to_string(), None)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_time_transparency(TimeTransparency::Transparent)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_url("http://local.net/john".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_recurrence_id(
+                Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                None,
+            )
+            .add_tz_id("America/New_York", true)
+            .add_range(Range::ThisAndFuture)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -151,7 +172,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 9);
+                assert_eq!(e.properties.len(), 14);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -205,6 +226,36 @@ mod tests {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected Priority"),
+                }
+                match &e.properties[9] {
+                    ComponentProperty::Sequence(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Sequence"),
+                }
+                match &e.properties[10] {
+                    ComponentProperty::RequestStatus(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected RequestStatus"),
+                }
+                match &e.properties[11] {
+                    ComponentProperty::TimeTransparency(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected TimeTransparency"),
+                }
+                match &e.properties[12] {
+                    ComponentProperty::Url(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Url"),
+                }
+                match &e.properties[13] {
+                    ComponentProperty::RecurrenceId(p) => {
+                        assert_eq!(p.params.len(), 4);
+                    }
+                    _ => panic!("Expected RecurrenceId"),
                 }
             }
             _ => panic!("Expected EventComponent"),

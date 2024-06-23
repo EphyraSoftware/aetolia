@@ -7,6 +7,7 @@ pub enum Param {
     Language { language: String },
     DirectoryEntryReference { value: String },
     SentBy { value: String },
+    Range { range: Range },
     Other { name: String, value: String },
     Others { name: String, values: Vec<String> },
 }
@@ -29,6 +30,24 @@ pub enum Value {
     UtcOffset,
     XName(String),
     IanaToken(String),
+}
+
+pub enum TimeTransparency {
+    Opaque,
+    Transparent,
+}
+
+pub enum Range {
+    ThisAndFuture,
+}
+
+impl Display for TimeTransparency {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            TimeTransparency::Opaque => write!(f, "OPAQUE"),
+            TimeTransparency::Transparent => write!(f, "TRANSPARENT"),
+        }
+    }
 }
 
 pub trait OtherParamsBuilder {
@@ -80,6 +99,8 @@ macro_rules! impl_other_params_builder {
 }
 
 pub(crate) use impl_other_params_builder;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 macro_rules! impl_other_component_params_builder {
     ($builder:ident<$p:ident>) => {
@@ -149,3 +170,17 @@ macro_rules! language_param {
 }
 
 pub(crate) use language_param;
+
+macro_rules! tz_id_param {
+    () => {
+        pub fn add_tz_id<V: ToString>(mut self, tz_id: V, unique: bool) -> Self {
+            self.inner.params.push(Param::TimeZoneId {
+                tz_id: tz_id.to_string(),
+                unique,
+            });
+            self
+        }
+    };
+}
+
+pub(crate) use tz_id_param;

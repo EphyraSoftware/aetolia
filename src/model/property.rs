@@ -1,7 +1,9 @@
 use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
-use crate::model::{altrep_param, impl_other_component_properties, language_param, Value};
+use crate::model::{
+    altrep_param, impl_other_component_properties, language_param, tz_id_param, Range, Value,
+};
 use std::fmt::Display;
 
 pub trait AddComponentProperty {
@@ -180,6 +182,11 @@ pub enum ComponentProperty {
     Organizer(OrganizerProperty),
     Priority(PriorityProperty),
     Sequence(SequenceProperty),
+    Summary(SummaryProperty),
+    TimeTransparency(TimeTransparencyProperty),
+    RequestStatus(RequestStatusProperty),
+    Url(UrlProperty),
+    RecurrenceId(RecurrenceIdProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -392,13 +399,7 @@ where
         }
     }
 
-    pub fn add_tz_id<V: ToString>(mut self, tz_id: V, unique: bool) -> Self {
-        self.inner.params.push(Param::TimeZoneId {
-            tz_id: tz_id.to_string(),
-            unique,
-        });
-        self
-    }
+    tz_id_param!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeStart);
 }
@@ -708,3 +709,180 @@ where
 }
 
 impl_other_component_params_builder!(SequencePropertyBuilder<P>);
+
+pub struct RequestStatusProperty {
+    status_code: Vec<u32>,
+    description: String,
+    exception_data: Option<String>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RequestStatusPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RequestStatusProperty,
+}
+
+impl<P> RequestStatusPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        status_code: Vec<u32>,
+        description: String,
+        exception_data: Option<String>,
+    ) -> RequestStatusPropertyBuilder<P> {
+        RequestStatusPropertyBuilder {
+            owner,
+            inner: RequestStatusProperty {
+                status_code,
+                description,
+                exception_data,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::RequestStatus);
+}
+
+impl_other_component_params_builder!(RequestStatusPropertyBuilder<P>);
+
+pub struct SummaryProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct SummaryPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: SummaryProperty,
+}
+
+impl<P> SummaryPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> SummaryPropertyBuilder<P> {
+        SummaryPropertyBuilder {
+            owner,
+            inner: SummaryProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Summary);
+}
+
+impl_other_component_params_builder!(SummaryPropertyBuilder<P>);
+
+pub struct TimeTransparencyProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeTransparencyPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeTransparencyProperty,
+}
+
+impl<P> TimeTransparencyPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> TimeTransparencyPropertyBuilder<P> {
+        TimeTransparencyPropertyBuilder {
+            owner,
+            inner: TimeTransparencyProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::TimeTransparency);
+}
+
+impl_other_component_params_builder!(TimeTransparencyPropertyBuilder<P>);
+
+pub struct UrlProperty {
+    // TODO should be a URI
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct UrlPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: UrlProperty,
+}
+
+impl<P> UrlPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> UrlPropertyBuilder<P> {
+        UrlPropertyBuilder {
+            owner,
+            inner: UrlProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Url);
+}
+
+impl_other_component_params_builder!(UrlPropertyBuilder<P>);
+
+pub struct RecurrenceIdProperty {
+    date: time::Date,
+    time: Option<time::Time>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RecurrenceIdPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RecurrenceIdProperty,
+}
+
+impl<P> RecurrenceIdPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> RecurrenceIdPropertyBuilder<P> {
+        let mut params = Vec::new();
+
+        // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
+        // optional, this will default to setting the value here.
+        if time.is_none() {
+            params.push(Param::Value { value: Value::Date })
+        }
+
+        RecurrenceIdPropertyBuilder {
+            owner,
+            inner: RecurrenceIdProperty { date, time, params },
+        }
+    }
+
+    tz_id_param!();
+
+    pub fn add_range(mut self, range: Range) -> Self {
+        self.inner.params.push(Param::Range { range });
+        self
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::RecurrenceId);
+}
+
+impl_other_component_params_builder!(RecurrenceIdPropertyBuilder<P>);
