@@ -117,6 +117,33 @@ mod tests {
             )
             .add_tz_id("America/New_York", true)
             .finish_property()
+            .add_class(Classification::Private)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_created(
+                time::Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                time::Time::from_hms(13, 0, 0).unwrap(),
+            )
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_description("Event description")
+            .add_alternate_representation("CID:evt.desc".to_string())
+            .add_language("en-US".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_geographic_position(37.386013, -122.082932)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_organizer("mailto:john@local.net".to_string())
+            .add_common_name("John")
+            .add_directory_entry_reference("ldap://local.net/john".to_string())
+            .add_sent_by("mailto:lilith@local.net".to_string())
+            .add_language("en-US".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_priority(4)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -124,7 +151,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 3);
+                assert_eq!(e.properties.len(), 9);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -142,6 +169,42 @@ mod tests {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected DateTimeStart"),
+                }
+                match &e.properties[3] {
+                    ComponentProperty::Class(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Class"),
+                }
+                match &e.properties[4] {
+                    ComponentProperty::Created(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Created"),
+                }
+                match &e.properties[5] {
+                    ComponentProperty::Description(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Description"),
+                }
+                match &e.properties[6] {
+                    ComponentProperty::GeographicPosition(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected GeographicPosition"),
+                }
+                match &e.properties[7] {
+                    ComponentProperty::Organizer(p) => {
+                        assert_eq!(p.params.len(), 5);
+                    }
+                    _ => panic!("Expected Organizer"),
+                }
+                match &e.properties[8] {
+                    ComponentProperty::Priority(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Priority"),
                 }
             }
             _ => panic!("Expected EventComponent"),

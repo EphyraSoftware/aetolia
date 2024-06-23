@@ -3,6 +3,10 @@ pub enum Param {
     CommonName { name: String },
     Value { value: Value },
     TimeZoneId { tz_id: String, unique: bool },
+    AlternateRepresentation { value: String },
+    Language { language: String },
+    DirectoryEntryReference { value: String },
+    SentBy { value: String },
     Other { name: String, value: String },
     Others { name: String, values: Vec<String> },
 }
@@ -119,3 +123,29 @@ macro_rules! impl_other_component_params_builder {
 }
 
 pub(crate) use impl_other_component_params_builder;
+
+macro_rules! altrep_param {
+    () => {
+        // TODO no generic URI representation for Rust? Maybe extract the URI parser in this crate and
+        //      make that into a URI crate.
+        pub fn add_alternate_representation(mut self, value: String) -> Self {
+            self.inner
+                .params
+                .push(Param::AlternateRepresentation { value });
+            self
+        }
+    };
+}
+
+pub(crate) use altrep_param;
+
+macro_rules! language_param {
+    () => {
+        pub fn add_language(mut self, language: String) -> Self {
+            self.inner.params.push(Param::Language { language });
+            self
+        }
+    };
+}
+
+pub(crate) use language_param;

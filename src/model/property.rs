@@ -1,10 +1,33 @@
 use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
-use crate::model::{impl_other_component_properties, Value};
+use crate::model::{altrep_param, impl_other_component_properties, language_param, Value};
+use std::fmt::Display;
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Classification {
+    Public,
+    Private,
+    Confidential,
+    XName(String),
+    IanaToken(String),
+}
+
+impl Display for Classification {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Classification::Public => "PUBLIC".to_string(),
+            Classification::Private => "PRIVATE".to_string(),
+            Classification::Confidential => "CONFIDENTIAL".to_string(),
+            Classification::XName(name) => name.to_string(),
+            Classification::IanaToken(token) => token.to_string(),
+        };
+        write!(f, "{}", str)
+    }
 }
 
 macro_rules! impl_finish_property_build {
@@ -148,6 +171,15 @@ pub enum ComponentProperty {
     DateTimeStamp(DateTimeStampProperty),
     UniqueIdentifier(UniqueIdentifierProperty),
     DateTimeStart(DateTimeStartProperty),
+    Class(ClassProperty),
+    Created(CreatedProperty),
+    Description(DescriptionProperty),
+    GeographicPosition(GeographicPositionProperty),
+    LastModified(LastModifiedProperty),
+    Location(LocationProperty),
+    Organizer(OrganizerProperty),
+    Priority(PriorityProperty),
+    Sequence(SequenceProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -372,3 +404,307 @@ where
 }
 
 impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
+
+pub struct ClassProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct ClassPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: ClassProperty,
+}
+
+impl<P> ClassPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> ClassPropertyBuilder<P> {
+        ClassPropertyBuilder {
+            owner,
+            inner: ClassProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Class);
+}
+
+impl_other_component_params_builder!(ClassPropertyBuilder<P>);
+
+pub struct CreatedProperty {
+    date: time::Date,
+    time: time::Time,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct CreatedPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: CreatedProperty,
+}
+
+impl<P> CreatedPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, date: time::Date, time: time::Time) -> CreatedPropertyBuilder<P> {
+        CreatedPropertyBuilder {
+            owner,
+            inner: CreatedProperty {
+                date,
+                time,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Created);
+}
+
+impl_other_component_params_builder!(CreatedPropertyBuilder<P>);
+
+pub struct DescriptionProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct DescriptionPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DescriptionProperty,
+}
+
+impl<P> DescriptionPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> DescriptionPropertyBuilder<P> {
+        DescriptionPropertyBuilder {
+            owner,
+            inner: DescriptionProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Description);
+}
+
+impl_other_component_params_builder!(DescriptionPropertyBuilder<P>);
+
+pub struct GeographicPositionProperty {
+    latitude: f64,
+    longitude: f64,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct GeographicPositionPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: GeographicPositionProperty,
+}
+
+impl<P> GeographicPositionPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        latitude: f64,
+        longitude: f64,
+    ) -> GeographicPositionPropertyBuilder<P> {
+        GeographicPositionPropertyBuilder {
+            owner,
+            inner: GeographicPositionProperty {
+                latitude,
+                longitude,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::GeographicPosition);
+}
+
+impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
+
+pub struct LastModifiedProperty {
+    date: time::Date,
+    time: time::Time,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct LastModifiedPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: LastModifiedProperty,
+}
+
+impl<P> LastModifiedPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: time::Time,
+    ) -> LastModifiedPropertyBuilder<P> {
+        LastModifiedPropertyBuilder {
+            owner,
+            inner: LastModifiedProperty {
+                date,
+                time,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::LastModified);
+}
+
+impl_other_component_params_builder!(LastModifiedPropertyBuilder<P>);
+
+pub struct LocationProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct LocationPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: LocationProperty,
+}
+
+impl<P> LocationPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> LocationPropertyBuilder<P> {
+        LocationPropertyBuilder {
+            owner,
+            inner: LocationProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Location);
+}
+
+impl_other_component_params_builder!(LocationPropertyBuilder<P>);
+
+pub struct OrganizerProperty {
+    pub(crate) params: Vec<Param>,
+    pub(crate) value: String,
+}
+
+pub struct OrganizerPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: OrganizerProperty,
+}
+
+impl<P> OrganizerPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> OrganizerPropertyBuilder<P> {
+        OrganizerPropertyBuilder {
+            owner,
+            inner: OrganizerProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    pub fn add_common_name<V: ToString>(mut self, value: V) -> Self {
+        self.inner.params.push(Param::CommonName {
+            name: value.to_string(),
+        });
+        self
+    }
+
+    // TODO should be a URI
+    pub fn add_directory_entry_reference(mut self, value: String) -> Self {
+        self.inner
+            .params
+            .push(Param::DirectoryEntryReference { value });
+        self
+    }
+
+    // TODO should be a URI
+    pub fn add_sent_by(mut self, value: String) -> Self {
+        self.inner.params.push(Param::SentBy { value });
+        self
+    }
+
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Organizer);
+}
+
+impl_other_component_params_builder!(OrganizerPropertyBuilder<P>);
+
+pub struct PriorityProperty {
+    value: u8,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct PriorityPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: PriorityProperty,
+}
+
+impl<P> PriorityPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: u8) -> PriorityPropertyBuilder<P> {
+        PriorityPropertyBuilder {
+            owner,
+            inner: PriorityProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Priority);
+}
+
+impl_other_component_params_builder!(PriorityPropertyBuilder<P>);
+
+pub struct SequenceProperty {
+    value: u32,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct SequencePropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: SequenceProperty,
+}
+
+impl<P> SequencePropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: u32) -> SequencePropertyBuilder<P> {
+        SequencePropertyBuilder {
+            owner,
+            inner: SequenceProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Sequence);
+}
+
+impl_other_component_params_builder!(SequencePropertyBuilder<P>);
