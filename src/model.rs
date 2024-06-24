@@ -168,6 +168,15 @@ mod tests {
             .add_recurrence_rule(Frequency::Hourly, |rule| rule.set_by_hour(vec![1, 2, 3]))
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_date_time_end(
+                Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                Some(time::Time::from_hms(15, 30, 0).unwrap()),
+            )
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_duration(|| Duration::days_and_time(-1, 10).hours(3).build())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -175,7 +184,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 15);
+                assert_eq!(e.properties.len(), 17);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -265,6 +274,18 @@ mod tests {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected RecurrenceRule"),
+                }
+                match &e.properties[15] {
+                    ComponentProperty::DateTimeEnd(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected DateTimeEnd"),
+                }
+                match &e.properties[16] {
+                    ComponentProperty::Duration(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Duration"),
                 }
             }
             _ => panic!("Expected EventComponent"),

@@ -1,3 +1,4 @@
+mod duration;
 mod recur;
 
 use crate::model::object::ICalObjectBuilder;
@@ -9,6 +10,7 @@ use crate::model::{
 use std::fmt::Display;
 use std::ops::Deref;
 
+pub use duration::*;
 pub use recur::*;
 
 pub trait AddComponentProperty {
@@ -193,6 +195,8 @@ pub enum ComponentProperty {
     Url(UrlProperty),
     RecurrenceId(RecurrenceIdProperty),
     RecurrenceRule(RecurrenceRuleProperty),
+    DateTimeEnd(DateTimeEndProperty),
+    Duration(DurationProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -921,3 +925,73 @@ where
 }
 
 impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
+
+pub struct DateTimeEndProperty {
+    date: time::Date,
+    time: Option<time::Time>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct DateTimeEndPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DateTimeEndProperty,
+}
+
+impl<P> DateTimeEndPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> DateTimeEndPropertyBuilder<P> {
+        let mut params = Vec::new();
+
+        // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
+        // optional, this will default to setting the value here.
+        if time.is_none() {
+            params.push(Param::Value { value: Value::Date })
+        }
+
+        DateTimeEndPropertyBuilder {
+            owner,
+            inner: DateTimeEndProperty { date, time, params },
+        }
+    }
+
+    tz_id_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::DateTimeEnd);
+}
+
+impl_other_component_params_builder!(DateTimeEndPropertyBuilder<P>);
+
+pub struct DurationProperty {
+    duration: duration::Duration,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct DurationPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DurationProperty,
+}
+
+impl<P> DurationPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, duration: duration::Duration) -> DurationPropertyBuilder<P> {
+        DurationPropertyBuilder {
+            owner,
+            inner: DurationProperty {
+                duration,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Duration);
+}
+
+impl_other_component_params_builder!(DurationPropertyBuilder<P>);

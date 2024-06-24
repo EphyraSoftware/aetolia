@@ -7,9 +7,9 @@ use crate::model::property::{
     XComponentPropertyBuilder,
 };
 use crate::model::{
-    CreatedPropertyBuilder, DateTimeStartPropertyBuilder, Frequency,
-    GeographicPositionPropertyBuilder, LocationPropertyBuilder, OrganizerPropertyBuilder,
-    PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
+    CreatedPropertyBuilder, DateTimeEndPropertyBuilder, DateTimeStartPropertyBuilder, Duration,
+    DurationPropertyBuilder, Frequency, GeographicPositionPropertyBuilder, LocationPropertyBuilder,
+    OrganizerPropertyBuilder, PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
     RecurrenceRulePropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
     TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
@@ -128,6 +128,18 @@ impl EventComponentBuilder {
         builder: fn(RecurrenceRule) -> RecurrenceRule,
     ) -> RecurrenceRulePropertyBuilder<Self> {
         RecurrenceRulePropertyBuilder::new(self, builder(RecurrenceRule::new(frequency)))
+    }
+
+    pub fn add_date_time_end(
+        self,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> DateTimeEndPropertyBuilder<Self> {
+        DateTimeEndPropertyBuilder::new(self, date, time)
+    }
+
+    pub fn add_duration(self, builder: fn() -> Duration) -> DurationPropertyBuilder<Self> {
+        DurationPropertyBuilder::new(self, builder())
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);
