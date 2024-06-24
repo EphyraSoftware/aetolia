@@ -165,6 +165,9 @@ mod tests {
             .add_range(Range::ThisAndFuture)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_recurrence_rule(Frequency::Hourly, |rule| rule.set_by_hour(vec![1, 2, 3]))
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -172,7 +175,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 14);
+                assert_eq!(e.properties.len(), 15);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -256,6 +259,12 @@ mod tests {
                         assert_eq!(p.params.len(), 4);
                     }
                     _ => panic!("Expected RecurrenceId"),
+                }
+                match &e.properties[14] {
+                    ComponentProperty::RecurrenceRule(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected RecurrenceRule"),
                 }
             }
             _ => panic!("Expected EventComponent"),

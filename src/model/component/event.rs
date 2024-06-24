@@ -7,9 +7,10 @@ use crate::model::property::{
     XComponentPropertyBuilder,
 };
 use crate::model::{
-    CreatedPropertyBuilder, DateTimeStartPropertyBuilder, GeographicPositionPropertyBuilder,
-    LocationPropertyBuilder, OrganizerPropertyBuilder, PriorityPropertyBuilder,
-    RecurrenceIdPropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
+    CreatedPropertyBuilder, DateTimeStartPropertyBuilder, Frequency,
+    GeographicPositionPropertyBuilder, LocationPropertyBuilder, OrganizerPropertyBuilder,
+    PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
+    RecurrenceRulePropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
     TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
@@ -119,6 +120,14 @@ impl EventComponentBuilder {
         time: Option<time::Time>,
     ) -> RecurrenceIdPropertyBuilder<Self> {
         RecurrenceIdPropertyBuilder::new(self, date, time)
+    }
+
+    pub fn add_recurrence_rule(
+        self,
+        frequency: Frequency,
+        builder: fn(RecurrenceRule) -> RecurrenceRule,
+    ) -> RecurrenceRulePropertyBuilder<Self> {
+        RecurrenceRulePropertyBuilder::new(self, builder(RecurrenceRule::new(frequency)))
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);

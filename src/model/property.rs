@@ -1,3 +1,5 @@
+mod recur;
+
 use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
@@ -5,6 +7,9 @@ use crate::model::{
     altrep_param, impl_other_component_properties, language_param, tz_id_param, Range, Value,
 };
 use std::fmt::Display;
+use std::ops::Deref;
+
+pub use recur::*;
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
@@ -187,6 +192,7 @@ pub enum ComponentProperty {
     RequestStatus(RequestStatusProperty),
     Url(UrlProperty),
     RecurrenceId(RecurrenceIdProperty),
+    RecurrenceRule(RecurrenceRuleProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -886,3 +892,32 @@ where
 }
 
 impl_other_component_params_builder!(RecurrenceIdPropertyBuilder<P>);
+
+pub struct RecurrenceRuleProperty {
+    rule: RecurrenceRule,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RecurrenceRulePropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RecurrenceRuleProperty,
+}
+
+impl<P> RecurrenceRulePropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, rule: RecurrenceRule) -> RecurrenceRulePropertyBuilder<P> {
+        RecurrenceRulePropertyBuilder {
+            owner,
+            inner: RecurrenceRuleProperty {
+                rule,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::RecurrenceRule);
+}
+
+impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
