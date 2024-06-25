@@ -177,6 +177,10 @@ mod tests {
             .add_duration(|| Duration::days_and_time(-1, 10).hours(3).build())
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_attach_uri("http://local.net/john".to_string())
+            .add_fmt_type("text", "plain")
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -184,7 +188,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 17);
+                assert_eq!(e.properties.len(), 18);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -286,6 +290,12 @@ mod tests {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected Duration"),
+                }
+                match &e.properties[17] {
+                    ComponentProperty::Attach(p) => {
+                        assert_eq!(p.params.len(), 2);
+                    }
+                    _ => panic!("Expected Attach"),
                 }
             }
             _ => panic!("Expected EventComponent"),

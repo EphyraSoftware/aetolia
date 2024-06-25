@@ -5,7 +5,8 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
-    altrep_param, impl_other_component_properties, language_param, tz_id_param, Range, Value,
+    altrep_param, impl_other_component_properties, language_param, tz_id_param, Encoding, Range,
+    Value,
 };
 use std::fmt::Display;
 use std::ops::Deref;
@@ -197,6 +198,7 @@ pub enum ComponentProperty {
     RecurrenceRule(RecurrenceRuleProperty),
     DateTimeEnd(DateTimeEndProperty),
     Duration(DurationProperty),
+    Attach(AttachProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -995,3 +997,60 @@ where
 }
 
 impl_other_component_params_builder!(DurationPropertyBuilder<P>);
+
+pub struct AttachProperty {
+    value_uri: Option<String>,
+    value_binary: Option<String>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct AttachPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: AttachProperty,
+}
+
+impl<P> AttachPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new_with_uri(owner: P, uri: String) -> AttachPropertyBuilder<P> {
+        AttachPropertyBuilder {
+            owner,
+            inner: AttachProperty {
+                value_uri: Some(uri),
+                value_binary: None,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    pub(crate) fn new_with_binary(owner: P, binary: String) -> AttachPropertyBuilder<P> {
+        AttachPropertyBuilder {
+            owner,
+            inner: AttachProperty {
+                value_uri: None,
+                value_binary: Some(binary),
+                params: vec![
+                    Param::Encoding {
+                        encoding: Encoding::Base64,
+                    },
+                    Param::Value {
+                        value: Value::Binary,
+                    },
+                ],
+            },
+        }
+    }
+
+    pub fn add_fmt_type<U: ToString, V: ToString>(mut self, type_name: U, sub_type_name: V) -> Self {
+        self.inner.params.push(Param::FormatType {
+            type_name: type_name.to_string(),
+            sub_type_name: sub_type_name.to_string(),
+        });
+        self
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Attach);
+}
+
+impl_other_component_params_builder!(AttachPropertyBuilder<P>);

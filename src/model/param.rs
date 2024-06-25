@@ -1,15 +1,47 @@
 pub enum Param {
-    AltRep { uri: String },
-    CommonName { name: String },
-    Value { value: Value },
-    TimeZoneId { tz_id: String, unique: bool },
-    AlternateRepresentation { value: String },
-    Language { language: String },
-    DirectoryEntryReference { value: String },
-    SentBy { value: String },
-    Range { range: Range },
-    Other { name: String, value: String },
-    Others { name: String, values: Vec<String> },
+    AltRep {
+        uri: String,
+    },
+    CommonName {
+        name: String,
+    },
+    Value {
+        value: Value,
+    },
+    TimeZoneId {
+        tz_id: String,
+        unique: bool,
+    },
+    AlternateRepresentation {
+        value: String,
+    },
+    Language {
+        language: String,
+    },
+    DirectoryEntryReference {
+        value: String,
+    },
+    SentBy {
+        value: String,
+    },
+    Range {
+        range: Range,
+    },
+    FormatType {
+        type_name: String,
+        sub_type_name: String,
+    },
+    Encoding {
+        encoding: Encoding,
+    },
+    Other {
+        name: String,
+        value: String,
+    },
+    Others {
+        name: String,
+        values: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -39,6 +71,13 @@ pub enum TimeTransparency {
 
 pub enum Range {
     ThisAndFuture,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum Encoding {
+    #[default]
+    EightBit,
+    Base64,
 }
 
 impl Display for TimeTransparency {

@@ -14,7 +14,8 @@ use crate::model::{
     TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
-    ClassPropertyBuilder, DescriptionPropertyBuilder, UniqueIdentifierPropertyBuilder,
+    AttachPropertyBuilder, ClassPropertyBuilder, DescriptionPropertyBuilder,
+    UniqueIdentifierPropertyBuilder,
 };
 
 pub struct EventComponent {
@@ -140,6 +141,14 @@ impl EventComponentBuilder {
 
     pub fn add_duration(self, builder: fn() -> Duration) -> DurationPropertyBuilder<Self> {
         DurationPropertyBuilder::new(self, builder())
+    }
+
+    pub fn add_attach_uri(self, value: String) -> AttachPropertyBuilder<Self> {
+        AttachPropertyBuilder::new_with_uri(self, value)
+    }
+
+    pub fn add_attach_binary(self, value: String) -> AttachPropertyBuilder<Self> {
+        AttachPropertyBuilder::new_with_binary(self, value)
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);
