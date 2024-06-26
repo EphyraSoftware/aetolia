@@ -7,15 +7,16 @@ use crate::model::property::{
     XComponentPropertyBuilder,
 };
 use crate::model::{
-    CreatedPropertyBuilder, DateTimeEndPropertyBuilder, DateTimeStartPropertyBuilder, Duration,
-    DurationPropertyBuilder, Frequency, GeographicPositionPropertyBuilder, LocationPropertyBuilder,
-    OrganizerPropertyBuilder, PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
+    CategoriesParamBuilder, CreatedPropertyBuilder, DateTimeEndPropertyBuilder,
+    DateTimeStartPropertyBuilder, Duration, DurationPropertyBuilder, Frequency,
+    GeographicPositionPropertyBuilder, LocationPropertyBuilder, OrganizerPropertyBuilder,
+    ParticipationStatusEvent, PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
     RecurrenceRulePropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
     TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
-    AttachPropertyBuilder, ClassPropertyBuilder, DescriptionPropertyBuilder,
-    UniqueIdentifierPropertyBuilder,
+    AttachPropertyBuilder, AttendeeParamBuilder, ClassPropertyBuilder, CommentParamBuilder,
+    ContactParamBuilder, DescriptionPropertyBuilder, UniqueIdentifierPropertyBuilder,
 };
 
 pub struct EventComponent {
@@ -149,6 +150,25 @@ impl EventComponentBuilder {
 
     pub fn add_attach_binary(self, value: String) -> AttachPropertyBuilder<Self> {
         AttachPropertyBuilder::new_with_binary(self, value)
+    }
+
+    pub fn add_attendee(
+        self,
+        value: String,
+    ) -> AttendeeParamBuilder<Self, ParticipationStatusEvent> {
+        AttendeeParamBuilder::new(self, value)
+    }
+
+    pub fn add_categories(self, value: Vec<String>) -> CategoriesParamBuilder<Self> {
+        CategoriesParamBuilder::new(self, value)
+    }
+
+    pub fn add_comment<V: ToString>(self, value: V) -> CommentParamBuilder<Self> {
+        CommentParamBuilder::new(self, value.to_string())
+    }
+
+    pub fn add_contact<V: ToString>(self, value: V) -> ContactParamBuilder<Self> {
+        ContactParamBuilder::new(self, value.to_string())
     }
 
     impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);

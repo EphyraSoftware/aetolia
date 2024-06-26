@@ -5,10 +5,12 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
-    altrep_param, impl_other_component_properties, language_param, tz_id_param, Encoding, Range,
-    Value,
+    altrep_param, common_name_param, directory_entry_reference_param,
+    impl_other_component_properties, language_param, sent_by_param, tz_id_param, CalendarUserType,
+    Encoding, ParticipationStatusUnknown, Range, Role, Value,
 };
 use std::fmt::Display;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 pub use duration::*;
@@ -199,6 +201,10 @@ pub enum ComponentProperty {
     DateTimeEnd(DateTimeEndProperty),
     Duration(DurationProperty),
     Attach(AttachProperty),
+    Attendee(AttendeeParam),
+    Categories(CategoriesParam),
+    Comment(CommentParam),
+    Contact(ContactParam),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -636,26 +642,11 @@ where
         }
     }
 
-    pub fn add_common_name<V: ToString>(mut self, value: V) -> Self {
-        self.inner.params.push(Param::CommonName {
-            name: value.to_string(),
-        });
-        self
-    }
+    common_name_param!();
 
-    // TODO should be a URI
-    pub fn add_directory_entry_reference(mut self, value: String) -> Self {
-        self.inner
-            .params
-            .push(Param::DirectoryEntryReference { value });
-        self
-    }
+    directory_entry_reference_param!();
 
-    // TODO should be a URI
-    pub fn add_sent_by(mut self, value: String) -> Self {
-        self.inner.params.push(Param::SentBy { value });
-        self
-    }
+    sent_by_param!();
 
     language_param!();
 
@@ -1042,7 +1033,11 @@ where
         }
     }
 
-    pub fn add_fmt_type<U: ToString, V: ToString>(mut self, type_name: U, sub_type_name: V) -> Self {
+    pub fn add_fmt_type<U: ToString, V: ToString>(
+        mut self,
+        type_name: U,
+        sub_type_name: V,
+    ) -> Self {
         self.inner.params.push(Param::FormatType {
             type_name: type_name.to_string(),
             sub_type_name: sub_type_name.to_string(),
@@ -1054,3 +1049,173 @@ where
 }
 
 impl_other_component_params_builder!(AttachPropertyBuilder<P>);
+
+pub struct AttendeeParam {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct AttendeeParamBuilder<P: AddComponentProperty, PS> {
+    owner: P,
+    inner: AttendeeParam,
+    _phantom: PhantomData<PS>,
+}
+
+impl<P, PS> AttendeeParamBuilder<P, PS>
+where
+    P: AddComponentProperty,
+    PS: Into<ParticipationStatusUnknown>,
+{
+    pub(crate) fn new(owner: P, value: String) -> AttendeeParamBuilder<P, PS> {
+        AttendeeParamBuilder {
+            owner,
+            inner: AttendeeParam {
+                value,
+                params: Vec::new(),
+            },
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn add_calendar_user_type(mut self, cu_type: CalendarUserType) -> Self {
+        self.inner.params.push(Param::CalendarUserType { cu_type });
+        self
+    }
+
+    pub fn add_members(mut self, members: Vec<String>) -> Self {
+        self.inner.params.push(Param::Members { members });
+        self
+    }
+
+    pub fn add_role(mut self, role: Role) -> Self {
+        self.inner.params.push(Param::Role { role });
+        self
+    }
+
+    pub fn add_participation_status(mut self, status: PS) -> Self {
+        self.inner.params.push(Param::ParticipationStatus {
+            status: status.into(),
+        });
+        self
+    }
+
+    pub fn add_rsvp(mut self) -> Self {
+        // Default is false, add to set true
+        self.inner.params.push(Param::Rsvp { rsvp: true });
+        self
+    }
+
+    pub fn add_delegated_to(mut self, delegates: Vec<String>) -> Self {
+        self.inner.params.push(Param::DelegatedTo { delegates });
+        self
+    }
+
+    pub fn add_delegated_from(mut self, delegators: Vec<String>) -> Self {
+        self.inner.params.push(Param::DelegatedFrom { delegators });
+        self
+    }
+
+    sent_by_param!();
+    common_name_param!();
+    directory_entry_reference_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Attendee);
+}
+
+impl_other_component_params_builder!(AttendeeParamBuilder<P, PS>);
+
+pub struct CategoriesParam {
+    value: Vec<String>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct CategoriesParamBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: CategoriesParam,
+}
+
+impl<P> CategoriesParamBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: Vec<String>) -> CategoriesParamBuilder<P> {
+        CategoriesParamBuilder {
+            owner,
+            inner: CategoriesParam {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Categories);
+}
+
+impl_other_component_params_builder!(CategoriesParamBuilder<P>);
+
+pub struct CommentParam {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct CommentParamBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: CommentParam,
+}
+
+impl<P> CommentParamBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> CommentParamBuilder<P> {
+        CommentParamBuilder {
+            owner,
+            inner: CommentParam {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Comment);
+}
+
+impl_other_component_params_builder!(CommentParamBuilder<P>);
+
+pub struct ContactParam {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct ContactParamBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: ContactParam,
+}
+
+impl<P> ContactParamBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> ContactParamBuilder<P> {
+        ContactParamBuilder {
+            owner,
+            inner: ContactParam {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Contact);
+}
+
+impl_other_component_params_builder!(ContactParamBuilder<P>);

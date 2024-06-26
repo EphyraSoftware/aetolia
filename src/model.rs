@@ -181,6 +181,25 @@ mod tests {
             .add_fmt_type("text", "plain")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_attendee("mailto:horace@local.net".to_string())
+            .add_members(vec!["mailto:dev-group@local.net".to_string()])
+            .add_participation_status(ParticipationStatusEvent::Accepted)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_categories(vec!["MEETING".to_string(), "PROJECT".to_string()])
+            .add_language("en-US".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_comment("Event comment")
+            .add_alternate_representation("CID:evt.comment".to_string())
+            .add_language("en-US".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_contact("mailto:kevin@local.net")
+            .add_alternate_representation("CID:evt.contact".to_string())
+            .add_language("en-US".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -188,7 +207,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 18);
+                assert_eq!(e.properties.len(), 22);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -296,6 +315,30 @@ mod tests {
                         assert_eq!(p.params.len(), 2);
                     }
                     _ => panic!("Expected Attach"),
+                }
+                match &e.properties[18] {
+                    ComponentProperty::Attendee(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Attendee"),
+                }
+                match &e.properties[19] {
+                    ComponentProperty::Categories(p) => {
+                        assert_eq!(p.params.len(), 2);
+                    }
+                    _ => panic!("Expected Categories"),
+                }
+                match &e.properties[20] {
+                    ComponentProperty::Comment(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Comment"),
+                }
+                match &e.properties[21] {
+                    ComponentProperty::Contact(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Contact"),
                 }
             }
             _ => panic!("Expected EventComponent"),
