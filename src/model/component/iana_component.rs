@@ -5,6 +5,7 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::property::{
     AddComponentProperty, ComponentProperty, IanaComponentPropertyBuilder,
 };
+use crate::model::XComponentPropertyBuilder;
 
 pub struct IanaComponent {
     name: String,
@@ -33,7 +34,11 @@ impl IanaComponentBuilder {
         }
     }
 
-    impl_other_component_properties!(IanaComponentPropertyBuilder, IanaComponentBuilder);
+    impl_other_component_properties!(
+        XComponentPropertyBuilder,
+        IanaComponentPropertyBuilder,
+        IanaComponentBuilder
+    );
 
     impl_finish_component_build!(CalendarComponent::IanaComponent);
 }

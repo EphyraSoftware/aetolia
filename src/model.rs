@@ -200,6 +200,51 @@ mod tests {
             .add_language("en-US".to_string())
             .add_x_param("x-special-param", "my-value")
             .finish_property()
+            .add_exception_date_times(vec![(
+                Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
+                None,
+            )])
+            .add_tz_id("America/New_York", true)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_status(StatusEvent::Tentative)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_related("CID:evt.related".to_string())
+            .add_relationship_type(RelationshipType::Parent)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_resources(vec!["EQUIPMENT".to_string(), "ROOM".to_string()])
+            .add_language("en-US".to_string())
+            .add_alternate_representation("CID:evt.resources".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_recurrence_date_periods(vec![Period::new_start(
+                Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
+                time::Time::from_hms(14, 30, 0).unwrap(),
+                std::time::Duration::from_secs(3600),
+            )])
+            .add_tz_id("America/New_York", true)
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_last_modified(
+                time::Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
+                time::Time::from_hms(13, 0, 0).unwrap(),
+            )
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_summary("Event summary")
+            .add_language("en-US".to_string())
+            .add_alternate_representation("CID:evt.summary".to_string())
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_x_property("X-SOME-PROP", "X-SOME-VALUE")
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
+            .add_iana_property("IANA-SOME-PROP", "IANA-SOME-VALUE")
+            .add_iana_param("special-param", "my-value")
+            .add_x_param("x-special-param", "my-value")
+            .finish_property()
             .finish_component()
             .build();
 
@@ -207,7 +252,7 @@ mod tests {
 
         match &obj.components[0] {
             CalendarComponent::Event(e) => {
-                assert_eq!(e.properties.len(), 22);
+                assert_eq!(e.properties.len(), 31);
                 match &e.properties[0] {
                     ComponentProperty::DateTimeStamp(p) => {
                         assert_eq!(p.params.len(), 1);
@@ -339,6 +384,60 @@ mod tests {
                         assert_eq!(p.params.len(), 3);
                     }
                     _ => panic!("Expected Contact"),
+                }
+                match &e.properties[22] {
+                    ComponentProperty::ExceptionDateTimes(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected ExceptionDateTimes"),
+                }
+                match &e.properties[23] {
+                    ComponentProperty::Status(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected Status"),
+                }
+                match &e.properties[24] {
+                    ComponentProperty::RelatedTo(p) => {
+                        assert_eq!(p.params.len(), 2);
+                    }
+                    _ => panic!("Expected RelatedTo"),
+                }
+                match &e.properties[25] {
+                    ComponentProperty::Resources(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Resources"),
+                }
+                match &e.properties[26] {
+                    ComponentProperty::RecurrenceDateTimes(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected RecurrenceDateTimes"),
+                }
+                match &e.properties[27] {
+                    ComponentProperty::LastModified(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected LastModified"),
+                }
+                match &e.properties[28] {
+                    ComponentProperty::Summary(p) => {
+                        assert_eq!(p.params.len(), 3);
+                    }
+                    _ => panic!("Expected Summary"),
+                }
+                match &e.properties[29] {
+                    ComponentProperty::XProperty(p) => {
+                        assert_eq!(p.params.len(), 1);
+                    }
+                    _ => panic!("Expected XProperty"),
+                }
+                match &e.properties[30] {
+                    ComponentProperty::IanaProperty(p) => {
+                        assert_eq!(p.params.len(), 2);
+                    }
+                    _ => panic!("Expected IanaProperty"),
                 }
             }
             _ => panic!("Expected EventComponent"),

@@ -9,14 +9,17 @@ use crate::model::property::{
 use crate::model::{
     CategoriesParamBuilder, CreatedPropertyBuilder, DateTimeEndPropertyBuilder,
     DateTimeStartPropertyBuilder, Duration, DurationPropertyBuilder, Frequency,
-    GeographicPositionPropertyBuilder, LocationPropertyBuilder, OrganizerPropertyBuilder,
-    ParticipationStatusEvent, PriorityPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
-    RecurrenceRulePropertyBuilder, RequestStatusPropertyBuilder, SequencePropertyBuilder,
-    TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
+    GeographicPositionPropertyBuilder, IanaComponentPropertyBuilder, LocationPropertyBuilder,
+    OrganizerPropertyBuilder, ParticipationStatusEvent, PriorityPropertyBuilder,
+    RecurrenceDateTimesPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
+    RecurrenceRulePropertyBuilder, RelatedToPropertyBuilder, RequestStatusPropertyBuilder,
+    ResourcesPropertyBuilder, SequencePropertyBuilder, StatusEvent, StatusProperty,
+    StatusPropertyBuilder, TimeTransparency, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
     AttachPropertyBuilder, AttendeeParamBuilder, ClassPropertyBuilder, CommentParamBuilder,
-    ContactParamBuilder, DescriptionPropertyBuilder, UniqueIdentifierPropertyBuilder,
+    ContactParamBuilder, DescriptionPropertyBuilder, ExceptionDateTimesPropertyBuilder,
+    LastModifiedPropertyBuilder, Period, SummaryPropertyBuilder, UniqueIdentifierPropertyBuilder,
 };
 
 pub struct EventComponent {
@@ -80,6 +83,14 @@ impl EventComponentBuilder {
         GeographicPositionPropertyBuilder::new(self, latitude, longitude)
     }
 
+    pub fn add_last_modified(
+        self,
+        date: time::Date,
+        time: time::Time,
+    ) -> LastModifiedPropertyBuilder<Self> {
+        LastModifiedPropertyBuilder::new(self, date, time)
+    }
+
     pub fn add_location(self, value: String) -> LocationPropertyBuilder<Self> {
         LocationPropertyBuilder::new(self, value)
     }
@@ -96,13 +107,12 @@ impl EventComponentBuilder {
         SequencePropertyBuilder::new(self, value)
     }
 
-    pub fn add_request_status(
-        self,
-        status_code: &[u32],
-        description: String,
-        exception_data: Option<String>,
-    ) -> RequestStatusPropertyBuilder<Self> {
-        RequestStatusPropertyBuilder::new(self, status_code.to_vec(), description, exception_data)
+    pub fn add_status(self, value: StatusEvent) -> StatusPropertyBuilder<Self> {
+        StatusPropertyBuilder::new(self, value.into())
+    }
+
+    pub fn add_summary<V: ToString>(self, value: V) -> SummaryPropertyBuilder<Self> {
+        SummaryPropertyBuilder::new(self, value.to_string())
     }
 
     pub fn add_time_transparency(
@@ -171,7 +181,49 @@ impl EventComponentBuilder {
         ContactParamBuilder::new(self, value.to_string())
     }
 
-    impl_other_component_properties!(XComponentPropertyBuilder, EventComponentBuilder);
+    pub fn add_exception_date_times(
+        self,
+        date_times: Vec<(time::Date, Option<time::Time>)>,
+    ) -> ExceptionDateTimesPropertyBuilder<Self> {
+        ExceptionDateTimesPropertyBuilder::new(self, date_times)
+    }
+
+    pub fn add_request_status(
+        self,
+        status_code: &[u32],
+        description: String,
+        exception_data: Option<String>,
+    ) -> RequestStatusPropertyBuilder<Self> {
+        RequestStatusPropertyBuilder::new(self, status_code.to_vec(), description, exception_data)
+    }
+
+    pub fn add_related(self, value: String) -> RelatedToPropertyBuilder<Self> {
+        RelatedToPropertyBuilder::new(self, value)
+    }
+
+    pub fn add_resources(self, value: Vec<String>) -> ResourcesPropertyBuilder<Self> {
+        ResourcesPropertyBuilder::new(self, value)
+    }
+
+    pub fn add_recurrence_date_date_times(
+        self,
+        date_times: Vec<(time::Date, Option<time::Time>)>,
+    ) -> RecurrenceDateTimesPropertyBuilder<Self> {
+        RecurrenceDateTimesPropertyBuilder::new_date_times(self, date_times)
+    }
+
+    pub fn add_recurrence_date_periods(
+        self,
+        periods: Vec<Period>,
+    ) -> RecurrenceDateTimesPropertyBuilder<Self> {
+        RecurrenceDateTimesPropertyBuilder::new_periods(self, periods)
+    }
+
+    impl_other_component_properties!(
+        XComponentPropertyBuilder,
+        IanaComponentPropertyBuilder,
+        EventComponentBuilder
+    );
 
     impl_finish_component_build!(CalendarComponent::Event);
 }

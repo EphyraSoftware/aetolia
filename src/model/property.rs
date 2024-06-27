@@ -7,7 +7,7 @@ use crate::model::param::{impl_other_component_params_builder, impl_other_params
 use crate::model::{
     altrep_param, common_name_param, directory_entry_reference_param,
     impl_other_component_properties, language_param, sent_by_param, tz_id_param, CalendarUserType,
-    Encoding, ParticipationStatusUnknown, Range, Role, Value,
+    Encoding, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -39,6 +39,34 @@ impl Display for Classification {
             Classification::IanaToken(token) => token.to_string(),
         };
         write!(f, "{}", str)
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Status {
+    Tentative,
+    Confirmed,
+    Cancelled,
+    NeedsAction,
+    Completed,
+    InProcess,
+    Draft,
+    Final,
+}
+
+pub enum StatusEvent {
+    Tentative,
+    Confirmed,
+    Cancelled,
+}
+
+impl From<StatusEvent> for Status {
+    fn from(status: StatusEvent) -> Self {
+        match status {
+            StatusEvent::Tentative => Status::Tentative,
+            StatusEvent::Confirmed => Status::Confirmed,
+            StatusEvent::Cancelled => Status::Cancelled,
+        }
     }
 }
 
@@ -205,6 +233,11 @@ pub enum ComponentProperty {
     Categories(CategoriesParam),
     Comment(CommentParam),
     Contact(ContactParam),
+    ExceptionDateTimes(ExceptionDateTimesProperty),
+    Status(StatusProperty),
+    RelatedTo(RelatedToProperty),
+    Resources(ResourcesProperty),
+    RecurrenceDateTimes(RecurrenceDateTimesProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -1219,3 +1252,219 @@ where
 }
 
 impl_other_component_params_builder!(ContactParamBuilder<P>);
+
+pub struct ExceptionDateTimesProperty {
+    date_times: Vec<(time::Date, Option<time::Time>)>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct ExceptionDateTimesPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: ExceptionDateTimesProperty,
+}
+
+impl<P> ExceptionDateTimesPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
+        let mut params = Vec::new();
+        if let Some((_, None)) = date_times.first() {
+            params.push(Param::Value { value: Value::Date });
+        }
+
+        ExceptionDateTimesPropertyBuilder {
+            owner,
+            inner: ExceptionDateTimesProperty { date_times, params },
+        }
+    }
+
+    tz_id_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::ExceptionDateTimes);
+}
+
+impl_other_component_params_builder!(ExceptionDateTimesPropertyBuilder<P>);
+
+pub struct StatusProperty {
+    value: Status,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct StatusPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: StatusProperty,
+}
+
+impl<P> StatusPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: Status) -> StatusPropertyBuilder<P> {
+        StatusPropertyBuilder {
+            owner,
+            inner: StatusProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Status);
+}
+
+impl_other_component_params_builder!(StatusPropertyBuilder<P>);
+
+pub struct RelatedToProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RelatedToPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RelatedToProperty,
+}
+
+impl<P> RelatedToPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> RelatedToPropertyBuilder<P> {
+        RelatedToPropertyBuilder {
+            owner,
+            inner: RelatedToProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    pub fn add_relationship_type(mut self, relationship_type: RelationshipType) -> Self {
+        self.inner
+            .params
+            .push(Param::RelationshipType { relationship_type });
+        self
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::RelatedTo);
+}
+
+impl_other_component_params_builder!(RelatedToPropertyBuilder<P>);
+
+pub struct ResourcesProperty {
+    value: Vec<String>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct ResourcesPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: ResourcesProperty,
+}
+
+impl<P> ResourcesPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: Vec<String>) -> ResourcesPropertyBuilder<P> {
+        ResourcesPropertyBuilder {
+            owner,
+            inner: ResourcesProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    altrep_param!();
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::Resources);
+}
+
+impl_other_component_params_builder!(ResourcesPropertyBuilder<P>);
+
+pub struct Period {
+    pub start: (time::Date, time::Time),
+    pub end: PeriodEnd,
+}
+
+impl Period {
+    pub fn new_explicit(
+        start_date: time::Date,
+        start_time: time::Time,
+        end_date: time::Date,
+        end_time: time::Time,
+    ) -> Self {
+        Period {
+            start: (start_date, start_time),
+            end: PeriodEnd::DateTime((end_date, end_time)),
+        }
+    }
+
+    pub fn new_start(
+        start_date: time::Date,
+        start_time: time::Time,
+        duration: std::time::Duration,
+    ) -> Self {
+        Period {
+            start: (start_date, start_time),
+            end: PeriodEnd::Duration(duration),
+        }
+    }
+}
+
+pub enum PeriodEnd {
+    DateTime((time::Date, time::Time)),
+    Duration(std::time::Duration),
+}
+
+pub struct RecurrenceDateTimesProperty {
+    date_times: Vec<(time::Date, Option<time::Time>)>,
+    periods: Vec<Period>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RecurrenceDateTimesPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RecurrenceDateTimesProperty,
+}
+
+impl<P> RecurrenceDateTimesPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub fn new_date_times(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
+        let mut params = Vec::new();
+        if let Some((_, None)) = date_times.first() {
+            params.push(Param::Value { value: Value::Date });
+        }
+
+        RecurrenceDateTimesPropertyBuilder {
+            owner,
+            inner: RecurrenceDateTimesProperty {
+                date_times,
+                periods: Vec::with_capacity(0),
+                params,
+            },
+        }
+    }
+
+    pub fn new_periods(owner: P, periods: Vec<Period>) -> Self {
+        RecurrenceDateTimesPropertyBuilder {
+            owner,
+            inner: RecurrenceDateTimesProperty {
+                date_times: Vec::with_capacity(0),
+                periods,
+                params: vec![Param::Value {
+                    value: Value::Period,
+                }],
+            },
+        }
+    }
+
+    tz_id_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::RecurrenceDateTimes);
+}
+
+impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);

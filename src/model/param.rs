@@ -55,6 +55,9 @@ pub enum Param {
     DelegatedFrom {
         delegators: Vec<String>,
     },
+    RelationshipType {
+        relationship_type: RelationshipType,
+    },
     Other {
         name: String,
         value: String,
@@ -159,12 +162,9 @@ pub enum ParticipationStatusEvent {
     IanaToken(String),
 }
 
-// Wrong lint in this case. The mapping in this direction in unique but the reverse is not and would
-// require a TryFrom.
-#[allow(clippy::from_over_into)]
-impl Into<ParticipationStatusUnknown> for ParticipationStatusEvent {
-    fn into(self) -> ParticipationStatusUnknown {
-        match self {
+impl From<ParticipationStatusEvent> for ParticipationStatusUnknown {
+    fn from(value: ParticipationStatusEvent) -> ParticipationStatusUnknown {
+        match value {
             ParticipationStatusEvent::NeedsAction => ParticipationStatusUnknown::NeedsAction,
             ParticipationStatusEvent::Accepted => ParticipationStatusUnknown::Accepted,
             ParticipationStatusEvent::Declined => ParticipationStatusUnknown::Declined,
@@ -176,6 +176,16 @@ impl Into<ParticipationStatusUnknown> for ParticipationStatusEvent {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum RelationshipType {
+    #[default]
+    Parent,
+    Child,
+    Sibling,
+    XName(String),
+    IanaToken(String),
 }
 
 pub trait OtherParamsBuilder {

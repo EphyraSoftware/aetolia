@@ -36,21 +36,21 @@ macro_rules! impl_finish_component_build {
 pub(crate) use impl_finish_component_build;
 
 macro_rules! impl_other_component_properties {
-    ($builder:ident, $inner:ty) => {
+    ($x_builder:ident, $iana_builder:ident, $inner:ty) => {
         pub fn add_x_property<N: ToString, V: ToString>(
             self,
             name: N,
             value: V,
-        ) -> $builder<$inner> {
-            $builder::new(self, name.to_string(), value.to_string())
+        ) -> $x_builder<$inner> {
+            $x_builder::new(self, name.to_string(), value.to_string())
         }
 
         pub fn add_iana_property<N: ToString, V: ToString>(
             self,
             name: N,
             value: V,
-        ) -> $builder<$inner> {
-            $builder::new(self, name.to_string(), value.to_string())
+        ) -> $iana_builder<$inner> {
+            $iana_builder::new(self, name.to_string(), value.to_string())
         }
     };
 }

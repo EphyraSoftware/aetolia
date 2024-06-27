@@ -3,6 +3,7 @@ use crate::model::component::{
 };
 use crate::model::object::ICalObjectBuilder;
 use crate::model::property::{AddComponentProperty, ComponentProperty, XComponentPropertyBuilder};
+use crate::model::IanaComponentPropertyBuilder;
 
 pub struct XComponent {
     name: String,
@@ -31,7 +32,11 @@ impl XComponentBuilder {
         }
     }
 
-    impl_other_component_properties!(XComponentPropertyBuilder, XComponentBuilder);
+    impl_other_component_properties!(
+        XComponentPropertyBuilder,
+        IanaComponentPropertyBuilder,
+        XComponentBuilder
+    );
 
     impl_finish_component_build!(CalendarComponent::XComponent);
 }
