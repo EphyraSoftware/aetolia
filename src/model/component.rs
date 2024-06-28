@@ -3,13 +3,12 @@ pub mod event;
 pub mod iana_component;
 mod todo;
 pub mod x_component;
+mod journal;
 
 pub enum CalendarComponent {
     Event(EventComponent),
     ToDo(ToDoComponent),
-    // Journal {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    Journal(JournalComponent),
     // FreeBusy {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -432,3 +431,4 @@ macro_rules! add_recurrence_date {
 }
 
 pub(crate) use add_recurrence_date;
+use crate::model::component::journal::JournalComponent;

@@ -88,6 +88,22 @@ impl From<StatusToDo> for Status {
     }
 }
 
+pub enum StatusJournal {
+    Draft,
+    Final,
+    Cancelled,
+}
+
+impl From<StatusJournal> for Status {
+    fn from(status: StatusJournal) -> Self {
+        match status {
+            StatusJournal::Draft => Status::Draft,
+            StatusJournal::Final => Status::Final,
+            StatusJournal::Cancelled => Status::Cancelled,
+        }
+    }
+}
+
 macro_rules! impl_finish_property_build {
     ($ev:expr) => {
         pub fn finish_property(mut self) -> ICalObjectBuilder {

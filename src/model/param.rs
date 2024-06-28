@@ -208,6 +208,26 @@ impl From<ParticipationStatusToDo> for ParticipationStatusUnknown {
     }
 }
 
+pub enum ParticipationStatusJournal {
+    NeedsAction,
+    Accepted,
+    Declined,
+    XName(String),
+    IanaToken(String),
+}
+
+impl From<ParticipationStatusJournal> for ParticipationStatusUnknown {
+    fn from(value: ParticipationStatusJournal) -> ParticipationStatusUnknown {
+        match value {
+            ParticipationStatusJournal::NeedsAction => ParticipationStatusUnknown::NeedsAction,
+            ParticipationStatusJournal::Accepted => ParticipationStatusUnknown::Accepted,
+            ParticipationStatusJournal::Declined => ParticipationStatusUnknown::Declined,
+            ParticipationStatusJournal::XName(name) => ParticipationStatusUnknown::XName(name),
+            ParticipationStatusJournal::IanaToken(token) => ParticipationStatusUnknown::IanaToken(token),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum RelationshipType {
     #[default]
