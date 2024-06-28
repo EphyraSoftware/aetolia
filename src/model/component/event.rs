@@ -8,7 +8,7 @@ use crate::model::property::{
 };
 use crate::model::{
     add_attach, add_categories, add_class, add_comment, add_contact, add_created,
-    add_date_time_stamp, add_date_time_start, add_description, add_duration,
+    add_date_time_end, add_date_time_stamp, add_date_time_start, add_description, add_duration,
     add_exception_date_times, add_geographic_position, add_last_modified, add_location,
     add_organizer, add_priority, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
     add_related, add_request_status, add_resources, add_sequence, add_summary,
@@ -92,13 +92,7 @@ impl EventComponentBuilder {
 
     add_recurrence_rule!();
 
-    pub fn add_date_time_end(
-        self,
-        date: time::Date,
-        time: Option<time::Time>,
-    ) -> DateTimeEndPropertyBuilder<Self> {
-        DateTimeEndPropertyBuilder::new(self, date, time)
-    }
+    add_date_time_end!();
 
     add_duration!();
 

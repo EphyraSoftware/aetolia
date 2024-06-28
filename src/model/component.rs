@@ -1,17 +1,16 @@
 pub mod alarm;
 pub mod event;
+mod free_busy;
 pub mod iana_component;
+mod journal;
 mod todo;
 pub mod x_component;
-mod journal;
 
 pub enum CalendarComponent {
     Event(EventComponent),
     ToDo(ToDoComponent),
     Journal(JournalComponent),
-    // FreeBusy {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    FreeBusy(FreeBusyComponent),
     // Timezone {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -430,5 +429,20 @@ macro_rules! add_recurrence_date {
     };
 }
 
-pub(crate) use add_recurrence_date;
 use crate::model::component::journal::JournalComponent;
+pub(crate) use add_recurrence_date;
+
+macro_rules! add_date_time_end {
+    () => {
+        pub fn add_date_time_end(
+            self,
+            date: time::Date,
+            time: std::option::Option<time::Time>,
+        ) -> $crate::model::property::DateTimeEndPropertyBuilder<Self> {
+            $crate::model::property::DateTimeEndPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+use crate::model::component::free_busy::FreeBusyComponent;
+pub(crate) use add_date_time_end;

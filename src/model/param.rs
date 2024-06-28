@@ -58,6 +58,9 @@ pub enum Param {
     RelationshipType {
         relationship_type: RelationshipType,
     },
+    FreeBusyType {
+        free_busy_time_type: FreeBusyTimeType,
+    },
     Other {
         name: String,
         value: String,
@@ -223,7 +226,9 @@ impl From<ParticipationStatusJournal> for ParticipationStatusUnknown {
             ParticipationStatusJournal::Accepted => ParticipationStatusUnknown::Accepted,
             ParticipationStatusJournal::Declined => ParticipationStatusUnknown::Declined,
             ParticipationStatusJournal::XName(name) => ParticipationStatusUnknown::XName(name),
-            ParticipationStatusJournal::IanaToken(token) => ParticipationStatusUnknown::IanaToken(token),
+            ParticipationStatusJournal::IanaToken(token) => {
+                ParticipationStatusUnknown::IanaToken(token)
+            }
         }
     }
 }
@@ -234,6 +239,15 @@ pub enum RelationshipType {
     Parent,
     Child,
     Sibling,
+    XName(String),
+    IanaToken(String),
+}
+
+pub enum FreeBusyTimeType {
+    Free,
+    Busy,
+    BusyUnavailable,
+    BusyTentative,
     XName(String),
     IanaToken(String),
 }

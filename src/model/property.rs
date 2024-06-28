@@ -7,7 +7,7 @@ use crate::model::param::{impl_other_component_params_builder, impl_other_params
 use crate::model::{
     altrep_param, common_name_param, directory_entry_reference_param,
     impl_other_component_properties, language_param, sent_by_param, tz_id_param, CalendarUserType,
-    Encoding, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
+    Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -275,6 +275,7 @@ pub enum ComponentProperty {
     Completed(CompletedProperty),
     PercentComplete(PercentCompleteProperty),
     DueDateTime(DueDateTimeProperty),
+    FreeBusy(FreeBusyProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -1606,3 +1607,38 @@ where
 }
 
 impl_other_component_params_builder!(DueDateTimePropertyBuilder<P>);
+
+pub struct FreeBusyProperty {
+    value: Vec<Period>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct FreeBusyPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: FreeBusyProperty,
+}
+
+impl<P> FreeBusyPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        free_busy_time_type: FreeBusyTimeType,
+        value: Vec<Period>,
+    ) -> FreeBusyPropertyBuilder<P> {
+        FreeBusyPropertyBuilder {
+            owner,
+            inner: FreeBusyProperty {
+                value,
+                params: vec![Param::FreeBusyType {
+                    free_busy_time_type,
+                }],
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::FreeBusy);
+}
+
+impl_other_component_params_builder!(FreeBusyPropertyBuilder<P>);
