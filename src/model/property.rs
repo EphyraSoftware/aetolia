@@ -1,5 +1,5 @@
-mod duration;
-mod recur;
+pub mod duration;
+pub mod recur;
 
 use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
@@ -66,6 +66,24 @@ impl From<StatusEvent> for Status {
             StatusEvent::Tentative => Status::Tentative,
             StatusEvent::Confirmed => Status::Confirmed,
             StatusEvent::Cancelled => Status::Cancelled,
+        }
+    }
+}
+
+pub enum StatusToDo {
+    NeedsAction,
+    Completed,
+    InProcess,
+    Cancelled,
+}
+
+impl From<StatusToDo> for Status {
+    fn from(status: StatusToDo) -> Self {
+        match status {
+            StatusToDo::NeedsAction => Status::NeedsAction,
+            StatusToDo::Completed => Status::Completed,
+            StatusToDo::InProcess => Status::InProcess,
+            StatusToDo::Cancelled => Status::Cancelled,
         }
     }
 }
@@ -238,6 +256,9 @@ pub enum ComponentProperty {
     RelatedTo(RelatedToProperty),
     Resources(ResourcesProperty),
     RecurrenceDateTimes(RecurrenceDateTimesProperty),
+    Completed(CompletedProperty),
+    PercentComplete(PercentCompleteProperty),
+    DueDateTime(DueDateTimeProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -1468,3 +1489,104 @@ where
 }
 
 impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
+
+pub struct CompletedProperty {
+    date: time::Date,
+    time: time::Time,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct CompletedPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: CompletedProperty,
+}
+
+impl<P> CompletedPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, date: time::Date, time: time::Time) -> CompletedPropertyBuilder<P> {
+        CompletedPropertyBuilder {
+            owner,
+            inner: CompletedProperty {
+                date,
+                time,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Completed);
+}
+
+impl_other_component_params_builder!(CompletedPropertyBuilder<P>);
+
+pub struct PercentCompleteProperty {
+    value: u8,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct PercentCompletePropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: PercentCompleteProperty,
+}
+
+impl<P> PercentCompletePropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: u8) -> PercentCompletePropertyBuilder<P> {
+        PercentCompletePropertyBuilder {
+            owner,
+            inner: PercentCompleteProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::PercentComplete);
+}
+
+impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
+
+pub struct DueDateTimeProperty {
+    date: time::Date,
+    time: Option<time::Time>,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct DueDateTimePropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: DueDateTimeProperty,
+}
+
+impl<P> DueDateTimePropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: Option<time::Time>,
+    ) -> DueDateTimePropertyBuilder<P> {
+        let mut params = Vec::new();
+
+        // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
+        // optional, this will default to setting the value here.
+        if time.is_none() {
+            params.push(Param::Value { value: Value::Date })
+        }
+
+        DueDateTimePropertyBuilder {
+            owner,
+            inner: DueDateTimeProperty { date, time, params },
+        }
+    }
+
+    tz_id_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::DueDateTime);
+}
+
+impl_other_component_params_builder!(DueDateTimePropertyBuilder<P>);

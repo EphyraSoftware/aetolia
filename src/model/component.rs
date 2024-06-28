@@ -1,13 +1,12 @@
 pub mod alarm;
 pub mod event;
 pub mod iana_component;
+mod todo;
 pub mod x_component;
 
 pub enum CalendarComponent {
     Event(EventComponent),
-    // ToDo {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    ToDo(ToDoComponent),
     // Journal {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -26,7 +25,7 @@ pub enum CalendarComponent {
 
 macro_rules! impl_finish_component_build {
     ($ev:expr) => {
-        pub fn finish_component(mut self) -> ICalObjectBuilder {
+        pub fn finish_component(mut self) -> $crate::model::object::ICalObjectBuilder {
             self.owner.inner.components.push($ev(self.inner));
             self.owner
         }
@@ -59,4 +58,377 @@ pub(crate) use impl_other_component_properties;
 
 use crate::model::component::event::EventComponent;
 use crate::model::component::iana_component::IanaComponent;
+use crate::model::component::todo::ToDoComponent;
 use crate::model::component::x_component::XComponent;
+
+macro_rules! add_date_time_stamp {
+    () => {
+        pub fn add_date_time_stamp(
+            self,
+            date: time::Date,
+            time: time::Time,
+        ) -> $crate::model::property::DateTimeStampPropertyBuilder<Self> {
+            $crate::model::property::DateTimeStampPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_date_time_stamp;
+
+macro_rules! add_unique_identifier {
+    () => {
+        pub fn add_unique_identifier<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::UniqueIdentifierPropertyBuilder<Self> {
+            $crate::model::property::UniqueIdentifierPropertyBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_unique_identifier;
+
+macro_rules! add_class {
+    () => {
+        pub fn add_class<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::ClassPropertyBuilder<Self> {
+            $crate::model::property::ClassPropertyBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_class;
+
+macro_rules! add_created {
+    () => {
+        pub fn add_created(
+            self,
+            date: time::Date,
+            time: time::Time,
+        ) -> $crate::model::property::CreatedPropertyBuilder<Self> {
+            $crate::model::property::CreatedPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_created;
+
+macro_rules! add_description {
+    () => {
+        pub fn add_description<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::DescriptionPropertyBuilder<Self> {
+            $crate::model::property::DescriptionPropertyBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_description;
+
+macro_rules! add_date_time_start {
+    () => {
+        pub fn add_date_time_start(
+            self,
+            date: time::Date,
+            time: Option<time::Time>,
+        ) -> $crate::model::property::DateTimeStartPropertyBuilder<Self> {
+            $crate::model::property::DateTimeStartPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_date_time_start;
+
+macro_rules! add_geographic_position {
+    () => {
+        pub fn add_geographic_position(
+            self,
+            latitude: f64,
+            longitude: f64,
+        ) -> $crate::model::property::GeographicPositionPropertyBuilder<Self> {
+            $crate::model::property::GeographicPositionPropertyBuilder::new(
+                self, latitude, longitude,
+            )
+        }
+    };
+}
+
+pub(crate) use add_geographic_position;
+
+macro_rules! add_last_modified {
+    () => {
+        pub fn add_last_modified(
+            self,
+            date: time::Date,
+            time: time::Time,
+        ) -> $crate::model::property::LastModifiedPropertyBuilder<Self> {
+            $crate::model::property::LastModifiedPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_last_modified;
+
+macro_rules! add_location {
+    () => {
+        pub fn add_location(
+            self,
+            value: String,
+        ) -> $crate::model::property::LocationPropertyBuilder<Self> {
+            $crate::model::property::LocationPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_location;
+
+macro_rules! add_organizer {
+    () => {
+        pub fn add_organizer(
+            self,
+            value: String,
+        ) -> $crate::model::property::OrganizerPropertyBuilder<Self> {
+            $crate::model::property::OrganizerPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_organizer;
+
+macro_rules! add_priority {
+    () => {
+        pub fn add_priority(
+            self,
+            value: u8,
+        ) -> $crate::model::property::PriorityPropertyBuilder<Self> {
+            $crate::model::property::PriorityPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_priority;
+
+macro_rules! add_recurrence_id {
+    () => {
+        pub fn add_recurrence_id(
+            self,
+            date: time::Date,
+            time: Option<time::Time>,
+        ) -> $crate::model::property::RecurrenceIdPropertyBuilder<Self> {
+            $crate::model::property::RecurrenceIdPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_recurrence_id;
+
+macro_rules! add_sequence {
+    () => {
+        pub fn add_sequence(
+            self,
+            value: u32,
+        ) -> $crate::model::property::SequencePropertyBuilder<Self> {
+            $crate::model::property::SequencePropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_sequence;
+
+macro_rules! add_summary {
+    () => {
+        pub fn add_summary<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::SummaryPropertyBuilder<Self> {
+            $crate::model::property::SummaryPropertyBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_summary;
+
+macro_rules! add_url {
+    () => {
+        pub fn add_url(self, value: String) -> $crate::model::property::UrlPropertyBuilder<Self> {
+            $crate::model::property::UrlPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_url;
+
+macro_rules! add_recurrence_rule {
+    () => {
+        pub fn add_recurrence_rule(
+            self,
+            frequency: $crate::model::property::Frequency,
+            builder: fn(
+                $crate::model::property::RecurrenceRule,
+            ) -> $crate::model::property::RecurrenceRule,
+        ) -> $crate::model::property::RecurrenceRulePropertyBuilder<Self> {
+            $crate::model::property::RecurrenceRulePropertyBuilder::new(
+                self,
+                builder($crate::model::property::RecurrenceRule::new(frequency)),
+            )
+        }
+    };
+}
+
+pub(crate) use add_recurrence_rule;
+
+macro_rules! add_duration {
+    () => {
+        pub fn add_duration(
+            self,
+            builder: fn() -> $crate::model::property::Duration,
+        ) -> $crate::model::property::DurationPropertyBuilder<Self> {
+            $crate::model::property::DurationPropertyBuilder::new(self, builder())
+        }
+    };
+}
+
+pub(crate) use add_duration;
+
+macro_rules! add_attach {
+    () => {
+        pub fn add_attach_uri(
+            self,
+            value: String,
+        ) -> $crate::model::property::AttachPropertyBuilder<Self> {
+            $crate::model::property::AttachPropertyBuilder::new_with_uri(self, value)
+        }
+
+        pub fn add_attach_binary(
+            self,
+            value: String,
+        ) -> $crate::model::property::AttachPropertyBuilder<Self> {
+            $crate::model::property::AttachPropertyBuilder::new_with_binary(self, value)
+        }
+    };
+}
+
+pub(crate) use add_attach;
+
+macro_rules! add_categories {
+    () => {
+        pub fn add_categories(
+            self,
+            value: Vec<String>,
+        ) -> $crate::model::property::CategoriesParamBuilder<Self> {
+            $crate::model::property::CategoriesParamBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_categories;
+
+macro_rules! add_comment {
+    () => {
+        pub fn add_comment<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::CommentParamBuilder<Self> {
+            $crate::model::property::CommentParamBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_comment;
+
+macro_rules! add_contact {
+    () => {
+        pub fn add_contact<V: ToString>(
+            self,
+            value: V,
+        ) -> $crate::model::property::ContactParamBuilder<Self> {
+            $crate::model::property::ContactParamBuilder::new(self, value.to_string())
+        }
+    };
+}
+
+pub(crate) use add_contact;
+
+macro_rules! add_exception_date_times {
+    () => {
+        pub fn add_exception_date_times(
+            self,
+            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>)>,
+        ) -> $crate::model::property::ExceptionDateTimesPropertyBuilder<Self> {
+            $crate::model::property::ExceptionDateTimesPropertyBuilder::new(self, date_times)
+        }
+    };
+}
+
+pub(crate) use add_exception_date_times;
+
+macro_rules! add_request_status {
+    () => {
+        pub fn add_request_status(
+            self,
+            status_code: &[u32],
+            description: String,
+            exception_data: std::option::Option<String>,
+        ) -> $crate::model::property::RequestStatusPropertyBuilder<Self> {
+            $crate::model::property::RequestStatusPropertyBuilder::new(
+                self,
+                status_code.to_vec(),
+                description,
+                exception_data,
+            )
+        }
+    };
+}
+
+pub(crate) use add_request_status;
+
+macro_rules! add_related {
+    () => {
+        pub fn add_related(
+            self,
+            value: String,
+        ) -> $crate::model::property::RelatedToPropertyBuilder<Self> {
+            $crate::model::property::RelatedToPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_related;
+
+macro_rules! add_resources {
+    () => {
+        pub fn add_resources(
+            self,
+            value: std::vec::Vec<String>,
+        ) -> $crate::model::property::ResourcesPropertyBuilder<Self> {
+            $crate::model::property::ResourcesPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_resources;
+
+macro_rules! add_recurrence_date {
+    () => {
+        pub fn add_recurrence_date_date_times(
+            self,
+            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>)>,
+        ) -> $crate::model::property::RecurrenceDateTimesPropertyBuilder<Self> {
+            $crate::model::property::RecurrenceDateTimesPropertyBuilder::new_date_times(
+                self, date_times,
+            )
+        }
+
+        pub fn add_recurrence_date_periods(
+            self,
+            periods: std::vec::Vec<$crate::model::property::Period>,
+        ) -> $crate::model::property::RecurrenceDateTimesPropertyBuilder<Self> {
+            $crate::model::property::RecurrenceDateTimesPropertyBuilder::new_periods(self, periods)
+        }
+    };
+}
+
+pub(crate) use add_recurrence_date;

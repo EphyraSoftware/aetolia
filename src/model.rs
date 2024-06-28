@@ -109,7 +109,7 @@ mod tests {
             )
             .add_x_param("X-SOME-PROP", "X-SOME-VALUE")
             .finish_property()
-            .add_uid("some-uid")
+            .add_unique_identifier("some-uid")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_date_time_start(

@@ -178,6 +178,36 @@ impl From<ParticipationStatusEvent> for ParticipationStatusUnknown {
     }
 }
 
+pub enum ParticipationStatusToDo {
+    NeedsAction,
+    Accepted,
+    Declined,
+    Tentative,
+    Delegated,
+    Completed,
+    InProcess,
+    XName(String),
+    IanaToken(String),
+}
+
+impl From<ParticipationStatusToDo> for ParticipationStatusUnknown {
+    fn from(value: ParticipationStatusToDo) -> ParticipationStatusUnknown {
+        match value {
+            ParticipationStatusToDo::NeedsAction => ParticipationStatusUnknown::NeedsAction,
+            ParticipationStatusToDo::Accepted => ParticipationStatusUnknown::Accepted,
+            ParticipationStatusToDo::Declined => ParticipationStatusUnknown::Declined,
+            ParticipationStatusToDo::Tentative => ParticipationStatusUnknown::Tentative,
+            ParticipationStatusToDo::Delegated => ParticipationStatusUnknown::Delegated,
+            ParticipationStatusToDo::Completed => ParticipationStatusUnknown::Completed,
+            ParticipationStatusToDo::InProcess => ParticipationStatusUnknown::InProcess,
+            ParticipationStatusToDo::XName(name) => ParticipationStatusUnknown::XName(name),
+            ParticipationStatusToDo::IanaToken(token) => {
+                ParticipationStatusUnknown::IanaToken(token)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum RelationshipType {
     #[default]
