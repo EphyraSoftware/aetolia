@@ -276,6 +276,8 @@ pub enum ComponentProperty {
     PercentComplete(PercentCompleteProperty),
     DueDateTime(DueDateTimeProperty),
     FreeBusy(FreeBusyProperty),
+    TimeZoneId(TimeZoneIdProperty),
+    TimeZoneUrl(TimeZoneUrlProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -1642,3 +1644,67 @@ where
 }
 
 impl_other_component_params_builder!(FreeBusyPropertyBuilder<P>);
+
+pub struct TimeZoneIdProperty {
+    value: String,
+    unique_registry_id: bool,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeZoneIdPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeZoneIdProperty,
+}
+
+impl<P> TimeZoneIdPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        value: String,
+        unique_registry_id: bool,
+    ) -> TimeZoneIdPropertyBuilder<P> {
+        TimeZoneIdPropertyBuilder {
+            owner,
+            inner: TimeZoneIdProperty {
+                value,
+                unique_registry_id,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::TimeZoneId);
+}
+
+impl_other_component_params_builder!(TimeZoneIdPropertyBuilder<P>);
+
+pub struct TimeZoneUrlProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeZoneUrlPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeZoneUrlProperty,
+}
+
+impl<P> TimeZoneUrlPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> TimeZoneUrlPropertyBuilder<P> {
+        TimeZoneUrlPropertyBuilder {
+            owner,
+            inner: TimeZoneUrlProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::TimeZoneUrl);
+}
+
+impl_other_component_params_builder!(TimeZoneUrlPropertyBuilder<P>);

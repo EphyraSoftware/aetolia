@@ -3,6 +3,7 @@ pub mod event;
 mod free_busy;
 pub mod iana_component;
 mod journal;
+mod time_zone;
 mod todo;
 pub mod x_component;
 
@@ -11,9 +12,7 @@ pub enum CalendarComponent {
     ToDo(ToDoComponent),
     Journal(JournalComponent),
     FreeBusy(FreeBusyComponent),
-    // Timezone {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    TimeZone(TimeZoneComponent),
     // Alarm {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -445,4 +444,5 @@ macro_rules! add_date_time_end {
 }
 
 use crate::model::component::free_busy::FreeBusyComponent;
+use crate::model::component::time_zone::TimeZoneComponent;
 pub(crate) use add_date_time_end;
