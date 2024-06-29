@@ -278,6 +278,9 @@ pub enum ComponentProperty {
     FreeBusy(FreeBusyProperty),
     TimeZoneId(TimeZoneIdProperty),
     TimeZoneUrl(TimeZoneUrlProperty),
+    TimeZoneOffsetTo(TimeZoneOffsetToProperty),
+    TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
+    TimeZoneName(TimeZoneNameProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
 }
@@ -1708,3 +1711,110 @@ where
 }
 
 impl_other_component_params_builder!(TimeZoneUrlPropertyBuilder<P>);
+
+pub struct TimeZoneOffset {
+    sign: u8,
+    hours: u8,
+    minutes: u8,
+    seconds: Option<u8>,
+}
+
+impl TimeZoneOffset {
+    pub fn new(sign: u8, hours: u8, minutes: u8, seconds: Option<u8>) -> Self {
+        TimeZoneOffset {
+            sign,
+            hours,
+            minutes,
+            seconds,
+        }
+    }
+}
+
+pub struct TimeZoneOffsetToProperty {
+    offset: TimeZoneOffset,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeZoneOffsetToPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeZoneOffsetToProperty,
+}
+
+impl<P> TimeZoneOffsetToPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, offset: TimeZoneOffset) -> TimeZoneOffsetToPropertyBuilder<P> {
+        TimeZoneOffsetToPropertyBuilder {
+            owner,
+            inner: TimeZoneOffsetToProperty {
+                offset,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::TimeZoneOffsetTo);
+}
+
+impl_other_component_params_builder!(TimeZoneOffsetToPropertyBuilder<P>);
+
+pub struct TimeZoneOffsetFromProperty {
+    offset: TimeZoneOffset,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeZoneOffsetFromPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeZoneOffsetFromProperty,
+}
+
+impl<P> TimeZoneOffsetFromPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, offset: TimeZoneOffset) -> TimeZoneOffsetFromPropertyBuilder<P> {
+        TimeZoneOffsetFromPropertyBuilder {
+            owner,
+            inner: TimeZoneOffsetFromProperty {
+                offset,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::TimeZoneOffsetFrom);
+}
+
+impl_other_component_params_builder!(TimeZoneOffsetFromPropertyBuilder<P>);
+
+pub struct TimeZoneNameProperty {
+    value: String,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct TimeZoneNamePropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: TimeZoneNameProperty,
+}
+
+impl<P> TimeZoneNamePropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: String) -> TimeZoneNamePropertyBuilder<P> {
+        TimeZoneNamePropertyBuilder {
+            owner,
+            inner: TimeZoneNameProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    language_param!();
+
+    impl_finish_component_property_build!(ComponentProperty::TimeZoneName);
+}
+
+impl_other_component_params_builder!(TimeZoneNamePropertyBuilder<P>);

@@ -73,6 +73,22 @@ impl ICalObjectBuilder {
         EventComponentBuilder::new(self)
     }
 
+    pub fn add_to_do_component(self) -> ToDoComponentBuilder {
+        ToDoComponentBuilder::new(self)
+    }
+
+    pub fn add_journal_component(self) -> JournalComponentBuilder {
+        JournalComponentBuilder::new(self)
+    }
+
+    pub fn add_free_busy_component(self) -> FreeBusyComponentBuilder {
+        FreeBusyComponentBuilder::new(self)
+    }
+
+    pub fn add_time_zone_component(self) -> TimeZoneComponentBuilder {
+        TimeZoneComponentBuilder::new(self)
+    }
+
     pub fn add_iana_component<N: ToString>(
         self,
         name: N,

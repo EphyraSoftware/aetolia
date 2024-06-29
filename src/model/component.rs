@@ -1,11 +1,18 @@
 pub mod alarm;
+mod daylight;
 pub mod event;
 mod free_busy;
 pub mod iana_component;
 mod journal;
+mod standard;
 mod time_zone;
 mod todo;
 pub mod x_component;
+
+pub use free_busy::{FreeBusyComponent, FreeBusyComponentBuilder};
+pub use journal::{JournalComponent, JournalComponentBuilder};
+pub use time_zone::{TimeZoneComponent, TimeZoneComponentBuilder};
+pub use todo::{ToDoComponent, ToDoComponentBuilder};
 
 pub enum CalendarComponent {
     Event(EventComponent),
@@ -13,6 +20,8 @@ pub enum CalendarComponent {
     Journal(JournalComponent),
     FreeBusy(FreeBusyComponent),
     TimeZone(TimeZoneComponent),
+    Standard(StandardComponent),
+    Daylight(DaylightComponent),
     // Alarm {
     //     properties: Vec<CalendarProperty>,
     // },
@@ -55,7 +64,6 @@ pub(crate) use impl_other_component_properties;
 
 use crate::model::component::event::EventComponent;
 use crate::model::component::iana_component::IanaComponent;
-use crate::model::component::todo::ToDoComponent;
 use crate::model::component::x_component::XComponent;
 
 macro_rules! add_date_time_stamp {
@@ -428,7 +436,6 @@ macro_rules! add_recurrence_date {
     };
 }
 
-use crate::model::component::journal::JournalComponent;
 pub(crate) use add_recurrence_date;
 
 macro_rules! add_date_time_end {
@@ -443,6 +450,6 @@ macro_rules! add_date_time_end {
     };
 }
 
-use crate::model::component::free_busy::FreeBusyComponent;
-use crate::model::component::time_zone::TimeZoneComponent;
+use crate::model::component::daylight::DaylightComponent;
+use crate::model::component::standard::StandardComponent;
 pub(crate) use add_date_time_end;

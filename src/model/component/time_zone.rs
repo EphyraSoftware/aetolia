@@ -1,3 +1,5 @@
+use crate::model::component::daylight::DaylightComponentBuilder;
+use crate::model::component::standard::StandardComponentBuilder;
 use crate::model::event::{EventComponent, EventComponentBuilder};
 use crate::model::{
     add_last_modified, impl_finish_component_build, impl_other_component_properties,
@@ -8,11 +10,12 @@ use crate::prelude::TimeZoneIdPropertyBuilder;
 
 pub struct TimeZoneComponent {
     pub(crate) properties: Vec<ComponentProperty>,
+    pub(crate) components: Vec<CalendarComponent>,
 }
 
 pub struct TimeZoneComponentBuilder {
     owner: ICalObjectBuilder,
-    inner: TimeZoneComponent,
+    pub(crate) inner: TimeZoneComponent,
 }
 
 impl TimeZoneComponentBuilder {
@@ -21,6 +24,7 @@ impl TimeZoneComponentBuilder {
             owner,
             inner: TimeZoneComponent {
                 properties: Vec::new(),
+                components: Vec::new(),
             },
         }
     }
@@ -37,6 +41,20 @@ impl TimeZoneComponentBuilder {
 
     pub fn add_time_zone_url(self, value: String) -> TimeZoneUrlPropertyBuilder<Self> {
         TimeZoneUrlPropertyBuilder::new(self, value)
+    }
+
+    pub fn add_standard_time(
+        self,
+        builder: fn(StandardComponentBuilder) -> StandardComponentBuilder,
+    ) -> Self {
+        builder(StandardComponentBuilder::new(self)).build()
+    }
+
+    pub fn add_daylight_time(
+        self,
+        builder: fn(DaylightComponentBuilder) -> DaylightComponentBuilder,
+    ) -> Self {
+        builder(DaylightComponentBuilder::new(self)).build()
     }
 
     impl_other_component_properties!(
