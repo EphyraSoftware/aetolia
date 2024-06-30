@@ -5,8 +5,8 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
-    altrep_param, common_name_param, directory_entry_reference_param,
-    impl_other_component_properties, language_param, sent_by_param, tz_id_param, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
+    altrep_param, common_name_param, directory_entry_reference_param
+    , language_param, ParticipationStatusUnknown, RelationshipType, Role, sent_by_param, tz_id_param, Value,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -14,7 +14,7 @@ use std::ops::Deref;
 
 pub use duration::*;
 pub use recur::*;
-use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType, Range};
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);

@@ -1,5 +1,5 @@
-use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
-use crate::parser::language_tag::LanguageTag;
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType, Range};
+use crate::common::LanguageTag;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Param<'a> {
@@ -138,11 +138,6 @@ pub enum ParticipationStatusUnknown {
     InProcess,
     XName(String),
     IanaToken(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Range {
-    ThisAndFuture,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

@@ -10,32 +10,7 @@ use nom::error::ParseError;
 use nom::multi::{many0, many1, many_m_n};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LanguageTag {
-    pub language: String,
-    pub ext_lang: Option<String>,
-    pub script: Option<String>,
-    pub region: Option<String>,
-    pub variants: Vec<String>,
-    pub extensions: Vec<String>,
-    pub private_use: Option<String>,
-}
-
-#[cfg(test)]
-impl Default for LanguageTag {
-    fn default() -> Self {
-        Self {
-            language: String::new(),
-            ext_lang: None,
-            script: None,
-            region: None,
-            variants: Vec::with_capacity(0),
-            extensions: Vec::with_capacity(0),
-            private_use: None,
-        }
-    }
-}
+use crate::common::LanguageTag;
 
 #[inline]
 const fn is_singleton(b: u8) -> bool {

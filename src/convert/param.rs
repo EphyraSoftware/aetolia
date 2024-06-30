@@ -35,6 +35,15 @@ impl ToModel for ParserParam<'_> {
             ParserParam::FreeBusyTimeType { fb_type } => {
                 ModelParam::FreeBusyTimeType { fb_type: fb_type.clone() }
             }
+            ParserParam::Language { language } => {
+                ModelParam::Language { language: language.clone() }
+            }
+            ParserParam::Members { members } => {
+                ModelParam::Members { members: members.iter().map(|m| convert_string(m)).collect() }
+            }
+            ParserParam::Range { range } => {
+                ModelParam::Range { range: range.clone() }
+            }
             _ => {
                 unimplemented!()
             }

@@ -16,6 +16,7 @@ mod tests {
     use crate::model::object::ICalObject;
     use crate::model::param::OtherParamsBuilder;
     use time::Date;
+    use crate::common::{LanguageTag, Range};
 
     #[test]
     fn all_cal_props_cal_object() {
@@ -129,7 +130,11 @@ mod tests {
             .finish_property()
             .add_description("Event description")
             .add_alternate_representation("CID:evt.desc".to_string())
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_geographic_position(37.386013, -122.082932)
@@ -139,7 +144,11 @@ mod tests {
             .add_common_name("John")
             .add_directory_entry_reference("ldap://local.net/john".to_string())
             .add_sent_by("mailto:lilith@local.net".to_string())
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_priority(4)
@@ -187,17 +196,29 @@ mod tests {
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_categories(vec!["MEETING".to_string(), "PROJECT".to_string()])
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_comment("Event comment")
             .add_alternate_representation("CID:evt.comment".to_string())
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_contact("mailto:kevin@local.net")
             .add_alternate_representation("CID:evt.contact".to_string())
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_exception_date_times(vec![(
@@ -215,7 +236,11 @@ mod tests {
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_resources(vec!["EQUIPMENT".to_string(), "ROOM".to_string()])
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_alternate_representation("CID:evt.resources".to_string())
             .add_x_param("x-special-param", "my-value")
             .finish_property()
@@ -234,7 +259,11 @@ mod tests {
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_summary("Event summary")
-            .add_language("en-US".to_string())
+            .add_language(LanguageTag {
+                language: "en".to_string(),
+                region: Some("US".to_string()),
+                ..Default::default()
+            })
             .add_alternate_representation("CID:evt.summary".to_string())
             .add_x_param("x-special-param", "my-value")
             .finish_property()

@@ -16,7 +16,7 @@ pub enum Param {
         value: String,
     },
     Language {
-        language: String,
+        language: LanguageTag,
     },
     DirectoryEntryReference {
         uri: String,
@@ -97,10 +97,6 @@ pub enum Value {
 pub enum TimeTransparency {
     Opaque,
     Transparent,
-}
-
-pub enum Range {
-    ThisAndFuture,
 }
 
 impl Display for TimeTransparency {
@@ -339,7 +335,7 @@ pub(crate) use altrep_param;
 
 macro_rules! language_param {
     () => {
-        pub fn add_language(mut self, language: String) -> Self {
+        pub fn add_language(mut self, language: $crate::common::LanguageTag) -> Self {
             self.inner.params.push(Param::Language { language });
             self
         }
@@ -401,4 +397,4 @@ macro_rules! directory_entry_reference_param {
 
 use crate::model::Related;
 pub(crate) use directory_entry_reference_param;
-use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, Range};

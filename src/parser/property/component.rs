@@ -1429,9 +1429,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::language_tag::LanguageTag;
+    use crate::common::{LanguageTag, Range};
     use crate::parser::param::{
-        ParamValue, ParticipationStatusUnknown, Range, Related, Role, Value,
+        ParamValue, ParticipationStatusUnknown, Related, Role, Value,
     };
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};

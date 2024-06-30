@@ -15,6 +15,7 @@ use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
 pub use types::*;
 pub use values::*;
+use crate::common::Range;
 
 pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
 where
@@ -487,7 +488,7 @@ where
 mod tests {
     use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
     use super::*;
-    use crate::parser::language_tag::LanguageTag;
+    use crate::common::LanguageTag;
     use crate::test_utils::check_rem;
 
     #[test]
