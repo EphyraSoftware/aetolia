@@ -1,3 +1,7 @@
+use crate::model::alarm::{
+    AddAlarmComponent, AlarmComponent, AudioAlarmComponentBuilder, DisplayAlarmComponentBuilder,
+    EmailAlarmComponentBuilder,
+};
 use crate::model::component::{
     impl_finish_component_build, impl_other_component_properties, CalendarComponent,
 };
@@ -7,7 +11,7 @@ use crate::model::property::{
     XComponentPropertyBuilder,
 };
 use crate::model::{
-    add_attach, add_categories, add_class, add_comment, add_contact, add_created,
+    add_alarms, add_attach, add_categories, add_class, add_comment, add_contact, add_created,
     add_date_time_end, add_date_time_stamp, add_date_time_start, add_description, add_duration,
     add_exception_date_times, add_geographic_position, add_last_modified, add_location,
     add_organizer, add_priority, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
@@ -127,11 +131,20 @@ impl EventComponentBuilder {
         EventComponentBuilder
     );
 
+    add_alarms!();
+
     impl_finish_component_build!(CalendarComponent::Event);
 }
 
 impl AddComponentProperty for EventComponentBuilder {
     fn add_property(&mut self, property: ComponentProperty) {
         self.inner.properties.push(property);
+    }
+}
+
+impl AddAlarmComponent for EventComponentBuilder {
+    fn add_alarm(mut self, alarm: AlarmComponent) -> Self {
+        self.inner.alarms.push(CalendarComponent::Alarm(alarm));
+        self
     }
 }

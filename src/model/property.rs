@@ -281,8 +281,16 @@ pub enum ComponentProperty {
     TimeZoneOffsetTo(TimeZoneOffsetToProperty),
     TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
     TimeZoneName(TimeZoneNameProperty),
+    Action(ActionProperty),
+    Trigger(Trigger),
+    Repeat(RepeatProperty),
     IanaProperty(IanaProperty),
     XProperty(XProperty),
+}
+
+pub enum Trigger {
+    Relative(RelativeTriggerProperty),
+    Absolute(AbsoluteTriggerProperty),
 }
 
 pub struct XProperty {
@@ -1818,3 +1826,155 @@ where
 }
 
 impl_other_component_params_builder!(TimeZoneNamePropertyBuilder<P>);
+
+pub enum Action {
+    Audio,
+    Display,
+    Email,
+    XName(String),
+    IanaToken(String),
+}
+
+pub struct ActionProperty {
+    value: Action,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct ActionPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: ActionProperty,
+}
+
+impl<P> ActionPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: Action) -> ActionPropertyBuilder<P> {
+        ActionPropertyBuilder {
+            owner,
+            inner: ActionProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Action);
+}
+
+impl_other_component_params_builder!(ActionPropertyBuilder<P>);
+
+pub enum Related {
+    Start,
+    End,
+}
+
+pub struct RelativeTriggerProperty {
+    value: Duration,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RelativeTriggerPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RelativeTriggerProperty,
+}
+
+impl<P> RelativeTriggerPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: Duration) -> RelativeTriggerPropertyBuilder<P> {
+        RelativeTriggerPropertyBuilder {
+            owner,
+            inner: RelativeTriggerProperty {
+                value,
+                params: vec![Param::Value {
+                    value: Value::Duration,
+                }],
+            },
+        }
+    }
+
+    pub fn add_related(mut self, related: Related) -> Self {
+        self.inner.params.push(Param::Related { related });
+        self
+    }
+
+    pub fn finish_property(mut self) -> P {
+        self.owner
+            .add_property(ComponentProperty::Trigger(Trigger::Relative(self.inner)));
+        self.owner
+    }
+}
+
+impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
+
+pub struct AbsoluteTriggerProperty {
+    date: time::Date,
+    time: time::Time,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct AbsoluteTriggerPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: AbsoluteTriggerProperty,
+}
+
+impl<P> AbsoluteTriggerPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(
+        owner: P,
+        date: time::Date,
+        time: time::Time,
+    ) -> AbsoluteTriggerPropertyBuilder<P> {
+        AbsoluteTriggerPropertyBuilder {
+            owner,
+            inner: AbsoluteTriggerProperty {
+                date,
+                time,
+                params: vec![Param::Value {
+                    value: Value::DateTime,
+                }],
+            },
+        }
+    }
+
+    pub fn finish_property(mut self) -> P {
+        self.owner
+            .add_property(ComponentProperty::Trigger(Trigger::Absolute(self.inner)));
+        self.owner
+    }
+}
+
+impl_other_component_params_builder!(AbsoluteTriggerPropertyBuilder<P>);
+
+pub struct RepeatProperty {
+    value: u32,
+    pub(crate) params: Vec<Param>,
+}
+
+pub struct RepeatPropertyBuilder<P: AddComponentProperty> {
+    owner: P,
+    inner: RepeatProperty,
+}
+
+impl<P> RepeatPropertyBuilder<P>
+where
+    P: AddComponentProperty,
+{
+    pub(crate) fn new(owner: P, value: u32) -> RepeatPropertyBuilder<P> {
+        RepeatPropertyBuilder {
+            owner,
+            inner: RepeatProperty {
+                value,
+                params: Vec::new(),
+            },
+        }
+    }
+
+    impl_finish_component_property_build!(ComponentProperty::Repeat);
+}
+
+impl_other_component_params_builder!(RepeatPropertyBuilder<P>);

@@ -61,6 +61,9 @@ pub enum Param {
     FreeBusyType {
         free_busy_time_type: FreeBusyTimeType,
     },
+    Related {
+        related: Related,
+    },
     Other {
         name: String,
         value: String,
@@ -424,4 +427,5 @@ macro_rules! directory_entry_reference_param {
     };
 }
 
+use crate::model::Related;
 pub(crate) use directory_entry_reference_param;

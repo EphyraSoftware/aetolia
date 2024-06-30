@@ -9,6 +9,9 @@ mod time_zone;
 mod todo;
 pub mod x_component;
 
+use crate::model::component::daylight::DaylightComponent;
+use crate::model::component::standard::StandardComponent;
+pub use alarm::AlarmComponent;
 pub use free_busy::{FreeBusyComponent, FreeBusyComponentBuilder};
 pub use journal::{JournalComponent, JournalComponentBuilder};
 pub use time_zone::{TimeZoneComponent, TimeZoneComponentBuilder};
@@ -22,9 +25,7 @@ pub enum CalendarComponent {
     TimeZone(TimeZoneComponent),
     Standard(StandardComponent),
     Daylight(DaylightComponent),
-    // Alarm {
-    //     properties: Vec<CalendarProperty>,
-    // },
+    Alarm(AlarmComponent),
     IanaComponent(IanaComponent),
     XComponent(XComponent),
 }
@@ -450,6 +451,72 @@ macro_rules! add_date_time_end {
     };
 }
 
-use crate::model::component::daylight::DaylightComponent;
-use crate::model::component::standard::StandardComponent;
 pub(crate) use add_date_time_end;
+
+macro_rules! add_action {
+    ($typ:expr) => {
+        pub fn add_action(self) -> $crate::model::property::ActionPropertyBuilder<Self> {
+            $crate::model::property::ActionPropertyBuilder::new(self, $typ)
+        }
+    };
+}
+
+pub(crate) use add_action;
+
+macro_rules! add_trigger {
+    () => {
+        pub fn add_relative_trigger(
+            self,
+            value: $crate::model::Duration,
+        ) -> $crate::model::property::RelativeTriggerPropertyBuilder<Self> {
+            $crate::model::property::RelativeTriggerPropertyBuilder::new(self, value)
+        }
+
+        pub fn add_absolute_trigger(
+            self,
+            date: time::Date,
+            time: time::Time,
+        ) -> $crate::model::property::AbsoluteTriggerPropertyBuilder<Self> {
+            $crate::model::property::AbsoluteTriggerPropertyBuilder::new(self, date, time)
+        }
+    };
+}
+
+pub(crate) use add_trigger;
+
+macro_rules! add_repeat {
+    () => {
+        pub fn add_repeat(
+            self,
+            value: u32,
+        ) -> $crate::model::property::RepeatPropertyBuilder<Self> {
+            $crate::model::property::RepeatPropertyBuilder::new(self, value)
+        }
+    };
+}
+
+pub(crate) use add_repeat;
+
+macro_rules! add_alarms {
+    () => {
+        pub fn add_audio_alarm(
+            self,
+        ) -> $crate::model::component::alarm::AudioAlarmComponentBuilder<Self> {
+            $crate::model::component::alarm::AudioAlarmComponentBuilder::new(self)
+        }
+
+        pub fn add_display_alarm(
+            self,
+        ) -> $crate::model::component::alarm::DisplayAlarmComponentBuilder<Self> {
+            $crate::model::component::alarm::DisplayAlarmComponentBuilder::new(self)
+        }
+
+        pub fn add_email_alarm(
+            self,
+        ) -> $crate::model::component::alarm::EmailAlarmComponentBuilder<Self> {
+            $crate::model::component::alarm::EmailAlarmComponentBuilder::new(self)
+        }
+    };
+}
+
+pub(crate) use add_alarms;
