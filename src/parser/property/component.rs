@@ -1,13 +1,13 @@
-use crate::parser::param::{other_params, params, Encoding, Param, ParamValue, Value};
+use crate::parser::param::{other_params, Param, params, ParamValue, Value};
 use crate::parser::property::recur::{recur, RecurRulePart};
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
-    prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
-    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
-    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration,
+    Period, prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
+    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_utc_offset,
     UtcOffset,
 };
-use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
+use crate::parser::{Error, iana_token, InnerError, read_int, x_name};
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case, take_while1};
 use nom::bytes::streaming::tag;
@@ -18,6 +18,7 @@ use nom::error::ParseError;
 use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use crate::common::Encoding;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttachValue<'a> {
@@ -1430,13 +1431,14 @@ mod tests {
     use super::*;
     use crate::parser::language_tag::LanguageTag;
     use crate::parser::param::{
-        FreeBusyTimeType, ParamValue, ParticipationStatusUnknown, Range, Related, Role, Value,
+        ParamValue, ParticipationStatusUnknown, Range, Related, Role, Value,
     };
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Period, PeriodEnd, Time};
     use crate::test_utils::check_rem;
     use base64::Engine;
+    use crate::common::FreeBusyTimeType;
 
     #[test]
     fn attach_uri() {
@@ -2129,7 +2131,7 @@ RSVP to team leader."#
                         },
                     },
                     Param {
-                        value: ParamValue::Dir {
+                        value: ParamValue::DirectoryEntryReference {
                             uri:
                                 b"ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)",
                         },

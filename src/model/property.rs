@@ -6,8 +6,7 @@ use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
     altrep_param, common_name_param, directory_entry_reference_param,
-    impl_other_component_properties, language_param, sent_by_param, tz_id_param, CalendarUserType,
-    Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
+    impl_other_component_properties, language_param, sent_by_param, tz_id_param, ParticipationStatusUnknown, Range, RelationshipType, Role, Value,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -15,6 +14,7 @@ use std::ops::Deref;
 
 pub use duration::*;
 pub use recur::*;
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
@@ -1644,8 +1644,8 @@ where
             owner,
             inner: FreeBusyProperty {
                 value,
-                params: vec![Param::FreeBusyType {
-                    free_busy_time_type,
+                params: vec![Param::FreeBusyTimeType {
+                    fb_type: free_busy_time_type,
                 }],
             },
         }

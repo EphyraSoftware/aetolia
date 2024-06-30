@@ -19,7 +19,7 @@ pub enum Param {
         language: String,
     },
     DirectoryEntryReference {
-        value: String,
+        uri: String,
     },
     SentBy {
         value: String,
@@ -58,8 +58,8 @@ pub enum Param {
     RelationshipType {
         relationship_type: RelationshipType,
     },
-    FreeBusyType {
-        free_busy_time_type: FreeBusyTimeType,
+    FreeBusyTimeType {
+        fb_type: FreeBusyTimeType,
     },
     Related {
         related: Related,
@@ -103,13 +103,6 @@ pub enum Range {
     ThisAndFuture,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum Encoding {
-    #[default]
-    EightBit,
-    Base64,
-}
-
 impl Display for TimeTransparency {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
@@ -117,18 +110,6 @@ impl Display for TimeTransparency {
             TimeTransparency::Transparent => write!(f, "TRANSPARENT"),
         }
     }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum CalendarUserType {
-    #[default]
-    Individual,
-    Group,
-    Resource,
-    Room,
-    Unknown,
-    XName(String),
-    IanaToken(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -242,15 +223,6 @@ pub enum RelationshipType {
     Parent,
     Child,
     Sibling,
-    XName(String),
-    IanaToken(String),
-}
-
-pub enum FreeBusyTimeType {
-    Free,
-    Busy,
-    BusyUnavailable,
-    BusyTentative,
     XName(String),
     IanaToken(String),
 }
@@ -421,7 +393,7 @@ macro_rules! directory_entry_reference_param {
         pub fn add_directory_entry_reference(mut self, value: String) -> Self {
             self.inner
                 .params
-                .push(Param::DirectoryEntryReference { value });
+                .push(Param::DirectoryEntryReference { uri:value });
             self
         }
     };
@@ -429,3 +401,4 @@ macro_rules! directory_entry_reference_param {
 
 use crate::model::Related;
 pub(crate) use directory_entry_reference_param;
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};

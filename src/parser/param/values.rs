@@ -1,8 +1,8 @@
 use crate::parser::param::{
-    CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Related,
+    ParticipationStatusUnknown, Related,
     RelationshipType, Role, Value,
 };
-use crate::parser::{iana_token, param_text, read_string, x_name, Error};
+use crate::parser::{Error, iana_token, param_text, read_string, x_name};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
 use nom::character::streaming::char;
@@ -11,6 +11,7 @@ use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
 
 pub fn param_value_calendar_user_type<'a, E>(
     input: &'a [u8],

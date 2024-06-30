@@ -8,6 +8,8 @@ use std::num::NonZeroUsize;
 
 mod model;
 mod parser;
+mod convert;
+mod common;
 
 #[cfg(test)]
 mod test_utils;

@@ -1,11 +1,12 @@
+use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
 use crate::parser::language_tag::LanguageTag;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Param<'a> {
     pub value: ParamValue<'a>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ParamValue<'a> {
     AltRep {
         uri: &'a [u8],
@@ -22,7 +23,7 @@ pub enum ParamValue<'a> {
     DelegatedTo {
         delegates: Vec<&'a [u8]>,
     },
-    Dir {
+    DirectoryEntryReference {
         uri: &'a [u8],
     },
     Encoding {
@@ -79,35 +80,6 @@ pub enum ParamValue<'a> {
         name: &'a [u8],
         values: Vec<&'a [u8]>,
     },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum CalendarUserType {
-    #[default]
-    Individual,
-    Group,
-    Resource,
-    Room,
-    Unknown,
-    XName(String),
-    IanaToken(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum Encoding {
-    #[default]
-    EightBit,
-    Base64,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FreeBusyTimeType {
-    Free,
-    Busy,
-    BusyUnavailable,
-    BusyTentative,
-    XName(String),
-    IanaToken(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

@@ -3,7 +3,7 @@ mod values;
 
 use crate::parser::language_tag::language_tag;
 use crate::parser::property::uri::param_value_uri;
-use crate::parser::{param_name, param_value, read_string, reg_name, x_name, Error};
+use crate::parser::{Error, param_name, param_value, read_string, reg_name, x_name};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
@@ -146,7 +146,7 @@ where
         cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
     ))(input)?;
 
-    Ok((input, ParamValue::Dir { uri }))
+    Ok((input, ParamValue::DirectoryEntryReference { uri }))
 }
 
 /// Parse an ENCODING param
@@ -479,6 +479,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
     use super::*;
     use crate::parser::language_tag::LanguageTag;
     use crate::test_utils::check_rem;
@@ -668,7 +669,7 @@ mod tests {
         .unwrap();
         check_rem(rem, 1);
         assert_eq!(
-            ParamValue::Dir {
+            ParamValue::DirectoryEntryReference {
                 uri: b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
             },
             param.value

@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-
-use crate::parser::param::ParamValue;
 use crate::{single, utf8_seq};
 use lazy_static::lazy_static;
 use nom::branch::alt;
@@ -21,6 +18,9 @@ mod object;
 mod param;
 mod pre;
 mod property;
+
+pub use object::types::ICalendar;
+pub use param::ParamValue;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
@@ -120,7 +120,7 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct ContentLine<'a> {
     property_name: &'a [u8],
     params: Vec<param::Param<'a>>,
