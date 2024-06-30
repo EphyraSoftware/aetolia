@@ -192,9 +192,9 @@ mod tests {
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Others {
+            ParamValue::Other {
                 name: b"x-prop",
-                values: vec![b"val"]
+                value: b"val"
             }
         );
         assert_eq!(prop.value, b"-//ABC Corporation//NONSGML My Product//EN");
@@ -218,9 +218,9 @@ mod tests {
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Others {
+            ParamValue::Other {
                 name: b"x-prop",
-                values: vec![b"val"]
+                value: b"val"
             }
         );
         assert_eq!(prop.min_version, None);
@@ -264,9 +264,9 @@ mod tests {
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Others {
+            ParamValue::Other {
                 name: b"x-prop",
-                values: vec![b"val"]
+                value: b"val"
             }
         );
         assert_eq!(prop.value, b"GREGORIAN");
@@ -289,9 +289,9 @@ mod tests {
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
             prop.other_params[0].value,
-            ParamValue::Others {
+            ParamValue::Other {
                 name: b"x-prop",
-                values: vec![b"val"]
+                value: b"val"
             }
         );
         assert_eq!(prop.value, b"REQUEST");

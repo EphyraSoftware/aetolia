@@ -457,7 +457,10 @@ where
     Ok((
         input,
         Param {
-            value: ParamValue::Others { name, values },
+            value: match values.len() {
+                1 => ParamValue::Other { name, value: values[0] },
+                _ => ParamValue::Others { name, values },
+            },
         },
     ))
 }
@@ -472,7 +475,10 @@ where
     Ok((
         input,
         Param {
-            value: ParamValue::Others { name, values },
+            value: match values.len() {
+                1 => ParamValue::Other { name, value: values[0] },
+                _ => ParamValue::Others { name, values },
+            },
         },
     ))
 }

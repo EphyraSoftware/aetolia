@@ -241,7 +241,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             &input[..(input.len() - 1)],
-            language_tag.language.as_str().as_bytes()
+            language_tag.language.as_bytes()
         );
 
         assert!(language_tag.ext_lang.is_none());
@@ -262,11 +262,11 @@ mod tests {
 
         let str = String::from_utf8(input[..(input.len() - 1)].to_vec()).unwrap();
         assert_eq!(
-            str.split("-").next().unwrap().as_bytes(),
-            language_tag.language.as_str().as_bytes()
+            str.split('-').next().unwrap().as_bytes(),
+            language_tag.language.as_bytes()
         );
         assert_eq!(
-            Some(str.split("-").skip(1).next().unwrap().to_string()),
+            Some(str.split('-').nth(1).unwrap().to_string()),
             language_tag.script
         );
 

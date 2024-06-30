@@ -160,59 +160,6 @@ where
     Ok((input, CalendarComponent::XComp { name, lines }))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::parser::pre::content_line_first_pass;
-    use crate::parser::property::types::VersionProperty;
-    use crate::test_utils::check_rem;
-    use nom::combinator::complete;
-    use nom::error::VerboseError;
-
-    #[test]
-    fn minimal_ical_stream_test() {
-        let input = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\nBEGIN:x-com\r\nx-prop:I'm a property\r\nEND:x-com\r\nEND:VCALENDAR\r\n";
-        let (rem, ical) = ical_stream::<Error>(input).unwrap();
-        check_rem(rem, 0);
-        assert_eq!(ical.len(), 1);
-        assert_eq!(ical[0].properties.len(), 2);
-        assert_eq!(
-            ical[0].properties[0],
-            CalendarProperty::Version(VersionProperty {
-                other_params: vec![],
-                min_version: None,
-                max_version: b"2.0",
-            })
-        );
-        assert_eq!(ical[0].components.len(), 1);
-    }
-
-    #[test]
-    #[ignore = "Requires a real file"]
-    fn real_file() {
-        let input = std::fs::read_to_string("sample.ics").unwrap();
-
-        let (input, first) = content_line_first_pass::<Error>(input.as_bytes()).unwrap();
-        check_rem(input, 0);
-
-        let r = complete::<_, _, VerboseError<&[u8]>, _>(ical_stream).parse(&first);
-        match r {
-            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => {
-                println!("fail:\n\n {}", convert_error_mod(first.as_slice(), e));
-            }
-            Ok((rem, ical)) => {
-                println!("Got an OK result");
-                check_rem(rem, 0);
-                println!("Calendars: {:?}", ical.len());
-                println!("Components: {:?}", ical[0].components.len());
-            }
-            e => {
-                panic!("unexpected result: {:?}", e)
-            }
-        }
-    }
-}
-
 trait ReprStr {
     fn repr_str(&self) -> &str;
 }
@@ -336,4 +283,57 @@ fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::pre::content_line_first_pass;
+    use crate::parser::property::types::VersionProperty;
+    use crate::test_utils::check_rem;
+    use nom::combinator::complete;
+    use nom::error::VerboseError;
+
+    #[test]
+    fn minimal_ical_stream_test() {
+        let input = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\nBEGIN:x-com\r\nx-prop:I'm a property\r\nEND:x-com\r\nEND:VCALENDAR\r\n";
+        let (rem, ical) = ical_stream::<Error>(input).unwrap();
+        check_rem(rem, 0);
+        assert_eq!(ical.len(), 1);
+        assert_eq!(ical[0].properties.len(), 2);
+        assert_eq!(
+            ical[0].properties[0],
+            CalendarProperty::Version(VersionProperty {
+                other_params: vec![],
+                min_version: None,
+                max_version: b"2.0",
+            })
+        );
+        assert_eq!(ical[0].components.len(), 1);
+    }
+
+    #[test]
+    #[ignore = "Requires a real file"]
+    fn real_file() {
+        let input = std::fs::read_to_string("sample.ics").unwrap();
+
+        let (input, first) = content_line_first_pass::<Error>(input.as_bytes()).unwrap();
+        check_rem(input, 0);
+
+        let r = complete::<_, _, VerboseError<&[u8]>, _>(ical_stream).parse(&first);
+        match r {
+            Err(nom::Err::Error(e) | nom::Err::Failure(e)) => {
+                println!("fail:\n\n {}", convert_error_mod(first.as_slice(), e));
+            }
+            Ok((rem, ical)) => {
+                println!("Got an OK result");
+                check_rem(rem, 0);
+                println!("Calendars: {:?}", ical.len());
+                println!("Components: {:?}", ical[0].components.len());
+            }
+            e => {
+                panic!("unexpected result: {:?}", e)
+            }
+        }
+    }
 }
