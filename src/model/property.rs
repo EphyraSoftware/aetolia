@@ -5,16 +5,19 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
-    altrep_param, common_name_param, directory_entry_reference_param
-    , language_param, ParticipationStatusUnknown, RelationshipType, Role, sent_by_param, tz_id_param, Value,
+    altrep_param, common_name_param, directory_entry_reference_param, language_param,
+    sent_by_param, tz_id_param,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
 use std::ops::Deref;
 
+use crate::common::{
+    CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, Related,
+    RelationshipType, Role, Value,
+};
 pub use duration::*;
 pub use recur::*;
-use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType, Range};
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
@@ -404,8 +407,8 @@ where
 impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 
 pub struct DateTimeStampProperty {
-    date: time::Date,
-    time: time::Time,
+    pub(crate) date: time::Date,
+    pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
 }
 
@@ -492,7 +495,7 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::Value { value: Value::Date })
+            params.push(Param::ValueType { value: Value::Date })
         }
 
         DateTimeStartPropertyBuilder {
@@ -953,7 +956,7 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::Value { value: Value::Date })
+            params.push(Param::ValueType { value: Value::Date })
         }
 
         RecurrenceIdPropertyBuilder {
@@ -1028,7 +1031,7 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::Value { value: Value::Date })
+            params.push(Param::ValueType { value: Value::Date })
         }
 
         DateTimeEndPropertyBuilder {
@@ -1109,7 +1112,7 @@ where
                     Param::Encoding {
                         encoding: Encoding::Base64,
                     },
-                    Param::Value {
+                    Param::ValueType {
                         value: Value::Binary,
                     },
                 ],
@@ -1321,7 +1324,7 @@ where
     pub(crate) fn new(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
         let mut params = Vec::new();
         if let Some((_, None)) = date_times.first() {
-            params.push(Param::Value { value: Value::Date });
+            params.push(Param::ValueType { value: Value::Date });
         }
 
         ExceptionDateTimesPropertyBuilder {
@@ -1391,9 +1394,9 @@ where
     }
 
     pub fn add_relationship_type(mut self, relationship_type: RelationshipType) -> Self {
-        self.inner
-            .params
-            .push(Param::RelationshipType { relationship_type });
+        self.inner.params.push(Param::RelationshipType {
+            relationship: relationship_type,
+        });
         self
     }
 
@@ -1487,7 +1490,7 @@ where
     pub fn new_date_times(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
         let mut params = Vec::new();
         if let Some((_, None)) = date_times.first() {
-            params.push(Param::Value { value: Value::Date });
+            params.push(Param::ValueType { value: Value::Date });
         }
 
         RecurrenceDateTimesPropertyBuilder {
@@ -1506,7 +1509,7 @@ where
             inner: RecurrenceDateTimesProperty {
                 date_times: Vec::with_capacity(0),
                 periods,
-                params: vec![Param::Value {
+                params: vec![Param::ValueType {
                     value: Value::Period,
                 }],
             },
@@ -1605,7 +1608,7 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::Value { value: Value::Date })
+            params.push(Param::ValueType { value: Value::Date })
         }
 
         DueDateTimePropertyBuilder {
@@ -1864,11 +1867,6 @@ where
 
 impl_other_component_params_builder!(ActionPropertyBuilder<P>);
 
-pub enum Related {
-    Start,
-    End,
-}
-
 pub struct RelativeTriggerProperty {
     value: Duration,
     pub(crate) params: Vec<Param>,
@@ -1888,7 +1886,7 @@ where
             owner,
             inner: RelativeTriggerProperty {
                 value,
-                params: vec![Param::Value {
+                params: vec![Param::ValueType {
                     value: Value::Duration,
                 }],
             },
@@ -1934,7 +1932,7 @@ where
             inner: AbsoluteTriggerProperty {
                 date,
                 time,
-                params: vec![Param::Value {
+                params: vec![Param::ValueType {
                     value: Value::DateTime,
                 }],
             },

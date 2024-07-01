@@ -56,3 +56,65 @@ impl Default for LanguageTag {
 pub enum Range {
     ThisAndFuture,
 }
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum Related {
+    #[default]
+    Start,
+    End,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum RelationshipType {
+    #[default]
+    Parent,
+    Child,
+    Sibling,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum Role {
+    Chair,
+    #[default]
+    RequiredParticipant,
+    OptionalParticipant,
+    NonParticipant,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Value {
+    Binary,
+    Boolean,
+    CalendarAddress,
+    Date,
+    DateTime,
+    Duration,
+    Float,
+    Integer,
+    Period,
+    Recurrence,
+    Text,
+    Time,
+    Uri,
+    UtcOffset,
+    XName(String),
+    IanaToken(String),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub enum ParticipationStatusUnknown {
+    #[default]
+    NeedsAction,
+    Accepted,
+    Declined,
+    Tentative,
+    Delegated,
+    Completed,
+    InProcess,
+    XName(String),
+    IanaToken(String),
+}

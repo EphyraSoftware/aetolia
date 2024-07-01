@@ -5,7 +5,7 @@ pub enum Param {
     CommonName {
         name: String,
     },
-    Value {
+    ValueType {
         value: Value,
     },
     TimeZoneId {
@@ -22,7 +22,7 @@ pub enum Param {
         uri: String,
     },
     SentBy {
-        value: String,
+        address: String,
     },
     Range {
         range: Range,
@@ -56,7 +56,7 @@ pub enum Param {
         delegators: Vec<String>,
     },
     RelationshipType {
-        relationship_type: RelationshipType,
+        relationship: RelationshipType,
     },
     FreeBusyTimeType {
         fb_type: FreeBusyTimeType,
@@ -74,26 +74,6 @@ pub enum Param {
     },
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Value {
-    Binary,
-    Boolean,
-    CalendarAddress,
-    Date,
-    DateTime,
-    Duration,
-    Float,
-    Integer,
-    Period,
-    Recurrence,
-    Text,
-    Time,
-    Uri,
-    UtcOffset,
-    XName(String),
-    IanaToken(String),
-}
-
 pub enum TimeTransparency {
     Opaque,
     Transparent,
@@ -106,31 +86,6 @@ impl Display for TimeTransparency {
             TimeTransparency::Transparent => write!(f, "TRANSPARENT"),
         }
     }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum Role {
-    Chair,
-    #[default]
-    RequiredParticipant,
-    OptionalParticipant,
-    NonParticipant,
-    XName(String),
-    IanaToken(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum ParticipationStatusUnknown {
-    #[default]
-    NeedsAction,
-    Accepted,
-    Declined,
-    Tentative,
-    Delegated,
-    Completed,
-    InProcess,
-    XName(String),
-    IanaToken(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -211,16 +166,6 @@ impl From<ParticipationStatusJournal> for ParticipationStatusUnknown {
             }
         }
     }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum RelationshipType {
-    #[default]
-    Parent,
-    Child,
-    Sibling,
-    XName(String),
-    IanaToken(String),
 }
 
 pub trait OtherParamsBuilder {
@@ -362,7 +307,7 @@ macro_rules! sent_by_param {
     () => {
         // TODO should be a URI
         pub fn add_sent_by(mut self, value: String) -> Self {
-            self.inner.params.push(Param::SentBy { value });
+            self.inner.params.push(Param::SentBy { address: value });
             self
         }
     };
@@ -389,12 +334,14 @@ macro_rules! directory_entry_reference_param {
         pub fn add_directory_entry_reference(mut self, value: String) -> Self {
             self.inner
                 .params
-                .push(Param::DirectoryEntryReference { uri:value });
+                .push(Param::DirectoryEntryReference { uri: value });
             self
         }
     };
 }
 
-use crate::model::Related;
+use crate::common::{
+    CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, ParticipationStatusUnknown, Range,
+    Related, RelationshipType, Role, Value,
+};
 pub(crate) use directory_entry_reference_param;
-use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, Range};

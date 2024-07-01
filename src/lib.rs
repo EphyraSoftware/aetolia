@@ -8,10 +8,10 @@ use nom::sequence::tuple;
 use nom::{IResult, InputIter, InputLength, InputTake};
 use std::num::NonZeroUsize;
 
+mod common;
+mod convert;
 mod model;
 mod parser;
-mod convert;
-mod common;
 
 #[cfg(test)]
 mod test_utils;

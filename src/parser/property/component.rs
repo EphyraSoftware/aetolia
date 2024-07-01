@@ -1,13 +1,14 @@
-use crate::parser::param::{other_params, Param, params, ParamValue, Value};
+use crate::common::{Encoding, Value};
+use crate::parser::param::{other_params, params, ParamValue};
 use crate::parser::property::recur::{recur, RecurRulePart};
 use crate::parser::property::uri::{param_value_uri, Uri};
 use crate::parser::property::{
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration,
-    Period, prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
-    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_utc_offset,
+    prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
+    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
+    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
     UtcOffset,
 };
-use crate::parser::{Error, iana_token, InnerError, read_int, x_name};
+use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case, take_while1};
 use nom::bytes::streaming::tag;
@@ -18,7 +19,6 @@ use nom::error::ParseError;
 use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use crate::common::Encoding;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttachValue<'a> {
@@ -28,7 +28,7 @@ pub enum AttachValue<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct AttachProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: AttachValue<'a>,
 }
 
@@ -45,7 +45,7 @@ where
 
     let is_base_64 = params.iter().any(|p| {
         matches!(
-            p.value,
+            p,
             ParamValue::Encoding {
                 encoding: Encoding::Base64,
             }
@@ -54,7 +54,7 @@ where
 
     let is_binary = params.iter().any(|p| {
         matches!(
-            p.value,
+            p,
             ParamValue::ValueType {
                 value: Value::Binary,
             }
@@ -86,7 +86,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CategoriesProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<Vec<u8>>,
 }
 
@@ -121,7 +121,7 @@ pub enum Classification<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ClassificationProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Classification<'a>,
 }
 
@@ -159,7 +159,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CommentProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -185,7 +185,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DescriptionProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -211,7 +211,7 @@ where
 
 #[derive(Debug, PartialEq)]
 pub struct GeographicPositionProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub latitude: f64,
     pub longitude: f64,
 }
@@ -245,7 +245,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct LocationProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -271,7 +271,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct PercentCompleteProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: u8,
 }
 
@@ -303,7 +303,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct PriorityProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: u8,
 }
 
@@ -333,7 +333,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ResourcesProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<Vec<u8>>,
 }
 
@@ -371,7 +371,7 @@ pub enum Status {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct StatusProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Status,
 }
 
@@ -410,7 +410,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SummaryProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -436,7 +436,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeCompletedProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: DateTime,
 }
 
@@ -468,7 +468,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeEndProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: DateOrDateTime,
 }
 
@@ -497,7 +497,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeDueProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: DateOrDateTime,
 }
 
@@ -526,7 +526,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeStartProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: DateOrDateTime,
 }
 
@@ -557,7 +557,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DurationProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Duration,
 }
 
@@ -587,7 +587,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FreeBusyTimeProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<Period<'a>>,
 }
 
@@ -619,7 +619,7 @@ pub enum TimeTransparency {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeTransparencyProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: TimeTransparency,
 }
 
@@ -654,7 +654,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeZoneIdProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -690,7 +690,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeZoneNameProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -716,7 +716,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeZoneOffsetProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: UtcOffset,
 }
 
@@ -774,7 +774,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeZoneUrlProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: &'a [u8],
 }
 
@@ -806,7 +806,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct AttendeeProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: &'a [u8],
 }
 
@@ -832,7 +832,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ContactProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -858,7 +858,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct OrganizerProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: &'a [u8],
 }
 
@@ -884,7 +884,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RecurrenceIdProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: DateOrDateTime,
 }
 
@@ -913,7 +913,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RelatedToProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -939,7 +939,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct UrlProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Uri<'a>,
 }
 
@@ -971,7 +971,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct UniqueIdentifierProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }
 
@@ -1003,7 +1003,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ExceptionDateTimesProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<DateOrDateTime>,
 }
 
@@ -1037,7 +1037,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RecurrenceDateTimesProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: Vec<DateOrDateTimeOrPeriod<'a>>,
 }
 
@@ -1072,7 +1072,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RecurrenceRuleProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Vec<RecurRulePart>,
 }
 
@@ -1115,7 +1115,7 @@ pub enum Action<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ActionProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: Action<'a>,
 }
 
@@ -1151,7 +1151,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RepeatCountProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: u32,
 }
 
@@ -1187,7 +1187,7 @@ pub enum DurationOrDateTime {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TriggerProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub value: DurationOrDateTime,
 }
 
@@ -1204,7 +1204,7 @@ where
 
     let value_choice = params
         .iter()
-        .filter_map(|p| match p.value {
+        .filter_map(|p| match p {
             ParamValue::ValueType {
                 value: Value::Duration,
             } => Some(1),
@@ -1236,7 +1236,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CreatedProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: DateTime,
 }
 
@@ -1266,7 +1266,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DateTimeStampProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: DateTime,
 }
 
@@ -1298,7 +1298,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct LastModifiedProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: DateTime,
 }
 
@@ -1328,7 +1328,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SequenceProperty<'a> {
-    pub other_params: Vec<Param<'a>>,
+    pub other_params: Vec<ParamValue<'a>>,
     pub value: u32,
 }
 
@@ -1358,7 +1358,7 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RequestStatusProperty<'a> {
-    pub params: Vec<Param<'a>>,
+    pub params: Vec<ParamValue<'a>>,
     pub status_code: Vec<u32>,
     pub status_description: Vec<u8>,
     pub extra_data: Option<Vec<u8>>,
@@ -1429,16 +1429,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{LanguageTag, Range};
-    use crate::parser::param::{
-        ParamValue, ParticipationStatusUnknown, Related, Role, Value,
-    };
+    use crate::common::FreeBusyTimeType;
+    use crate::common::{LanguageTag, ParticipationStatusUnknown, Range, Related, Role, Value};
+    use crate::parser::param::ParamValue;
     use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Period, PeriodEnd, Time};
     use crate::test_utils::check_rem;
     use base64::Engine;
-    use crate::common::FreeBusyTimeType;
 
     #[test]
     fn attach_uri() {
@@ -1467,15 +1465,11 @@ mod tests {
             prop,
             AttachProperty {
                 params: vec![
-                    Param {
-                        value: ParamValue::ValueType {
-                            value: Value::Binary
-                        },
+                    ParamValue::ValueType {
+                        value: Value::Binary
                     },
-                    Param {
-                        value: ParamValue::Encoding {
-                            encoding: Encoding::Base64,
-                        },
+                    ParamValue::Encoding {
+                        encoding: Encoding::Base64,
                     },
                 ],
                 value: AttachValue::Binary(r.as_bytes()),
@@ -1575,11 +1569,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             LocationProperty {
-                params: vec![Param {
-                    value: ParamValue::AltRep {
-                        uri: b"http://xyzcorp.com/conf-rooms/f123.vcf",
-                    },
-                }],
+                params: vec![ParamValue::AltRep {
+                    uri: b"http://xyzcorp.com/conf-rooms/f123.vcf",
+                },],
                 value: b"Conference Room - F123, Bldg. 002".to_vec(),
             }
         );
@@ -1683,9 +1675,7 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             DateTimeEndProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType { value: Value::Date },
-                },],
+                params: vec![ParamValue::ValueType { value: Value::Date },],
                 value: DateOrDateTime::Date(Date {
                     year: 1998,
                     month: 7,
@@ -1727,9 +1717,7 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             DateTimeDueProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType { value: Value::Date },
-                },],
+                params: vec![ParamValue::ValueType { value: Value::Date },],
                 value: DateOrDateTime::Date(Date {
                     year: 1998,
                     month: 4,
@@ -1834,11 +1822,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             FreeBusyTimeProperty {
-                params: vec![Param {
-                    value: ParamValue::FreeBusyTimeType {
-                        fb_type: FreeBusyTimeType::BusyUnavailable,
-                    },
-                }],
+                params: vec![ParamValue::FreeBusyTimeType {
+                    fb_type: FreeBusyTimeType::BusyUnavailable,
+                },],
                 value: vec![Period {
                     start: b"19970308T160000Z",
                     end: PeriodEnd::Duration(Duration {
@@ -1862,11 +1848,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             FreeBusyTimeProperty {
-                params: vec![Param {
-                    value: ParamValue::FreeBusyTimeType {
-                        fb_type: FreeBusyTimeType::Free,
-                    },
-                }],
+                params: vec![ParamValue::FreeBusyTimeType {
+                    fb_type: FreeBusyTimeType::Free,
+                },],
                 value: vec![
                     Period {
                         start: b"19970308T160000Z",
@@ -1964,15 +1948,13 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             TimeZoneNameProperty {
-                params: vec![Param {
-                    value: ParamValue::Language {
-                        language: LanguageTag {
-                            language: "fr".to_string(),
-                            region: Some("CA".to_string()),
-                            ..Default::default()
-                        },
+                params: vec![ParamValue::Language {
+                    language: LanguageTag {
+                        language: "fr".to_string(),
+                        region: Some("CA".to_string()),
+                        ..Default::default()
                     },
-                }],
+                },],
                 value: b"HNE".to_vec(),
             }
         );
@@ -2038,25 +2020,17 @@ RSVP to team leader."#
             prop,
             AttendeeProperty {
                 params: vec![
-                    Param {
-                        value: ParamValue::Role {
-                            role: Role::RequiredParticipant,
-                        },
+                    ParamValue::Role {
+                        role: Role::RequiredParticipant,
                     },
-                    Param {
-                        value: ParamValue::DelegatedFrom {
-                            delegators: vec![b"mailto:bob@example.com"],
-                        },
+                    ParamValue::DelegatedFrom {
+                        delegators: vec![b"mailto:bob@example.com"],
                     },
-                    Param {
-                        value: ParamValue::ParticipationStatus {
-                            status: ParticipationStatusUnknown::Accepted,
-                        },
+                    ParamValue::ParticipationStatus {
+                        status: ParticipationStatusUnknown::Accepted,
                     },
-                    Param {
-                        value: ParamValue::CommonName {
-                            name: "Jane Doe".to_string(),
-                        },
+                    ParamValue::CommonName {
+                        name: "Jane Doe".to_string(),
                     },
                 ],
                 value: b"mailto:jdoe@example.com",
@@ -2087,12 +2061,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             ContactProperty {
-                params: vec![Param {
-                    value: ParamValue::AltRep {
-                        uri:
-                            b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)",
-                    },
-                }],
+                params: vec![ParamValue::AltRep {
+                    uri: b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)",
+                },],
                 value: b"Jim Dolittle, ABC Industries, +1-919-555-1234".to_vec(),
             }
         );
@@ -2107,11 +2078,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             OrganizerProperty {
-                params: vec![Param {
-                    value: ParamValue::CommonName {
-                        name: "John Smith".to_string(),
-                    },
-                }],
+                params: vec![ParamValue::CommonName {
+                    name: "John Smith".to_string(),
+                },],
                 value: b"mailto:jsmith@example.com",
             }
         );
@@ -2125,16 +2094,11 @@ RSVP to team leader."#
             prop,
             OrganizerProperty {
                 params: vec![
-                    Param {
-                        value: ParamValue::CommonName {
-                            name: "JohnSmith".to_string(),
-                        },
+                    ParamValue::CommonName {
+                        name: "JohnSmith".to_string(),
                     },
-                    Param {
-                        value: ParamValue::DirectoryEntryReference {
-                            uri:
-                                b"ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)",
-                        },
+                    ParamValue::DirectoryEntryReference {
+                        uri: b"ldap://example.com:6666/o=DC%20Associates,c=US???(cn=John%20Smith)",
                     },
                 ],
                 value: b"mailto:jsmith@example.com",
@@ -2152,11 +2116,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             OrganizerProperty {
-                params: vec![Param {
-                    value: ParamValue::SentBy {
-                        address: b"mailto:jane_doe@example.com",
-                    },
-                }],
+                params: vec![ParamValue::SentBy {
+                    address: b"mailto:jane_doe@example.com",
+                },],
                 value: b"mailto:jsmith@example.com",
             }
         );
@@ -2170,9 +2132,7 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             RecurrenceIdProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType { value: Value::Date },
-                }],
+                params: vec![ParamValue::ValueType { value: Value::Date },],
                 value: DateOrDateTime::Date(Date {
                     year: 1996,
                     month: 4,
@@ -2191,11 +2151,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             RecurrenceIdProperty {
-                params: vec![Param {
-                    value: ParamValue::Range {
-                        range: Range::ThisAndFuture,
-                    },
-                }],
+                params: vec![ParamValue::Range {
+                    range: Range::ThisAndFuture,
+                },],
                 value: DateOrDateTime::DateTime(DateTime {
                     date: Date {
                         year: 1996,
@@ -2336,12 +2294,10 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             RecurrenceDateTimesProperty {
-                params: vec![Param {
-                    value: ParamValue::TimeZoneId {
-                        tz_id: "America/New_York".to_string(),
-                        unique: false,
-                    },
-                }],
+                params: vec![ParamValue::TimeZoneId {
+                    tz_id: "America/New_York".to_string(),
+                    unique: false,
+                },],
                 value: vec![DateOrDateTimeOrPeriod::DateTime(DateTime {
                     date: Date {
                         year: 1997,
@@ -2369,11 +2325,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             RecurrenceDateTimesProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType {
-                        value: Value::Period
-                    },
-                }],
+                params: vec![ParamValue::ValueType {
+                    value: Value::Period
+                },],
                 value: vec![
                     DateOrDateTimeOrPeriod::Period(Period {
                         start: b"19960403T020000Z",
@@ -2403,9 +2357,7 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             RecurrenceDateTimesProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType { value: Value::Date },
-                }],
+                params: vec![ParamValue::ValueType { value: Value::Date },],
                 value: vec![
                     DateOrDateTimeOrPeriod::Date(Date {
                         year: 1997,
@@ -2524,11 +2476,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             TriggerProperty {
-                params: vec![Param {
-                    value: ParamValue::Related {
-                        related: Related::End,
-                    },
-                }],
+                params: vec![ParamValue::Related {
+                    related: Related::End,
+                },],
                 value: DurationOrDateTime::Duration(Duration {
                     sign: 1,
                     weeks: 0,
@@ -2547,11 +2497,9 @@ RSVP to team leader."#
         assert_eq!(
             prop,
             TriggerProperty {
-                params: vec![Param {
-                    value: ParamValue::ValueType {
-                        value: Value::DateTime,
-                    },
-                }],
+                params: vec![ParamValue::ValueType {
+                    value: Value::DateTime,
+                },],
                 value: DurationOrDateTime::DateTime(DateTime {
                     date: Date {
                         year: 1998,

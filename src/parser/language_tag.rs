@@ -1,5 +1,6 @@
 //! https://www.rfc-editor.org/rfc/rfc5646.txt
 
+use crate::common::LanguageTag;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::{tag, take_while_m_n};
@@ -10,7 +11,6 @@ use nom::error::ParseError;
 use nom::multi::{many0, many1, many_m_n};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use crate::common::LanguageTag;
 
 #[inline]
 const fn is_singleton(b: u8) -> bool {

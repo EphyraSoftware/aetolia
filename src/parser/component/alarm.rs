@@ -43,7 +43,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::{Param, ParamValue, Value};
+    use crate::common::Value;
+    use crate::parser::param::ParamValue;
     use crate::parser::property::{
         Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration,
         DurationOrDateTime, DurationProperty, RepeatCountProperty, Time, TriggerProperty,
@@ -63,11 +64,9 @@ mod tests {
                 assert_eq!(
                     properties[0],
                     ComponentProperty::Trigger(TriggerProperty {
-                        params: vec![Param {
-                            value: ParamValue::ValueType {
-                                value: Value::DateTime,
-                            },
-                        }],
+                        params: vec![ParamValue::ValueType {
+                            value: Value::DateTime,
+                        },],
                         value: DurationOrDateTime::DateTime(DateTime {
                             date: Date {
                                 year: 1997,
@@ -116,12 +115,10 @@ mod tests {
                 assert_eq!(
                     properties[4],
                     ComponentProperty::Attach(AttachProperty {
-                        params: vec![Param {
-                            value: ParamValue::FormatType {
-                                type_name: "audio".to_string(),
-                                sub_type_name: "basic".to_string(),
-                            },
-                        }],
+                        params: vec![ParamValue::FormatType {
+                            type_name: "audio".to_string(),
+                            sub_type_name: "basic".to_string(),
+                        },],
                         value: AttachValue::Uri(b"ftp://example.com/pub/sounds/bell-01.aud"),
                     })
                 );

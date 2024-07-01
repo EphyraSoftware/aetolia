@@ -13,10 +13,10 @@ pub use property::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::{LanguageTag, Range, RelationshipType};
     use crate::model::object::ICalObject;
     use crate::model::param::OtherParamsBuilder;
     use time::Date;
-    use crate::common::{LanguageTag, Range};
 
     #[test]
     fn all_cal_props_cal_object() {

@@ -4,8 +4,8 @@ use crate::model::{
     add_comment, add_contact, add_date_time_end, add_date_time_stamp, add_date_time_start,
     add_organizer, add_request_status, add_unique_identifier, add_url, impl_finish_component_build,
     impl_other_component_properties, AddComponentProperty, AttendeeParamBuilder, CalendarComponent,
-    ComponentProperty, FreeBusyPropertyBuilder, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
+    ComponentProperty, FreeBusyPropertyBuilder, ICalObjectBuilder, IanaComponentPropertyBuilder,
+    ParticipationStatusEvent, XComponentPropertyBuilder,
 };
 use crate::prelude::Period;
 

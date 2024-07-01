@@ -21,6 +21,7 @@ mod property;
 
 pub use object::types::ICalendar;
 pub use param::ParamValue;
+pub use property::DateTimeStampProperty;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
@@ -123,7 +124,7 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
 #[derive(Debug, PartialEq)]
 struct ContentLine<'a> {
     property_name: &'a [u8],
-    params: Vec<param::Param<'a>>,
+    params: Vec<ParamValue<'a>>,
     value: Vec<u8>,
 }
 
@@ -281,7 +282,7 @@ where
     })(input)
 }
 
-fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], param::Param<'a>, E>
+fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], param::ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -291,12 +292,7 @@ where
         cut(separated_list1(char(','), param_value)),
     )(input)?;
 
-    Ok((
-        input,
-        param::Param {
-            value: ParamValue::Others { name, values },
-        },
-    ))
+    Ok((input, ParamValue::Others { name, values }))
 }
 
 fn content_line<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E>

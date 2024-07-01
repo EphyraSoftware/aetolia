@@ -76,7 +76,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::{Param, ParamValue, Value};
+    use crate::common::Value;
+    use crate::parser::param::ParamValue;
     use crate::parser::property::{
         CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
         DateTimeDueProperty, DateTimeStampProperty, Status, StatusProperty, SummaryProperty, Time,
@@ -126,9 +127,7 @@ mod tests {
                 assert_eq!(
                     properties[2],
                     ComponentProperty::DateTimeDue(DateTimeDueProperty {
-                        params: vec![Param {
-                            value: ParamValue::ValueType { value: Value::Date },
-                        }],
+                        params: vec![ParamValue::ValueType { value: Value::Date },],
                         value: DateOrDateTime::Date(Date {
                             year: 2007,
                             month: 5,

@@ -169,7 +169,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::param::{ParamValue, Value};
+    use crate::common::Value;
+    use crate::parser::param::ParamValue;
     use crate::test_utils::check_rem;
 
     #[test]
@@ -191,7 +192,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
-            prop.other_params[0].value,
+            prop.other_params[0],
             ParamValue::Other {
                 name: b"x-prop",
                 value: b"val"
@@ -217,7 +218,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
-            prop.other_params[0].value,
+            prop.other_params[0],
             ParamValue::Other {
                 name: b"x-prop",
                 value: b"val"
@@ -263,7 +264,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
-            prop.other_params[0].value,
+            prop.other_params[0],
             ParamValue::Other {
                 name: b"x-prop",
                 value: b"val"
@@ -288,7 +289,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.other_params.len(), 1);
         assert_eq!(
-            prop.other_params[0].value,
+            prop.other_params[0],
             ParamValue::Other {
                 name: b"x-prop",
                 value: b"val"
@@ -305,12 +306,9 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(prop.name, b"X-ABC-MMSUBJ");
         assert_eq!(prop.params.len(), 2);
+        assert_eq!(prop.params[0], ParamValue::ValueType { value: Value::Uri });
         assert_eq!(
-            prop.params[0].value,
-            ParamValue::ValueType { value: Value::Uri }
-        );
-        assert_eq!(
-            prop.params[1].value,
+            prop.params[1],
             ParamValue::FormatType {
                 type_name: "audio".to_string(),
                 sub_type_name: "basic".to_string()
@@ -337,7 +335,7 @@ mod tests {
         assert_eq!(prop.name, b"NON-SMOKING");
         assert_eq!(prop.params.len(), 1);
         assert_eq!(
-            prop.params[0].value,
+            prop.params[0],
             ParamValue::ValueType {
                 value: Value::Boolean
             }

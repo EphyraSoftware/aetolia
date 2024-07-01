@@ -1,9 +1,10 @@
 mod types;
 mod values;
 
+use crate::common::Range;
 use crate::parser::language_tag::language_tag;
 use crate::parser::property::uri::param_value_uri;
-use crate::parser::{Error, param_name, param_value, read_string, reg_name, x_name};
+use crate::parser::{param_name, param_value, read_string, reg_name, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
@@ -15,9 +16,8 @@ use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
 pub use types::*;
 pub use values::*;
-use crate::common::Range;
 
-pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
+pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
@@ -26,7 +26,7 @@ where
     many0(tuple((char(';'), cut(param))).map(|(_, p)| p)).parse(input)
 }
 
-pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
@@ -399,7 +399,7 @@ where
     Ok((input, ParamValue::ValueType { value }))
 }
 
-fn known_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+fn known_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
@@ -428,24 +428,24 @@ where
         param_value_type,
     ))(input)?;
 
-    Ok((input, Param { value: param_value }))
+    Ok((input, param_value))
 }
 
-pub fn other_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<Param<'a>>, E>
+pub fn other_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     many0(tuple((char(';'), other_param)).map(|(_, p)| p)).parse(input)
 }
 
-pub fn other_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+pub fn other_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     alt((iana_param, x_param))(input)
 }
 
-fn iana_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+fn iana_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -457,16 +457,17 @@ where
 
     Ok((
         input,
-        Param {
-            value: match values.len() {
-                1 => ParamValue::Other { name, value: values[0] },
-                _ => ParamValue::Others { name, values },
+        match values.len() {
+            1 => ParamValue::Other {
+                name,
+                value: values[0],
             },
+            _ => ParamValue::Others { name, values },
         },
     ))
 }
 
-fn x_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Param<'a>, E>
+fn x_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -475,20 +476,24 @@ where
 
     Ok((
         input,
-        Param {
-            value: match values.len() {
-                1 => ParamValue::Other { name, value: values[0] },
-                _ => ParamValue::Others { name, values },
+        match values.len() {
+            1 => ParamValue::Other {
+                name,
+                value: values[0],
             },
+            _ => ParamValue::Others { name, values },
         },
     ))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::common::{CalendarUserType, Encoding, FreeBusyTimeType};
     use super::*;
     use crate::common::LanguageTag;
+    use crate::common::{
+        CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Related,
+        RelationshipType, Role, Value,
+    };
     use crate::test_utils::check_rem;
 
     #[test]
@@ -500,7 +505,7 @@ mod tests {
             ParamValue::AltRep {
                 uri: b"http://example.com/calendar"
             },
-            param.value
+            param
         );
     }
 
@@ -512,7 +517,7 @@ mod tests {
             ParamValue::CommonName {
                 name: "John Smith".to_string()
             },
-            param.value
+            param
         );
     }
 
@@ -524,7 +529,7 @@ mod tests {
             ParamValue::CommonName {
                 name: "Danny".to_string()
             },
-            param.value
+            param
         );
     }
 
@@ -536,7 +541,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Individual
             },
-            param.value
+            param
         );
     }
 
@@ -548,7 +553,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Group
             },
-            param.value
+            param
         );
     }
 
@@ -560,7 +565,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Resource
             },
-            param.value
+            param
         );
     }
 
@@ -572,7 +577,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Room
             },
-            param.value
+            param
         );
     }
 
@@ -584,7 +589,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::Unknown
             },
-            param.value
+            param
         );
     }
 
@@ -596,7 +601,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::XName("X-esl-special".to_string())
             },
-            param.value
+            param
         );
     }
 
@@ -608,7 +613,7 @@ mod tests {
             ParamValue::CalendarUserType {
                 cu_type: CalendarUserType::IanaToken("other".to_string())
             },
-            param.value
+            param
         );
     }
 
@@ -621,7 +626,7 @@ mod tests {
             ParamValue::DelegatedFrom {
                 delegators: vec![b"mailto:jsmith@example.com"],
             },
-            param.value
+            param
         );
     }
 
@@ -636,7 +641,7 @@ mod tests {
             ParamValue::DelegatedFrom {
                 delegators: vec![b"mailto:jsmith@example.com", b"mailto:danny@example.com",],
             },
-            param.value
+            param
         );
     }
 
@@ -649,7 +654,7 @@ mod tests {
             ParamValue::DelegatedTo {
                 delegates: vec![b"mailto:jsmith@example.com"],
             },
-            param.value
+            param
         );
     }
 
@@ -664,7 +669,7 @@ mod tests {
             ParamValue::DelegatedTo {
                 delegates: vec![b"mailto:jsmith@example.com", b"mailto:danny@example.com",],
             },
-            param.value
+            param
         );
     }
 
@@ -679,7 +684,7 @@ mod tests {
             ParamValue::DirectoryEntryReference {
                 uri: b"ldap://example.com:6666/o=ABC%20Industries,c=US???(cn=Jim%20Dolittle)"
             },
-            param.value
+            param
         );
     }
 
@@ -691,7 +696,7 @@ mod tests {
             ParamValue::Encoding {
                 encoding: Encoding::EightBit
             },
-            param.value
+            param
         );
     }
 
@@ -703,7 +708,7 @@ mod tests {
             ParamValue::Encoding {
                 encoding: Encoding::Base64
             },
-            param.value
+            param
         );
     }
 
@@ -716,7 +721,7 @@ mod tests {
                 type_name: "application".to_string(),
                 sub_type_name: "msword".to_string(),
             },
-            param.value
+            param
         );
     }
 
@@ -728,7 +733,7 @@ mod tests {
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::Free
             },
-            param.value
+            param
         );
     }
 
@@ -740,7 +745,7 @@ mod tests {
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::Busy
             },
-            param.value
+            param
         );
     }
 
@@ -752,7 +757,7 @@ mod tests {
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::BusyUnavailable
             },
-            param.value
+            param
         );
     }
 
@@ -764,7 +769,7 @@ mod tests {
             ParamValue::FreeBusyTimeType {
                 fb_type: FreeBusyTimeType::BusyTentative
             },
-            param.value
+            param
         );
     }
 
@@ -780,7 +785,7 @@ mod tests {
                     ..Default::default()
                 }
             },
-            param.value
+            param
         );
     }
 
@@ -793,7 +798,7 @@ mod tests {
             ParamValue::Members {
                 members: vec![b"mailto:ietf-calsch@example.org"],
             },
-            param.value
+            param
         );
     }
 
@@ -811,7 +816,7 @@ mod tests {
                     b"mailto:projectB@example.com",
                 ],
             },
-            param.value
+            param
         );
     }
 
@@ -823,7 +828,7 @@ mod tests {
             ParamValue::ParticipationStatus {
                 status: ParticipationStatusUnknown::Declined
             },
-            param.value
+            param
         );
     }
 
@@ -835,7 +840,7 @@ mod tests {
             ParamValue::Range {
                 range: Range::ThisAndFuture
             },
-            param.value
+            param
         );
     }
 
@@ -847,7 +852,7 @@ mod tests {
             ParamValue::Related {
                 related: Related::Start
             },
-            param.value
+            param
         );
     }
 
@@ -859,7 +864,7 @@ mod tests {
             ParamValue::Related {
                 related: Related::End
             },
-            param.value
+            param
         );
     }
 
@@ -871,7 +876,7 @@ mod tests {
             ParamValue::RelationshipType {
                 relationship: RelationshipType::Sibling
             },
-            param.value
+            param
         );
     }
 
@@ -879,21 +884,21 @@ mod tests {
     fn param_role() {
         let (rem, param) = known_param::<Error>(b"ROLE=CHAIR;").unwrap();
         check_rem(rem, 1);
-        assert_eq!(ParamValue::Role { role: Role::Chair }, param.value);
+        assert_eq!(ParamValue::Role { role: Role::Chair }, param);
     }
 
     #[test]
     fn param_rsvp_true() {
         let (rem, param) = known_param::<Error>(b"RSVP=TRUE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!(ParamValue::Rsvp { rsvp: true }, param.value);
+        assert_eq!(ParamValue::Rsvp { rsvp: true }, param);
     }
 
     #[test]
     fn param_rsvp_false() {
         let (rem, param) = known_param::<Error>(b"RSVP=FALSE;").unwrap();
         check_rem(rem, 1);
-        assert_eq!(ParamValue::Rsvp { rsvp: false }, param.value);
+        assert_eq!(ParamValue::Rsvp { rsvp: false }, param);
     }
 
     #[test]
@@ -904,7 +909,7 @@ mod tests {
             ParamValue::SentBy {
                 address: b"mailto:sray@example.com"
             },
-            param.value
+            param
         );
     }
 
@@ -917,7 +922,7 @@ mod tests {
                 tz_id: "America/New_York".to_string(),
                 unique: false,
             },
-            param.value
+            param
         );
     }
 
@@ -930,7 +935,7 @@ mod tests {
                 tz_id: "America/New_York".to_string(),
                 unique: true,
             },
-            param.value
+            param
         );
     }
 
@@ -942,7 +947,7 @@ mod tests {
             ParamValue::ValueType {
                 value: Value::Binary
             },
-            param.value
+            param
         );
     }
 }
