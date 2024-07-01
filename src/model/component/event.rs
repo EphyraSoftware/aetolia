@@ -27,9 +27,10 @@ use crate::model::{
     UrlPropertyBuilder,
 };
 use crate::prelude::{
-    AttachPropertyBuilder, AttendeeParamBuilder, ClassPropertyBuilder, CommentParamBuilder,
-    ContactParamBuilder, DescriptionPropertyBuilder, ExceptionDateTimesPropertyBuilder,
-    LastModifiedPropertyBuilder, Period, SummaryPropertyBuilder, UniqueIdentifierPropertyBuilder,
+    AttachPropertyBuilder, AttendeeParamBuilder, ClassificationPropertyBuilder,
+    CommentParamBuilder, ContactParamBuilder, DescriptionPropertyBuilder,
+    ExceptionDateTimesPropertyBuilder, LastModifiedPropertyBuilder, Period, SummaryPropertyBuilder,
+    UniqueIdentifierPropertyBuilder,
 };
 
 pub struct EventComponent {

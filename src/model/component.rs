@@ -96,11 +96,11 @@ pub(crate) use add_unique_identifier;
 
 macro_rules! add_class {
     () => {
-        pub fn add_class<V: ToString>(
+        pub fn add_class(
             self,
-            value: V,
-        ) -> $crate::model::property::ClassPropertyBuilder<Self> {
-            $crate::model::property::ClassPropertyBuilder::new(self, value.to_string())
+            value: $crate::model::property::Classification,
+        ) -> $crate::model::property::ClassificationPropertyBuilder<Self> {
+            $crate::model::property::ClassificationPropertyBuilder::new(self, value)
         }
     };
 }

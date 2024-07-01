@@ -248,7 +248,7 @@ pub enum ComponentProperty {
     DateTimeStamp(DateTimeStampProperty),
     UniqueIdentifier(UniqueIdentifierProperty),
     DateTimeStart(DateTimeStartProperty),
-    Class(ClassProperty),
+    Class(ClassificationProperty),
     Created(CreatedProperty),
     Description(DescriptionProperty),
     GeographicPosition(GeographicPositionProperty),
@@ -442,7 +442,7 @@ where
 impl_other_component_params_builder!(DateTimeStampPropertyBuilder<P>);
 
 pub struct UniqueIdentifierProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -471,8 +471,8 @@ where
 impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
 pub struct DateTimeStartProperty {
-    date: time::Date,
-    time: Option<time::Time>,
+    pub(crate) date: time::Date,
+    pub(crate) time: Option<time::Time>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -511,24 +511,24 @@ where
 
 impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
 
-pub struct ClassProperty {
-    value: String,
+pub struct ClassificationProperty {
+    pub(crate) value: Classification,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct ClassPropertyBuilder<P: AddComponentProperty> {
+pub struct ClassificationPropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: ClassProperty,
+    inner: ClassificationProperty,
 }
 
-impl<P> ClassPropertyBuilder<P>
+impl<P> ClassificationPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, value: String) -> ClassPropertyBuilder<P> {
-        ClassPropertyBuilder {
+    pub(crate) fn new(owner: P, value: Classification) -> ClassificationPropertyBuilder<P> {
+        ClassificationPropertyBuilder {
             owner,
-            inner: ClassProperty {
+            inner: ClassificationProperty {
                 value,
                 params: Vec::new(),
             },
@@ -538,7 +538,7 @@ where
     impl_finish_component_property_build!(ComponentProperty::Class);
 }
 
-impl_other_component_params_builder!(ClassPropertyBuilder<P>);
+impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
 pub struct CreatedProperty {
     date: time::Date,

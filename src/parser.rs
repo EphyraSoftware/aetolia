@@ -21,7 +21,10 @@ mod property;
 
 pub use object::types::ICalendar;
 pub use param::ParamValue;
-pub use property::DateTimeStampProperty;
+pub use property::{
+    Classification, ClassificationProperty, Date, DateOrDateTime, DateTime, DateTimeStampProperty,
+    DateTimeStartProperty, Time, UniqueIdentifierProperty,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
