@@ -149,7 +149,7 @@ impl ToModel for crate::parser::OrganizerProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::OrganizerProperty {
-            value: convert_string(&self.value),
+            value: convert_string(self.value),
             params: self.params.to_model()?,
         })
     }
@@ -278,12 +278,12 @@ impl TryFrom<&crate::parser::Date> for time::Date {
     type Error = anyhow::Error;
 
     fn try_from(value: &crate::parser::Date) -> Result<Self, Self::Error> {
-        Ok(time::Date::from_calendar_date(
+        time::Date::from_calendar_date(
             value.year as i32,
             time::Month::try_from(value.month).context("Invalid month")?,
             value.day,
         )
-        .context("Invalid date")?)
+        .context("Invalid date")
     }
 }
 

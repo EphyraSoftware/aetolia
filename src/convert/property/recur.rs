@@ -54,7 +54,7 @@ impl ToModel for Vec<RecurRulePart> {
                     rule = rule.set_by_month(
                         month
                             .iter()
-                            .map(|m| time::Month::try_from(m.clone()).context("Invalid month"))
+                            .map(|m| time::Month::try_from(*m).context("Invalid month"))
                             .collect::<anyhow::Result<Vec<_>>>()?,
                     );
                 }

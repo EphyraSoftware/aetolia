@@ -488,9 +488,7 @@ impl Display for Uri<'_> {
                 }
                 Host::IpAddr(IpAddr::VFuture(vf)) => {
                     f.write_char('[')?;
-                    vf.iter()
-                        .map(|b| write!(f, "{:02X}", b))
-                        .collect::<std::fmt::Result>()?;
+                    vf.iter().try_for_each(|b| write!(f, "{:02X}", b))?;
                     f.write_char(']')?;
                 }
                 Host::RegName(name) => write!(f, "{}", String::from_utf8_lossy(name))?,
