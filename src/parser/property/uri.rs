@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Display, Formatter, Write};
 use crate::parser::{Error, InnerError};
 use crate::single;
 use nom::branch::alt;
@@ -464,6 +465,56 @@ where
     ))(input)
 }
 
+impl Display for Uri<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(self.scheme))?;
+        f.write_char(':');
+
+        if let Some(authority) = &self.authority {
+            f.write_char('/')?;
+            f.write_char('/')?;
+
+            if let Some(user_info) = &authority.user_info {
+                write!(f, "{}", String::from_utf8_lossy(user_info));
+                f.write_char('@')?;
+            }
+
+            match &authority.host {
+                Host::IpAddr(IpAddr::V4(ip)) => write!(f, "{}", ip)?,
+                Host::IpAddr(IpAddr::V6(ip)) => {
+                    f.write_char('[')?;
+                    write!(f, "{}", ip)?;
+                    f.write_char(']')?;
+                }
+                Host::IpAddr(IpAddr::VFuture(vf)) => {
+                    f.write_char('[')?;
+                    vf.iter().map(|b| write!(f, "{:02X}", b)).collect::<std::fmt::Result>()?;
+                    f.write_char(']')?;
+                }
+                Host::RegName(name) => write!(f, "{}", String::from_utf8_lossy(name))?,
+            }
+
+            if let Some(port) = authority.port {
+                write!(f, ":{}", port)?;
+            }
+        };
+
+        write!(f, "{}", String::from_utf8_lossy(&self.path))?;
+
+        if let Some(query) = self.query {
+            f.write_char('?')?;
+            write!(f, "{}", String::from_utf8_lossy(query))?;
+        }
+
+        if let Some(fragment) = self.fragment {
+            f.write_char('#')?;
+            write!(f, "{}", String::from_utf8_lossy(fragment))?;
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,28 +522,32 @@ mod tests {
 
     #[test]
     fn ftp() {
+        let raw = b"ftp://ftp.is.co.za/rfc/rfc1808.txt`";
         let (input, uri) =
-            param_value_uri::<Error>(b"ftp://ftp.is.co.za/rfc/rfc1808.txt`").unwrap();
+            param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ftp");
         assert_eq!(
-            uri.authority.unwrap().host,
+            uri.authority.clone().unwrap().host,
             Host::RegName(b"ftp.is.co.za".to_vec())
         );
         assert_eq!(uri.path, b"/rfc/rfc1808.txt");
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn http() {
+        let raw = b"http://www.ietf.org/rfc/rfc2396.txt`";
         let (input, uri) =
-            param_value_uri::<Error>(b"http://www.ietf.org/rfc/rfc2396.txt`").unwrap();
+            param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"http");
         assert_eq!(
-            uri.authority.unwrap().host,
+            uri.authority.clone().unwrap().host,
             Host::RegName(b"www.ietf.org".to_vec())
         );
         assert_eq!(uri.path, b"/rfc/rfc2396.txt");
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
@@ -504,60 +559,71 @@ mod tests {
 
     #[test]
     fn ldap() {
+        let raw = b"ldap://[2001:db8::7]/c=GB?objectClass?one`";
         let (input, uri) =
-            param_value_uri::<Error>(b"ldap://[2001:db8::7]/c=GB?objectClass?one`").unwrap();
+            param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
         assert_eq!(
-            uri.authority.unwrap().host,
+            uri.authority.clone().unwrap().host,
             Host::IpAddr(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 7)))
         );
         assert_eq!(uri.path, b"/c=GB");
         assert_eq!(uri.query.unwrap(), b"objectClass?one");
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn mailto() {
-        let (input, uri) = param_value_uri::<Error>(b"mailto:John.Doe@example.com`").unwrap();
+        let raw = b"mailto:John.Doe@example.com`";
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"mailto");
         assert_eq!(uri.path, b"John.Doe@example.com".to_vec());
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn news() {
+        let raw = b"news:comp.infosystems.www.servers.unix`";
         let (input, uri) =
-            param_value_uri::<Error>(b"news:comp.infosystems.www.servers.unix`").unwrap();
+            param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"news");
         assert_eq!(uri.path, b"comp.infosystems.www.servers.unix".to_vec());
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn tel() {
-        let (input, uri) = param_value_uri::<Error>(b"tel:+1-816-555-1212`").unwrap();
+        let raw = b"tel:+1-816-555-1212`";
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"tel");
         assert_eq!(uri.path, b"+1-816-555-1212".to_vec());
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn telnet() {
-        let (input, uri) = param_value_uri::<Error>(b"telnet://192.0.2.16:80/`").unwrap();
+        let raw = b"telnet://192.0.2.16:80/`";
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"telnet");
-        let authority = uri.authority.unwrap();
+        let authority = uri.authority.clone().unwrap();
         assert_eq!(
             authority.host,
             Host::IpAddr(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 16)))
         );
-        assert_eq!(authority.port.unwrap(), 80);
+        assert_eq!(authority.port.clone().unwrap(), 80);
+        check_serialize_raw(uri, raw);
     }
 
     #[test]
     fn urn() {
+        let raw = b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`";
         let (input, uri) =
-            param_value_uri::<Error>(b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`")
+            param_value_uri::<Error>(raw)
                 .unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"urn");
@@ -565,5 +631,11 @@ mod tests {
             uri.path,
             b"oasis:names:specification:docbook:dtd:xml:4.1.2".to_vec()
         );
+        check_serialize_raw(uri, raw);
+    }
+
+    fn check_serialize_raw(uri: Uri, raw: &[u8]) {
+        let out = uri.to_string();
+        assert_eq!(out.as_bytes(), &raw[..(raw.len() - 1)]);
     }
 }
