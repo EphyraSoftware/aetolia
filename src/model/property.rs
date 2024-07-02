@@ -14,7 +14,7 @@ use std::ops::Deref;
 
 use crate::common::{
     CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, Related,
-    RelationshipType, Role, Value,
+    RelationshipType, Role, Status, TimeTransparency, Value,
 };
 pub use duration::*;
 pub use recur::*;
@@ -43,18 +43,6 @@ impl Display for Classification {
         };
         write!(f, "{}", str)
     }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Status {
-    Tentative,
-    Confirmed,
-    Cancelled,
-    NeedsAction,
-    Completed,
-    InProcess,
-    Draft,
-    Final,
 }
 
 pub enum StatusEvent {
@@ -135,8 +123,8 @@ pub enum CalendarProperty {
 }
 
 pub struct ProductIdProperty {
-    params: Vec<Param>,
-    value: String,
+    pub(crate) value: String,
+    pub(crate) params: Vec<Param>,
 }
 
 pub struct ProductIdPropertyBuilder {
@@ -149,8 +137,8 @@ impl ProductIdPropertyBuilder {
         ProductIdPropertyBuilder {
             owner,
             inner: ProductIdProperty {
-                params: Vec::new(),
                 value,
+                params: Vec::new(),
             },
         }
     }
@@ -161,9 +149,9 @@ impl ProductIdPropertyBuilder {
 impl_other_params_builder!(ProductIdPropertyBuilder);
 
 pub struct VersionProperty {
-    params: Vec<Param>,
-    min_version: Option<String>,
-    max_version: String,
+    pub(crate) min_version: Option<String>,
+    pub(crate) max_version: String,
+    pub(crate) params: Vec<Param>,
 }
 
 pub struct VersionPropertyBuilder {
@@ -180,9 +168,9 @@ impl VersionPropertyBuilder {
         VersionPropertyBuilder {
             owner,
             inner: VersionProperty {
-                params: Vec::new(),
                 min_version,
                 max_version,
+                params: Vec::new(),
             },
         }
     }
@@ -193,8 +181,8 @@ impl VersionPropertyBuilder {
 impl_other_params_builder!(VersionPropertyBuilder);
 
 pub struct CalendarScaleProperty {
-    params: Vec<Param>,
-    value: String,
+    pub(crate) value: String,
+    pub(crate) params: Vec<Param>,
 }
 
 pub struct CalendarScalePropertyBuilder {
@@ -207,8 +195,8 @@ impl CalendarScalePropertyBuilder {
         CalendarScalePropertyBuilder {
             owner,
             inner: CalendarScaleProperty {
-                params: Vec::new(),
                 value,
+                params: Vec::new(),
             },
         }
     }
@@ -219,8 +207,8 @@ impl CalendarScalePropertyBuilder {
 impl_other_params_builder!(CalendarScalePropertyBuilder);
 
 pub struct MethodProperty {
-    params: Vec<Param>,
-    value: String,
+    pub(crate) value: String,
+    pub(crate) params: Vec<Param>,
 }
 
 pub struct MethodPropertyBuilder {
@@ -297,9 +285,9 @@ pub enum Trigger {
 }
 
 pub struct XProperty {
+    pub(crate) name: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
-    name: String,
-    value: String,
 }
 
 pub struct XPropertyBuilder {
@@ -312,9 +300,9 @@ impl XPropertyBuilder {
         XPropertyBuilder {
             owner,
             inner: XProperty {
-                params: Vec::new(),
                 name,
                 value,
+                params: Vec::new(),
             },
         }
     }
@@ -325,9 +313,9 @@ impl XPropertyBuilder {
 impl_other_params_builder!(XPropertyBuilder);
 
 pub struct IanaProperty {
+    pub(crate) name: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
-    name: String,
-    value: String,
 }
 
 pub struct IanaPropertyBuilder {
@@ -344,9 +332,9 @@ impl IanaPropertyBuilder {
         IanaPropertyBuilder {
             owner,
             inner: IanaProperty {
-                params: Vec::new(),
                 name,
                 value,
+                params: Vec::new(),
             },
         }
     }
@@ -394,9 +382,9 @@ where
         IanaComponentPropertyBuilder {
             owner,
             inner: IanaProperty {
-                params: Vec::new(),
                 name,
                 value,
+                params: Vec::new(),
             },
         }
     }
@@ -541,8 +529,8 @@ where
 impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
 pub struct CreatedProperty {
-    date: time::Date,
-    time: time::Time,
+    pub(crate) date: time::Date,
+    pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
 }
 
@@ -572,7 +560,7 @@ where
 impl_other_component_params_builder!(CreatedPropertyBuilder<P>);
 
 pub struct DescriptionProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -604,8 +592,8 @@ where
 impl_other_component_params_builder!(DescriptionPropertyBuilder<P>);
 
 pub struct GeographicPositionProperty {
-    latitude: f64,
-    longitude: f64,
+    pub(crate) latitude: f64,
+    pub(crate) longitude: f64,
     pub(crate) params: Vec<Param>,
 }
 
@@ -639,8 +627,8 @@ where
 impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 
 pub struct LastModifiedProperty {
-    date: time::Date,
-    time: time::Time,
+    pub(crate) date: time::Date,
+    pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
 }
 
@@ -674,7 +662,7 @@ where
 impl_other_component_params_builder!(LastModifiedPropertyBuilder<P>);
 
 pub struct LocationProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -706,8 +694,8 @@ where
 impl_other_component_params_builder!(LocationPropertyBuilder<P>);
 
 pub struct OrganizerProperty {
-    pub(crate) params: Vec<Param>,
     pub(crate) value: String,
+    pub(crate) params: Vec<Param>,
 }
 
 pub struct OrganizerPropertyBuilder<P: AddComponentProperty> {
@@ -743,7 +731,7 @@ where
 impl_other_component_params_builder!(OrganizerPropertyBuilder<P>);
 
 pub struct PriorityProperty {
-    value: u8,
+    pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
 }
 
@@ -772,7 +760,7 @@ where
 impl_other_component_params_builder!(PriorityPropertyBuilder<P>);
 
 pub struct SequenceProperty {
-    value: u32,
+    pub(crate) value: u32,
     pub(crate) params: Vec<Param>,
 }
 
@@ -801,9 +789,9 @@ where
 impl_other_component_params_builder!(SequencePropertyBuilder<P>);
 
 pub struct RequestStatusProperty {
-    status_code: Vec<u32>,
-    description: String,
-    exception_data: Option<String>,
+    pub(crate) status_code: Vec<u32>,
+    pub(crate) description: String,
+    pub(crate) exception_data: Option<String>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -841,7 +829,7 @@ where
 impl_other_component_params_builder!(RequestStatusPropertyBuilder<P>);
 
 pub struct SummaryProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -873,7 +861,7 @@ where
 impl_other_component_params_builder!(SummaryPropertyBuilder<P>);
 
 pub struct TimeTransparencyProperty {
-    value: String,
+    pub(crate) value: TimeTransparency,
     pub(crate) params: Vec<Param>,
 }
 
@@ -886,7 +874,7 @@ impl<P> TimeTransparencyPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, value: String) -> TimeTransparencyPropertyBuilder<P> {
+    pub(crate) fn new(owner: P, value: TimeTransparency) -> TimeTransparencyPropertyBuilder<P> {
         TimeTransparencyPropertyBuilder {
             owner,
             inner: TimeTransparencyProperty {
@@ -903,7 +891,7 @@ impl_other_component_params_builder!(TimeTransparencyPropertyBuilder<P>);
 
 pub struct UrlProperty {
     // TODO should be a URI
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -932,8 +920,8 @@ where
 impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 
 pub struct RecurrenceIdProperty {
-    date: time::Date,
-    time: Option<time::Time>,
+    pub(crate) date: time::Date,
+    pub(crate) time: Option<time::Time>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -978,7 +966,7 @@ where
 impl_other_component_params_builder!(RecurrenceIdPropertyBuilder<P>);
 
 pub struct RecurrenceRuleProperty {
-    rule: RecurrenceRule,
+    pub(crate) rule: RecurrenceRule,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1007,8 +995,8 @@ where
 impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
 pub struct DateTimeEndProperty {
-    date: time::Date,
-    time: Option<time::Time>,
+    pub(crate) date: time::Date,
+    pub(crate) time: Option<time::Time>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1048,7 +1036,7 @@ where
 impl_other_component_params_builder!(DateTimeEndPropertyBuilder<P>);
 
 pub struct DurationProperty {
-    duration: duration::Duration,
+    pub(crate) duration: Duration,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1061,7 +1049,7 @@ impl<P> DurationPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, duration: duration::Duration) -> DurationPropertyBuilder<P> {
+    pub(crate) fn new(owner: P, duration: Duration) -> DurationPropertyBuilder<P> {
         DurationPropertyBuilder {
             owner,
             inner: DurationProperty {
@@ -1077,8 +1065,8 @@ where
 impl_other_component_params_builder!(DurationPropertyBuilder<P>);
 
 pub struct AttachProperty {
-    value_uri: Option<String>,
-    value_binary: Option<String>,
+    pub(crate) value_uri: Option<String>,
+    pub(crate) value_binary: Option<String>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1138,7 +1126,7 @@ where
 impl_other_component_params_builder!(AttachPropertyBuilder<P>);
 
 pub struct AttendeeParam {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1213,7 +1201,7 @@ where
 impl_other_component_params_builder!(AttendeeParamBuilder<P, PS>);
 
 pub struct CategoriesParam {
-    value: Vec<String>,
+    pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1244,7 +1232,7 @@ where
 impl_other_component_params_builder!(CategoriesParamBuilder<P>);
 
 pub struct CommentParam {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1276,7 +1264,7 @@ where
 impl_other_component_params_builder!(CommentParamBuilder<P>);
 
 pub struct ContactParam {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1308,7 +1296,7 @@ where
 impl_other_component_params_builder!(ContactParamBuilder<P>);
 
 pub struct ExceptionDateTimesProperty {
-    date_times: Vec<(time::Date, Option<time::Time>)>,
+    pub(crate) date_times: Vec<(time::Date, Option<time::Time>)>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1341,7 +1329,7 @@ where
 impl_other_component_params_builder!(ExceptionDateTimesPropertyBuilder<P>);
 
 pub struct StatusProperty {
-    value: Status,
+    pub(crate) value: Status,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1370,7 +1358,7 @@ where
 impl_other_component_params_builder!(StatusPropertyBuilder<P>);
 
 pub struct RelatedToProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1406,7 +1394,7 @@ where
 impl_other_component_params_builder!(RelatedToPropertyBuilder<P>);
 
 pub struct ResourcesProperty {
-    value: Vec<String>,
+    pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1473,8 +1461,8 @@ pub enum PeriodEnd {
 }
 
 pub struct RecurrenceDateTimesProperty {
-    date_times: Vec<(time::Date, Option<time::Time>)>,
-    periods: Vec<Period>,
+    pub(crate) date_times: Vec<(time::Date, Option<time::Time>)>,
+    pub(crate) periods: Vec<Period>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1524,8 +1512,8 @@ where
 impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
 pub struct CompletedProperty {
-    date: time::Date,
-    time: time::Time,
+    pub(crate) date: time::Date,
+    pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1555,7 +1543,7 @@ where
 impl_other_component_params_builder!(CompletedPropertyBuilder<P>);
 
 pub struct PercentCompleteProperty {
-    value: u8,
+    pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1584,8 +1572,8 @@ where
 impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
 pub struct DueDateTimeProperty {
-    date: time::Date,
-    time: Option<time::Time>,
+    pub(crate) date: time::Date,
+    pub(crate) time: Option<time::Time>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1625,7 +1613,7 @@ where
 impl_other_component_params_builder!(DueDateTimePropertyBuilder<P>);
 
 pub struct FreeBusyProperty {
-    value: Vec<Period>,
+    pub(crate) value: Vec<Period>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1660,8 +1648,8 @@ where
 impl_other_component_params_builder!(FreeBusyPropertyBuilder<P>);
 
 pub struct TimeZoneIdProperty {
-    value: String,
-    unique_registry_id: bool,
+    pub(crate) value: String,
+    pub(crate) unique_registry_id: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1695,7 +1683,7 @@ where
 impl_other_component_params_builder!(TimeZoneIdPropertyBuilder<P>);
 
 pub struct TimeZoneUrlProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1742,7 +1730,7 @@ impl TimeZoneOffset {
 }
 
 pub struct TimeZoneOffsetToProperty {
-    offset: TimeZoneOffset,
+    pub(crate) offset: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1771,7 +1759,7 @@ where
 impl_other_component_params_builder!(TimeZoneOffsetToPropertyBuilder<P>);
 
 pub struct TimeZoneOffsetFromProperty {
-    offset: TimeZoneOffset,
+    pub(crate) offset: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1800,7 +1788,7 @@ where
 impl_other_component_params_builder!(TimeZoneOffsetFromPropertyBuilder<P>);
 
 pub struct TimeZoneNameProperty {
-    value: String,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1839,7 +1827,7 @@ pub enum Action {
 }
 
 pub struct ActionProperty {
-    value: Action,
+    pub(crate) value: Action,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1868,7 +1856,7 @@ where
 impl_other_component_params_builder!(ActionPropertyBuilder<P>);
 
 pub struct RelativeTriggerProperty {
-    value: Duration,
+    pub(crate) value: Duration,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1908,8 +1896,8 @@ where
 impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 
 pub struct AbsoluteTriggerProperty {
-    date: time::Date,
-    time: time::Time,
+    pub(crate) date: time::Date,
+    pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1949,7 +1937,7 @@ where
 impl_other_component_params_builder!(AbsoluteTriggerPropertyBuilder<P>);
 
 pub struct RepeatProperty {
-    value: u32,
+    pub(crate) value: u32,
     pub(crate) params: Vec<Param>,
 }
 

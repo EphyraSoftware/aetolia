@@ -118,3 +118,58 @@ pub enum ParticipationStatusUnknown {
     XName(String),
     IanaToken(String),
 }
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Status {
+    Tentative,
+    Confirmed,
+    Cancelled,
+    NeedsAction,
+    Completed,
+    InProcess,
+    Draft,
+    Final,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum TimeTransparency {
+    Opaque,
+    Transparent,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RecurFreq {
+    Secondly,
+    Minutely,
+    Hourly,
+    Daily,
+    Weekly,
+    Monthly,
+    Yearly,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Weekday {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct OffsetWeekday {
+    pub offset_weeks: Option<i8>,
+    pub weekday: Weekday,
+}
+
+impl OffsetWeekday {
+    pub fn new(weekday: Weekday, offset_weeks: Option<i8>) -> Self {
+        OffsetWeekday {
+            weekday,
+            offset_weeks,
+        }
+    }
+}

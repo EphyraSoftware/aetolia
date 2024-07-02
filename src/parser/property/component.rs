@@ -1,4 +1,4 @@
-use crate::common::{Encoding, Value};
+use crate::common::{Encoding, Status, TimeTransparency, Value};
 use crate::parser::param::{other_params, params, ParamValue};
 use crate::parser::property::recur::{recur, RecurRulePart};
 use crate::parser::property::uri::{param_value_uri, Uri};
@@ -358,18 +358,6 @@ where
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Status {
-    Tentative,
-    Confirmed,
-    Cancelled,
-    NeedsAction,
-    Completed,
-    InProcess,
-    Draft,
-    Final,
-}
-
-#[derive(Debug, Eq, PartialEq)]
 pub struct StatusProperty<'a> {
     pub other_params: Vec<ParamValue<'a>>,
     pub value: Status,
@@ -609,12 +597,6 @@ where
     ))(input)?;
 
     Ok((input, FreeBusyTimeProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum TimeTransparency {
-    Opaque,
-    Transparent,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -1430,9 +1412,9 @@ where
 mod tests {
     use super::*;
     use crate::common::FreeBusyTimeType;
+    use crate::common::RecurFreq;
     use crate::common::{LanguageTag, ParticipationStatusUnknown, Range, Related, Role, Value};
     use crate::parser::param::ParamValue;
-    use crate::parser::property::recur::RecurFreq;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Period, PeriodEnd, Time};
     use crate::test_utils::check_rem;

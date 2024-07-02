@@ -1,4 +1,3 @@
-use std::fmt::{Debug, Display, Formatter, Write};
 use crate::parser::{Error, InnerError};
 use crate::single;
 use nom::branch::alt;
@@ -10,6 +9,7 @@ use nom::error::ParseError;
 use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
+use std::fmt::{Debug, Display, Formatter, Write};
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -488,7 +488,9 @@ impl Display for Uri<'_> {
                 }
                 Host::IpAddr(IpAddr::VFuture(vf)) => {
                     f.write_char('[')?;
-                    vf.iter().map(|b| write!(f, "{:02X}", b)).collect::<std::fmt::Result>()?;
+                    vf.iter()
+                        .map(|b| write!(f, "{:02X}", b))
+                        .collect::<std::fmt::Result>()?;
                     f.write_char(']')?;
                 }
                 Host::RegName(name) => write!(f, "{}", String::from_utf8_lossy(name))?,
@@ -523,8 +525,7 @@ mod tests {
     #[test]
     fn ftp() {
         let raw = b"ftp://ftp.is.co.za/rfc/rfc1808.txt`";
-        let (input, uri) =
-            param_value_uri::<Error>(raw).unwrap();
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ftp");
         assert_eq!(
@@ -538,8 +539,7 @@ mod tests {
     #[test]
     fn http() {
         let raw = b"http://www.ietf.org/rfc/rfc2396.txt`";
-        let (input, uri) =
-            param_value_uri::<Error>(raw).unwrap();
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"http");
         assert_eq!(
@@ -560,8 +560,7 @@ mod tests {
     #[test]
     fn ldap() {
         let raw = b"ldap://[2001:db8::7]/c=GB?objectClass?one`";
-        let (input, uri) =
-            param_value_uri::<Error>(raw).unwrap();
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"ldap");
         assert_eq!(
@@ -586,8 +585,7 @@ mod tests {
     #[test]
     fn news() {
         let raw = b"news:comp.infosystems.www.servers.unix`";
-        let (input, uri) =
-            param_value_uri::<Error>(raw).unwrap();
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"news");
         assert_eq!(uri.path, b"comp.infosystems.www.servers.unix".to_vec());
@@ -622,9 +620,7 @@ mod tests {
     #[test]
     fn urn() {
         let raw = b"urn:oasis:names:specification:docbook:dtd:xml:4.1.2`";
-        let (input, uri) =
-            param_value_uri::<Error>(raw)
-                .unwrap();
+        let (input, uri) = param_value_uri::<Error>(raw).unwrap();
         check_rem(input, 1);
         assert_eq!(uri.scheme, b"urn");
         assert_eq!(

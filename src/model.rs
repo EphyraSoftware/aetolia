@@ -13,7 +13,7 @@ pub use property::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::{LanguageTag, Range, RelationshipType};
+    use crate::common::{LanguageTag, Range, RecurFreq, RelationshipType, TimeTransparency};
     use crate::model::object::ICalObject;
     use crate::model::param::OtherParamsBuilder;
     use time::Date;
@@ -174,7 +174,7 @@ mod tests {
             .add_range(Range::ThisAndFuture)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_recurrence_rule(Frequency::Hourly, |rule| rule.set_by_hour(vec![1, 2, 3]))
+            .add_recurrence_rule(RecurFreq::Hourly, |rule| rule.set_by_hour(vec![1, 2, 3]))
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_date_time_end(

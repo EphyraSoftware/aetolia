@@ -1,3 +1,4 @@
+use crate::common::TimeTransparency;
 use crate::model::alarm::{
     AddAlarmComponent, AlarmComponent, AudioAlarmComponentBuilder, DisplayAlarmComponentBuilder,
     EmailAlarmComponentBuilder,
@@ -18,13 +19,12 @@ use crate::model::{
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, CategoriesParamBuilder, CreatedPropertyBuilder,
     DateTimeEndPropertyBuilder, DateTimeStartPropertyBuilder, Duration, DurationPropertyBuilder,
-    Frequency, GeographicPositionPropertyBuilder, IanaComponentPropertyBuilder,
-    LocationPropertyBuilder, OrganizerPropertyBuilder, ParticipationStatusEvent,
-    PriorityPropertyBuilder, RecurrenceDateTimesPropertyBuilder, RecurrenceIdPropertyBuilder,
-    RecurrenceRule, RecurrenceRulePropertyBuilder, RelatedToPropertyBuilder,
-    RequestStatusPropertyBuilder, ResourcesPropertyBuilder, SequencePropertyBuilder, StatusEvent,
-    StatusProperty, StatusPropertyBuilder, TimeTransparency, TimeTransparencyPropertyBuilder,
-    UrlPropertyBuilder,
+    GeographicPositionPropertyBuilder, IanaComponentPropertyBuilder, LocationPropertyBuilder,
+    OrganizerPropertyBuilder, ParticipationStatusEvent, PriorityPropertyBuilder,
+    RecurrenceDateTimesPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
+    RecurrenceRulePropertyBuilder, RelatedToPropertyBuilder, RequestStatusPropertyBuilder,
+    ResourcesPropertyBuilder, SequencePropertyBuilder, StatusEvent, StatusProperty,
+    StatusPropertyBuilder, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
     AttachPropertyBuilder, AttendeeParamBuilder, ClassificationPropertyBuilder,
@@ -88,7 +88,7 @@ impl EventComponentBuilder {
         self,
         value: TimeTransparency,
     ) -> TimeTransparencyPropertyBuilder<Self> {
-        TimeTransparencyPropertyBuilder::new(self, value.to_string())
+        TimeTransparencyPropertyBuilder::new(self, value)
     }
 
     add_url!();

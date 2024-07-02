@@ -1,5 +1,6 @@
+use crate::common::{OffsetWeekday, RecurFreq, Weekday};
 use crate::parser::property::{prop_value_date, prop_value_time, DateTime};
-use crate::parser::{Error, InnerError};
+use crate::parser::{DateOrDateTime, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::{take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
@@ -14,7 +15,7 @@ use nom::{IResult, Parser};
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RecurRulePart {
     Freq(RecurFreq),
-    Until(DateTime),
+    Until(DateOrDateTime),
     Count(u64),
     Interval(u64),
     BySecList(Vec<u8>),
@@ -27,34 +28,6 @@ pub enum RecurRulePart {
     ByMonth(Vec<u8>),
     BySetPos(Vec<i16>),
     WeekStart(Weekday),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RecurFreq {
-    Secondly,
-    Minutely,
-    Hourly,
-    Daily,
-    Weekly,
-    Monthly,
-    Yearly,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Weekday {
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday,
-    Sunday,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct OffsetWeekday {
-    pub offset_weeks: Option<i8>,
-    pub weekday: Weekday,
 }
 
 pub fn recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
@@ -128,16 +101,22 @@ where
     Ok((input, freq))
 }
 
-fn end_date<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DateTime, E>
+fn end_date<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DateOrDateTime, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (date, opt_time)) =
         tuple((prop_value_date, opt(tuple((char('T'), prop_value_time)))))(input)?;
 
-    let time = opt_time.map(|(_, time)| time).unwrap_or_default();
+    let time = opt_time.map(|(_, time)| time);
 
-    Ok((input, DateTime { date, time }))
+    Ok((
+        input,
+        match time {
+            Some(time) => DateOrDateTime::DateTime(DateTime { date, time }),
+            None => DateOrDateTime::Date(date),
+        },
+    ))
 }
 
 fn read_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>

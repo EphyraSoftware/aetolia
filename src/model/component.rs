@@ -271,7 +271,7 @@ macro_rules! add_recurrence_rule {
     () => {
         pub fn add_recurrence_rule(
             self,
-            frequency: $crate::model::property::Frequency,
+            frequency: $crate::common::RecurFreq,
             builder: fn(
                 $crate::model::property::RecurrenceRule,
             ) -> $crate::model::property::RecurrenceRule,

@@ -21,9 +21,16 @@ mod property;
 
 pub use object::types::ICalendar;
 pub use param::ParamValue;
+pub use property::recur::RecurRulePart;
 pub use property::{
-    Classification, ClassificationProperty, Date, DateOrDateTime, DateTime, DateTimeStampProperty,
-    DateTimeStartProperty, Time, UniqueIdentifierProperty,
+    AttachProperty, AttendeeProperty, CategoriesProperty, Classification, ClassificationProperty,
+    CommentProperty, ContactProperty, CreatedProperty, Date, DateOrDateTime, DateTime,
+    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
+    DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty, LastModifiedProperty,
+    LocationProperty, OrganizerProperty, PriorityProperty, RecurrenceDateTimesProperty,
+    RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty, RequestStatusProperty,
+    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, Time,
+    TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -125,7 +132,7 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
 }
 
 #[derive(Debug, PartialEq)]
-struct ContentLine<'a> {
+pub struct ContentLine<'a> {
     property_name: &'a [u8],
     params: Vec<ParamValue<'a>>,
     value: Vec<u8>,

@@ -76,11 +76,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::Value;
+    use crate::common::{Status, Value};
     use crate::parser::param::ParamValue;
     use crate::parser::property::{
         CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
-        DateTimeDueProperty, DateTimeStampProperty, Status, StatusProperty, SummaryProperty, Time,
+        DateTimeDueProperty, DateTimeStampProperty, StatusProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
     };
     use crate::parser::Error;

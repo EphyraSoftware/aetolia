@@ -74,11 +74,6 @@ pub enum Param {
     },
 }
 
-pub enum TimeTransparency {
-    Opaque,
-    Transparent,
-}
-
 impl Display for TimeTransparency {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
@@ -342,6 +337,6 @@ macro_rules! directory_entry_reference_param {
 
 use crate::common::{
     CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, ParticipationStatusUnknown, Range,
-    Related, RelationshipType, Role, Value,
+    Related, RelationshipType, Role, TimeTransparency, Value,
 };
 pub(crate) use directory_entry_reference_param;

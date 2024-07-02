@@ -1,12 +1,14 @@
+use crate::common::{OffsetWeekday, RecurFreq, Weekday};
+
 pub struct RecurrenceRule {
-    pub freq: Frequency,
+    pub freq: RecurFreq,
     pub until: Option<(time::Date, Option<time::Time>)>,
-    pub count: Option<u32>,
-    pub interval: Option<u32>,
+    pub count: Option<u64>,
+    pub interval: Option<u64>,
     pub by_second: Option<Vec<u8>>,
     pub by_minute: Option<Vec<u8>>,
     pub by_hour: Option<Vec<u8>>,
-    pub by_day: Option<Vec<WeekDayNum>>,
+    pub by_day: Option<Vec<OffsetWeekday>>,
     pub by_month_day: Option<Vec<i8>>,
     pub by_year_day: Option<Vec<i16>>,
     pub by_week_number: Option<Vec<i8>>,
@@ -16,7 +18,7 @@ pub struct RecurrenceRule {
 }
 
 impl RecurrenceRule {
-    pub fn new(freq: Frequency) -> Self {
+    pub fn new(freq: RecurFreq) -> Self {
         RecurrenceRule {
             freq,
             until: None,
@@ -40,12 +42,12 @@ impl RecurrenceRule {
         self
     }
 
-    pub fn set_count(mut self, count: u32) -> Self {
+    pub fn set_count(mut self, count: u64) -> Self {
         self.count = Some(count);
         self
     }
 
-    pub fn set_interval(mut self, interval: u32) -> Self {
+    pub fn set_interval(mut self, interval: u64) -> Self {
         self.interval = Some(interval);
         self
     }
@@ -65,7 +67,7 @@ impl RecurrenceRule {
         self
     }
 
-    pub fn set_by_day(mut self, by_day: Vec<WeekDayNum>) -> Self {
+    pub fn set_by_day(mut self, by_day: Vec<OffsetWeekday>) -> Self {
         self.by_day = Some(by_day);
         self
     }
@@ -99,38 +101,4 @@ impl RecurrenceRule {
         self.week_start = Some(week_start);
         self
     }
-}
-
-pub enum Frequency {
-    Secondly,
-    Minutely,
-    Hourly,
-    Daily,
-    Weekly,
-    Monthly,
-    Yearly,
-}
-
-pub struct WeekDayNum {
-    pub weekday: Weekday,
-    pub offset_weeks: Option<i8>,
-}
-
-impl WeekDayNum {
-    pub fn new(weekday: Weekday, offset_weeks: Option<i8>) -> Self {
-        WeekDayNum {
-            weekday,
-            offset_weeks,
-        }
-    }
-}
-
-pub enum Weekday {
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday,
-    Sunday,
 }
