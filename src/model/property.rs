@@ -254,10 +254,10 @@ pub enum ComponentProperty {
     DateTimeEnd(DateTimeEndProperty),
     Duration(DurationProperty),
     Attach(AttachProperty),
-    Attendee(AttendeeParam),
-    Categories(CategoriesParam),
-    Comment(CommentParam),
-    Contact(ContactParam),
+    Attendee(AttendeeProperty),
+    Categories(CategoriesProperty),
+    Comment(CommentProperty),
+    Contact(ContactProperty),
     ExceptionDateTimes(ExceptionDateTimesProperty),
     Status(StatusProperty),
     RelatedTo(RelatedToProperty),
@@ -1125,26 +1125,26 @@ where
 
 impl_other_component_params_builder!(AttachPropertyBuilder<P>);
 
-pub struct AttendeeParam {
+pub struct AttendeeProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct AttendeeParamBuilder<P: AddComponentProperty, PS> {
+pub struct AttendeePropertyBuilder<P: AddComponentProperty, PS> {
     owner: P,
-    inner: AttendeeParam,
+    inner: AttendeeProperty,
     _phantom: PhantomData<PS>,
 }
 
-impl<P, PS> AttendeeParamBuilder<P, PS>
+impl<P, PS> AttendeePropertyBuilder<P, PS>
 where
     P: AddComponentProperty,
     PS: Into<ParticipationStatusUnknown>,
 {
-    pub(crate) fn new(owner: P, value: String) -> AttendeeParamBuilder<P, PS> {
-        AttendeeParamBuilder {
+    pub(crate) fn new(owner: P, value: String) -> AttendeePropertyBuilder<P, PS> {
+        AttendeePropertyBuilder {
             owner,
-            inner: AttendeeParam {
+            inner: AttendeeProperty {
                 value,
                 params: Vec::new(),
             },
@@ -1198,26 +1198,26 @@ where
     impl_finish_component_property_build!(ComponentProperty::Attendee);
 }
 
-impl_other_component_params_builder!(AttendeeParamBuilder<P, PS>);
+impl_other_component_params_builder!(AttendeePropertyBuilder<P, PS>);
 
-pub struct CategoriesParam {
+pub struct CategoriesProperty {
     pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct CategoriesParamBuilder<P: AddComponentProperty> {
+pub struct CategoriesPropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: CategoriesParam,
+    inner: CategoriesProperty,
 }
 
-impl<P> CategoriesParamBuilder<P>
+impl<P> CategoriesPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, value: Vec<String>) -> CategoriesParamBuilder<P> {
-        CategoriesParamBuilder {
+    pub(crate) fn new(owner: P, value: Vec<String>) -> CategoriesPropertyBuilder<P> {
+        CategoriesPropertyBuilder {
             owner,
-            inner: CategoriesParam {
+            inner: CategoriesProperty {
                 value,
                 params: Vec::new(),
             },
@@ -1229,26 +1229,26 @@ where
     impl_finish_component_property_build!(ComponentProperty::Categories);
 }
 
-impl_other_component_params_builder!(CategoriesParamBuilder<P>);
+impl_other_component_params_builder!(CategoriesPropertyBuilder<P>);
 
-pub struct CommentParam {
+pub struct CommentProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct CommentParamBuilder<P: AddComponentProperty> {
+pub struct CommentPropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: CommentParam,
+    inner: CommentProperty,
 }
 
-impl<P> CommentParamBuilder<P>
+impl<P> CommentPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, value: String) -> CommentParamBuilder<P> {
-        CommentParamBuilder {
+    pub(crate) fn new(owner: P, value: String) -> CommentPropertyBuilder<P> {
+        CommentPropertyBuilder {
             owner,
-            inner: CommentParam {
+            inner: CommentProperty {
                 value,
                 params: Vec::new(),
             },
@@ -1261,26 +1261,26 @@ where
     impl_finish_component_property_build!(ComponentProperty::Comment);
 }
 
-impl_other_component_params_builder!(CommentParamBuilder<P>);
+impl_other_component_params_builder!(CommentPropertyBuilder<P>);
 
-pub struct ContactParam {
+pub struct ContactProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct ContactParamBuilder<P: AddComponentProperty> {
+pub struct ContactPropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: ContactParam,
+    inner: ContactProperty,
 }
 
-impl<P> ContactParamBuilder<P>
+impl<P> ContactPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, value: String) -> ContactParamBuilder<P> {
-        ContactParamBuilder {
+    pub(crate) fn new(owner: P, value: String) -> ContactPropertyBuilder<P> {
+        ContactPropertyBuilder {
             owner,
-            inner: ContactParam {
+            inner: ContactProperty {
                 value,
                 params: Vec::new(),
             },
@@ -1293,7 +1293,7 @@ where
     impl_finish_component_property_build!(ComponentProperty::Contact);
 }
 
-impl_other_component_params_builder!(ContactParamBuilder<P>);
+impl_other_component_params_builder!(ContactPropertyBuilder<P>);
 
 pub struct ExceptionDateTimesProperty {
     pub(crate) date_times: Vec<(time::Date, Option<time::Time>)>,
@@ -1425,6 +1425,7 @@ where
 
 impl_other_component_params_builder!(ResourcesPropertyBuilder<P>);
 
+#[derive(Clone, Debug)]
 pub struct Period {
     pub start: (time::Date, time::Time),
     pub end: PeriodEnd,
@@ -1443,11 +1444,7 @@ impl Period {
         }
     }
 
-    pub fn new_start(
-        start_date: time::Date,
-        start_time: time::Time,
-        duration: std::time::Duration,
-    ) -> Self {
+    pub fn new_start(start_date: time::Date, start_time: time::Time, duration: Duration) -> Self {
         Period {
             start: (start_date, start_time),
             end: PeriodEnd::Duration(duration),
@@ -1455,9 +1452,10 @@ impl Period {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum PeriodEnd {
     DateTime((time::Date, time::Time)),
-    Duration(std::time::Duration),
+    Duration(Duration),
 }
 
 pub struct RecurrenceDateTimesProperty {

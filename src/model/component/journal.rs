@@ -6,7 +6,7 @@ use crate::model::{
     add_organizer, add_priority, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, impl_finish_component_build, impl_other_component_properties,
-    AddComponentProperty, AttendeeParamBuilder, CalendarComponent, CompletedPropertyBuilder,
+    AddComponentProperty, AttendeePropertyBuilder, CalendarComponent, CompletedPropertyBuilder,
     ComponentProperty, DueDateTimePropertyBuilder, ICalObjectBuilder, IanaComponentPropertyBuilder,
     ParticipationStatusJournal, ParticipationStatusToDo, PercentCompletePropertyBuilder,
     StatusJournal, StatusPropertyBuilder, StatusToDo, XComponentPropertyBuilder,
@@ -64,8 +64,8 @@ impl JournalComponentBuilder {
     pub fn add_attendee(
         self,
         value: String,
-    ) -> AttendeeParamBuilder<Self, ParticipationStatusJournal> {
-        AttendeeParamBuilder::new(self, value)
+    ) -> AttendeePropertyBuilder<Self, ParticipationStatusJournal> {
+        AttendeePropertyBuilder::new(self, value)
     }
 
     add_categories!();

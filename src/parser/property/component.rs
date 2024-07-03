@@ -1343,7 +1343,7 @@ pub struct RequestStatusProperty<'a> {
     pub params: Vec<ParamValue<'a>>,
     pub status_code: Vec<u32>,
     pub status_description: Vec<u8>,
-    pub extra_data: Option<Vec<u8>>,
+    pub exception_data: Option<Vec<u8>>,
 }
 
 /// Parse a REQUEST-STATUS property.
@@ -1403,7 +1403,7 @@ where
             params,
             status_code,
             status_description,
-            extra_data,
+            exception_data: extra_data,
         },
     ))
 }
@@ -2569,7 +2569,7 @@ RSVP to team leader."#
                 params: vec![],
                 status_code: vec![2, 0],
                 status_description: b"Success".to_vec(),
-                extra_data: None,
+                exception_data: None,
             }
         );
     }
@@ -2587,7 +2587,7 @@ RSVP to team leader."#
                 params: vec![],
                 status_code: vec![3, 1],
                 status_description: b"Invalid property value".to_vec(),
-                extra_data: Some(b"DTSTART:96-Apr-01".to_vec()),
+                exception_data: Some(b"DTSTART:96-Apr-01".to_vec()),
             }
         );
     }

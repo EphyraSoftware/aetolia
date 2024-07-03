@@ -1,6 +1,6 @@
-mod component;
+pub(crate) mod component;
 pub(crate) mod recur;
-pub mod types;
+pub(crate) mod types;
 pub(crate) mod uri;
 mod value;
 pub(crate) mod value_types;

@@ -17,7 +17,7 @@ use crate::model::{
     add_exception_date_times, add_geographic_position, add_last_modified, add_location,
     add_organizer, add_priority, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
     add_related, add_request_status, add_resources, add_sequence, add_summary,
-    add_unique_identifier, add_url, CategoriesParamBuilder, CreatedPropertyBuilder,
+    add_unique_identifier, add_url, CategoriesPropertyBuilder, CreatedPropertyBuilder,
     DateTimeEndPropertyBuilder, DateTimeStartPropertyBuilder, Duration, DurationPropertyBuilder,
     GeographicPositionPropertyBuilder, IanaComponentPropertyBuilder, LocationPropertyBuilder,
     OrganizerPropertyBuilder, ParticipationStatusEvent, PriorityPropertyBuilder,
@@ -27,8 +27,8 @@ use crate::model::{
     StatusPropertyBuilder, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
-    AttachPropertyBuilder, AttendeeParamBuilder, ClassificationPropertyBuilder,
-    CommentParamBuilder, ContactParamBuilder, DescriptionPropertyBuilder,
+    AttachPropertyBuilder, AttendeePropertyBuilder, ClassificationPropertyBuilder,
+    CommentPropertyBuilder, ContactPropertyBuilder, DescriptionPropertyBuilder,
     ExceptionDateTimesPropertyBuilder, LastModifiedPropertyBuilder, Period, SummaryPropertyBuilder,
     UniqueIdentifierPropertyBuilder,
 };
@@ -106,8 +106,8 @@ impl EventComponentBuilder {
     pub fn add_attendee(
         self,
         value: String,
-    ) -> AttendeeParamBuilder<Self, ParticipationStatusEvent> {
-        AttendeeParamBuilder::new(self, value)
+    ) -> AttendeePropertyBuilder<Self, ParticipationStatusEvent> {
+        AttendeePropertyBuilder::new(self, value)
     }
 
     add_categories!();

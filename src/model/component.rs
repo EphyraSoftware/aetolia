@@ -324,8 +324,8 @@ macro_rules! add_categories {
         pub fn add_categories(
             self,
             value: Vec<String>,
-        ) -> $crate::model::property::CategoriesParamBuilder<Self> {
-            $crate::model::property::CategoriesParamBuilder::new(self, value)
+        ) -> $crate::model::property::CategoriesPropertyBuilder<Self> {
+            $crate::model::property::CategoriesPropertyBuilder::new(self, value)
         }
     };
 }
@@ -337,8 +337,8 @@ macro_rules! add_comment {
         pub fn add_comment<V: ToString>(
             self,
             value: V,
-        ) -> $crate::model::property::CommentParamBuilder<Self> {
-            $crate::model::property::CommentParamBuilder::new(self, value.to_string())
+        ) -> $crate::model::property::CommentPropertyBuilder<Self> {
+            $crate::model::property::CommentPropertyBuilder::new(self, value.to_string())
         }
     };
 }
@@ -350,8 +350,8 @@ macro_rules! add_contact {
         pub fn add_contact<V: ToString>(
             self,
             value: V,
-        ) -> $crate::model::property::ContactParamBuilder<Self> {
-            $crate::model::property::ContactParamBuilder::new(self, value.to_string())
+        ) -> $crate::model::property::ContactPropertyBuilder<Self> {
+            $crate::model::property::ContactPropertyBuilder::new(self, value.to_string())
         }
     };
 }

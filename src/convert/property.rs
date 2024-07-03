@@ -1,8 +1,10 @@
 mod recur;
 
 use crate::convert::{convert_string, ToModel};
-use crate::parser::DateOrDateTime;
+use crate::model::Period;
+use crate::parser::{DateOrDateTime, DateOrDateTimeOrPeriod};
 use anyhow::Context;
+use chrono::{Datelike, Timelike};
 
 impl ToModel for crate::parser::DateTimeStampProperty<'_> {
     type Model = crate::model::DateTimeStampProperty;
@@ -271,6 +273,169 @@ impl ToModel for crate::parser::DurationProperty<'_> {
     }
 }
 
+impl ToModel for crate::parser::AttachProperty<'_> {
+    type Model = crate::model::AttachProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        let (uri, binary) = match self.value {
+            crate::parser::AttachValue::Uri(uri) => (Some(convert_string(uri)), None),
+            crate::parser::AttachValue::Binary(binary) => (None, Some(convert_string(binary))),
+        };
+
+        Ok(crate::model::AttachProperty {
+            value_uri: uri,
+            value_binary: binary,
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::AttendeeProperty<'_> {
+    type Model = crate::model::AttendeeProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::AttendeeProperty {
+            value: convert_string(self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::CategoriesProperty<'_> {
+    type Model = crate::model::CategoriesProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::CategoriesProperty {
+            value: self.value.iter().map(|v| convert_string(v)).collect(),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::CommentProperty<'_> {
+    type Model = crate::model::CommentProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::CommentProperty {
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::ContactProperty<'_> {
+    type Model = crate::model::ContactProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::ContactProperty {
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::ExceptionDateTimesProperty<'_> {
+    type Model = crate::model::ExceptionDateTimesProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::ExceptionDateTimesProperty {
+            date_times: self
+                .value
+                .iter()
+                .map(|v| v.to_model())
+                .collect::<Result<_, _>>()?,
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::RequestStatusProperty<'_> {
+    type Model = crate::model::RequestStatusProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::RequestStatusProperty {
+            status_code: self.status_code.clone(),
+            description: convert_string(&self.status_description),
+            exception_data: self.exception_data.as_ref().map(|v| convert_string(v)),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::RelatedToProperty<'_> {
+    type Model = crate::model::RelatedToProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::RelatedToProperty {
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::ResourcesProperty<'_> {
+    type Model = crate::model::ResourcesProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::ResourcesProperty {
+            value: self.value.iter().map(|v| convert_string(v)).collect(),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::XProperty<'_> {
+    type Model = crate::model::XProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::XProperty {
+            name: convert_string(self.name),
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::IanaProperty<'_> {
+    type Model = crate::model::IanaProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::IanaProperty {
+            name: convert_string(self.name),
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::RecurrenceDateTimesProperty<'_> {
+    type Model = crate::model::RecurrenceDateTimesProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        let date_times = self.value.to_model()?;
+
+        let (date_times, periods) = if date_times.iter().all(|dt| dt.0.is_some()) {
+            (
+                date_times.iter().map(|dt| dt.0.unwrap()).collect(),
+                Vec::with_capacity(0),
+            )
+        } else if date_times.iter().all(|dt| dt.1.is_some()) {
+            (
+                Vec::with_capacity(0),
+                date_times.iter().map(|dt| dt.1.clone().unwrap()).collect(),
+            )
+        } else {
+            return Err(anyhow::anyhow!("Invalid recurrence date-times"));
+        };
+
+        Ok(crate::model::RecurrenceDateTimesProperty {
+            date_times,
+            periods,
+            params: self.params.to_model()?,
+        })
+    }
+}
+
 impl ToModel for crate::parser::Duration {
     type Model = crate::model::Duration;
 
@@ -282,6 +447,39 @@ impl ToModel for crate::parser::Duration {
             hours: self.hours,
             minutes: self.minutes,
             seconds: self.seconds,
+        })
+    }
+}
+
+impl ToModel for DateOrDateTimeOrPeriod<'_> {
+    type Model = (Option<(time::Date, Option<time::Time>)>, Option<Period>);
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        match self {
+            DateOrDateTimeOrPeriod::Date(date) => Ok((Some((date.try_into()?, None)), None)),
+            DateOrDateTimeOrPeriod::DateTime(date_time) => {
+                let (date, time) = date_time.try_into()?;
+                Ok((Some((date, Some(time))), None))
+            }
+            DateOrDateTimeOrPeriod::Period(period) => Ok((None, Some(period.to_model()?))),
+        }
+    }
+}
+
+impl ToModel for crate::parser::Period<'_> {
+    type Model = Period;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(Period {
+            start: convert_date_time_iso8601(self.start)?,
+            end: match &self.end {
+                crate::parser::PeriodEnd::DateTime(date_time) => {
+                    crate::model::PeriodEnd::DateTime(convert_date_time_iso8601(date_time)?)
+                }
+                crate::parser::PeriodEnd::Duration(duration) => {
+                    crate::model::PeriodEnd::Duration(duration.to_model()?)
+                }
+            },
         })
     }
 }
@@ -323,4 +521,26 @@ impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time) {
                 .context("Invalid time")?,
         ))
     }
+}
+
+fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Time)> {
+    let date_time = chrono::DateTime::parse_from_rfc3339(
+        std::str::from_utf8(raw).context("Invalid date string")?,
+    )
+    .context("Date failed to parse")?;
+
+    Ok((
+        time::Date::from_calendar_date(
+            date_time.year(),
+            time::Month::try_from(date_time.month() as u8).context("Should be a valid month")?,
+            date_time.day() as u8,
+        )
+        .context("Invalid date")?,
+        time::Time::from_hms(
+            date_time.hour() as u8,
+            date_time.minute() as u8,
+            date_time.second() as u8,
+        )
+        .context("Invalid time")?,
+    ))
 }

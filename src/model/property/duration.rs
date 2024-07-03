@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct Duration {
     pub(crate) sign: i8,
     pub(crate) weeks: Option<u64>,

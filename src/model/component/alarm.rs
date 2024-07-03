@@ -1,9 +1,10 @@
 use crate::model::property::ComponentProperty;
 use crate::model::{
     add_action, add_attach, add_description, add_duration, add_repeat, add_summary, add_trigger,
-    impl_other_component_properties, AbsoluteTriggerPropertyBuilder, Action, AttendeeParamBuilder,
-    Duration, IanaComponentPropertyBuilder, ParticipationStatusEvent, ParticipationStatusJournal,
-    RelativeTriggerPropertyBuilder, RepeatPropertyBuilder, XComponentPropertyBuilder,
+    impl_other_component_properties, AbsoluteTriggerPropertyBuilder, Action,
+    AttendeePropertyBuilder, Duration, IanaComponentPropertyBuilder, ParticipationStatusEvent,
+    ParticipationStatusJournal, RelativeTriggerPropertyBuilder, RepeatPropertyBuilder,
+    XComponentPropertyBuilder,
 };
 use crate::prelude::{ActionPropertyBuilder, AddComponentProperty};
 
@@ -140,8 +141,8 @@ where
     pub fn add_attendee(
         self,
         value: String,
-    ) -> AttendeeParamBuilder<Self, ParticipationStatusEvent> {
-        AttendeeParamBuilder::new(self, value)
+    ) -> AttendeePropertyBuilder<Self, ParticipationStatusEvent> {
+        AttendeePropertyBuilder::new(self, value)
     }
 
     add_duration!();

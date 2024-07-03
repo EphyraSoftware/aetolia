@@ -21,17 +21,19 @@ mod property;
 
 pub use object::types::ICalendar;
 pub use param::ParamValue;
+pub use property::component::AttachValue;
 pub use property::recur::RecurRulePart;
-pub use property::value_types::Duration;
+pub use property::types::{IanaProperty, XProperty};
+pub use property::value_types::{Duration, Period, PeriodEnd};
 pub use property::{
     AttachProperty, AttendeeProperty, CategoriesProperty, Classification, ClassificationProperty,
-    CommentProperty, ContactProperty, CreatedProperty, Date, DateOrDateTime, DateTime,
-    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
-    DurationProperty, ExceptionDateTimesProperty, GeographicPositionProperty, LastModifiedProperty,
-    LocationProperty, OrganizerProperty, PriorityProperty, RecurrenceDateTimesProperty,
-    RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty, RequestStatusProperty,
-    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, Time,
-    TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
+    CommentProperty, ContactProperty, CreatedProperty, Date, DateOrDateTime,
+    DateOrDateTimeOrPeriod, DateTime, DateTimeEndProperty, DateTimeStampProperty,
+    DateTimeStartProperty, DescriptionProperty, DurationProperty, ExceptionDateTimesProperty,
+    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
+    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
+    RelatedToProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
+    SummaryProperty, Time, TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
 };
 
 #[derive(Clone, Debug, PartialEq)]
