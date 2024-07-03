@@ -1786,9 +1786,10 @@ RSVP to team leader."#
                 other_params: vec![],
                 value: Duration {
                     sign: 1,
-                    weeks: 0,
-                    days: 0,
-                    seconds: 3600,
+                    hours: Some(1),
+                    minutes: Some(0),
+                    seconds: Some(0),
+                    ..Default::default()
                 },
             }
         );
@@ -1811,9 +1812,9 @@ RSVP to team leader."#
                     start: b"19970308T160000Z",
                     end: PeriodEnd::Duration(Duration {
                         sign: 1,
-                        weeks: 0,
-                        days: 0,
-                        seconds: 30600,
+                        hours: Some(8),
+                        minutes: Some(30),
+                        ..Default::default()
                     }),
                 }],
             }
@@ -1838,18 +1839,16 @@ RSVP to team leader."#
                         start: b"19970308T160000Z",
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
-                            weeks: 0,
-                            days: 0,
-                            seconds: 10800,
+                            hours: Some(3),
+                            ..Default::default()
                         }),
                     },
                     Period {
                         start: b"19970308T200000Z",
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
-                            weeks: 0,
-                            days: 0,
-                            seconds: 3600,
+                            hours: Some(1),
+                            ..Default::default()
                         }),
                     },
                 ],
@@ -2319,9 +2318,8 @@ RSVP to team leader."#
                         start: b"19960404T010000Z",
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
-                            weeks: 0,
-                            days: 0,
-                            seconds: 10800,
+                            hours: Some(3),
+                            ..Default::default()
                         }),
                     }),
                 ],
@@ -2443,9 +2441,8 @@ RSVP to team leader."#
                 params: vec![],
                 value: DurationOrDateTime::Duration(Duration {
                     sign: -1,
-                    weeks: 0,
-                    days: 0,
-                    seconds: 900,
+                    minutes: Some(15),
+                    ..Default::default()
                 }),
             }
         );
@@ -2463,9 +2460,8 @@ RSVP to team leader."#
                 },],
                 value: DurationOrDateTime::Duration(Duration {
                     sign: 1,
-                    weeks: 0,
-                    days: 0,
-                    seconds: 300,
+                    minutes: Some(5),
+                    ..Default::default()
                 }),
             }
         );

@@ -97,9 +97,8 @@ mod tests {
                         other_params: vec![],
                         value: Duration {
                             sign: 1,
-                            weeks: 0,
-                            days: 0,
-                            seconds: 900,
+                            minutes: Some(15),
+                            ..Default::default()
                         },
                     })
                 );

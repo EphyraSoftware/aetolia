@@ -1,14 +1,14 @@
 pub struct Duration {
-    sign: i8,
-    weeks: Option<u32>,
-    days: Option<u32>,
-    hours: Option<u32>,
-    minutes: Option<u32>,
-    seconds: Option<u32>,
+    pub(crate) sign: i8,
+    pub(crate) weeks: Option<u64>,
+    pub(crate) days: Option<u64>,
+    pub(crate) hours: Option<u64>,
+    pub(crate) minutes: Option<u64>,
+    pub(crate) seconds: Option<u64>,
 }
 
 impl Duration {
-    pub fn weeks(sign: i8, weeks: u32) -> Self {
+    pub fn weeks(sign: i8, weeks: u64) -> Self {
         Duration {
             sign,
             weeks: Some(weeks),
@@ -19,7 +19,7 @@ impl Duration {
         }
     }
 
-    pub fn days(sign: i8, days: u32) -> Self {
+    pub fn days(sign: i8, days: u64) -> Self {
         Duration {
             sign,
             weeks: None,
@@ -30,7 +30,7 @@ impl Duration {
         }
     }
 
-    pub fn days_and_time(sign: i8, days: u32) -> DurationTimeBuilder {
+    pub fn days_and_time(sign: i8, days: u64) -> DurationTimeBuilder {
         DurationTimeBuilder {
             duration: Duration {
                 sign,
@@ -43,7 +43,7 @@ impl Duration {
         }
     }
 
-    pub fn hours(sign: i8, hours: u32) -> DurationTimeMinutesBuilder {
+    pub fn hours(sign: i8, hours: u64) -> DurationTimeMinutesBuilder {
         DurationTimeMinutesBuilder {
             duration: Duration {
                 sign,
@@ -56,7 +56,7 @@ impl Duration {
         }
     }
 
-    pub fn minutes(sign: i8, minutes: u32) -> DurationTimeSecondsBuilder {
+    pub fn minutes(sign: i8, minutes: u64) -> DurationTimeSecondsBuilder {
         DurationTimeSecondsBuilder {
             duration: Duration {
                 sign,
@@ -69,7 +69,7 @@ impl Duration {
         }
     }
 
-    pub fn seconds(sign: i8, seconds: u32) -> Self {
+    pub fn seconds(sign: i8, seconds: u64) -> Self {
         Duration {
             sign,
             weeks: None,
@@ -86,21 +86,21 @@ pub struct DurationTimeBuilder {
 }
 
 impl DurationTimeBuilder {
-    pub fn hours(mut self, hours: u32) -> DurationTimeMinutesBuilder {
+    pub fn hours(mut self, hours: u64) -> DurationTimeMinutesBuilder {
         self.duration.hours = Some(hours);
         DurationTimeMinutesBuilder {
             duration: self.duration,
         }
     }
 
-    pub fn minutes(mut self, minutes: u32) -> DurationTimeSecondsBuilder {
+    pub fn minutes(mut self, minutes: u64) -> DurationTimeSecondsBuilder {
         self.duration.minutes = Some(minutes);
         DurationTimeSecondsBuilder {
             duration: self.duration,
         }
     }
 
-    pub fn seconds(mut self, seconds: u32) -> Duration {
+    pub fn seconds(mut self, seconds: u64) -> Duration {
         self.duration.seconds = Some(seconds);
         self.build()
     }
@@ -115,7 +115,7 @@ pub struct DurationTimeMinutesBuilder {
 }
 
 impl DurationTimeMinutesBuilder {
-    pub fn minutes(mut self, minutes: u32) -> DurationTimeSecondsBuilder {
+    pub fn minutes(mut self, minutes: u64) -> DurationTimeSecondsBuilder {
         self.duration.minutes = Some(minutes);
         DurationTimeSecondsBuilder {
             duration: self.duration,
@@ -132,7 +132,7 @@ pub struct DurationTimeSecondsBuilder {
 }
 
 impl DurationTimeSecondsBuilder {
-    pub fn seconds(mut self, seconds: u32) -> Duration {
+    pub fn seconds(mut self, seconds: u64) -> Duration {
         self.duration.seconds = Some(seconds);
         self.build()
     }

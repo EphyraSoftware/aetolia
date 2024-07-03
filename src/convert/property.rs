@@ -260,6 +260,32 @@ impl ToModel for crate::parser::DateTimeEndProperty<'_> {
     }
 }
 
+impl ToModel for crate::parser::DurationProperty<'_> {
+    type Model = crate::model::DurationProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::DurationProperty {
+            duration: self.value.to_model()?,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::Duration {
+    type Model = crate::model::Duration;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::Duration {
+            sign: self.sign,
+            weeks: self.weeks,
+            days: self.days,
+            hours: self.hours,
+            minutes: self.minutes,
+            seconds: self.seconds,
+        })
+    }
+}
+
 impl ToModel for DateOrDateTime {
     type Model = (time::Date, Option<time::Time>);
 

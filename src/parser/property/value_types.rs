@@ -22,18 +22,22 @@ pub struct DateTime {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Duration {
     pub sign: i8,
-    pub weeks: u64,
-    pub days: u64,
-    pub seconds: u64,
+    pub weeks: Option<u64>,
+    pub days: Option<u64>,
+    pub hours: Option<u64>,
+    pub minutes: Option<u64>,
+    pub seconds: Option<u64>,
 }
 
 impl Default for Duration {
     fn default() -> Self {
         Duration {
             sign: 1,
-            weeks: 0,
-            days: 0,
-            seconds: 0,
+            weeks: None,
+            days: None,
+            hours: None,
+            minutes: None,
+            seconds: None,
         }
     }
 }

@@ -22,6 +22,7 @@ mod property;
 pub use object::types::ICalendar;
 pub use param::ParamValue;
 pub use property::recur::RecurRulePart;
+pub use property::value_types::Duration;
 pub use property::{
     AttachProperty, AttendeeProperty, CategoriesProperty, Classification, ClassificationProperty,
     CommentProperty, ContactProperty, CreatedProperty, Date, DateOrDateTime, DateTime,

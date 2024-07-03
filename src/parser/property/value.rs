@@ -177,7 +177,9 @@ where
     ))
 }
 
-fn duration_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+type HoursMinutesSeconds = (Option<u64>, Option<u64>, Option<u64>);
+
+fn duration_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], HoursMinutesSeconds, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -188,22 +190,18 @@ where
     match time_branch {
         'H' => {
             let (input, (min, sec)) = tuple((
-                opt(tuple((duration_num, char('M'))))
-                    .map(|min| min.map(|(min, _)| min).unwrap_or(0)),
-                opt(tuple((duration_num, char('S'))))
-                    .map(|min| min.map(|(min, _)| min).unwrap_or(0)),
+                opt(tuple((duration_num, char('M'))).map(|(min, _)| min)),
+                opt(tuple((duration_num, char('S'))).map(|(sec, _)| sec)),
             ))(input)?;
 
-            Ok((input, num * 60 * 60 + min * 60 + sec))
+            Ok((input, (Some(num), min, sec)))
         }
         'M' => {
-            let (input, sec) = opt(tuple((duration_num, char('S'))))(input)?;
+            let (input, sec) = opt(tuple((duration_num, char('S'))).map(|(sec, _)| sec))(input)?;
 
-            let sec = if let Some((sec, _)) = sec { sec } else { 0 };
-
-            Ok((input, num * 60 + sec))
+            Ok((input, (None, Some(num), sec)))
         }
-        'S' => Ok((input, num)),
+        'S' => Ok((input, (None, None, Some(num)))),
         // This is unreachable because of the one_of combinator
         _ => unreachable!(),
     }
@@ -234,13 +232,15 @@ where
     let (input, t) = opt(char('T'))(input)?;
 
     if t.is_some() {
-        let (input, t) = duration_time(input)?;
+        let (input, (hours, minutes, seconds)) = duration_time(input)?;
 
         return Ok((
             input,
             Duration {
                 sign,
-                seconds: t,
+                hours,
+                minutes,
+                seconds,
                 ..Default::default()
             },
         ));
@@ -252,19 +252,17 @@ where
 
     match date_branch {
         'D' => {
-            let (input, seconds) = opt(tuple((char('T'), duration_time)))(input)?;
+            let (input, time) = opt(tuple((char('T'), duration_time)).map(|(_, t)| t))(input)?;
 
-            let seconds = if let Some((_, seconds)) = seconds {
-                seconds
-            } else {
-                0
-            };
+            let (hours, minutes, seconds) = time.unwrap_or((None, None, None));
 
             Ok((
                 input,
                 Duration {
                     sign,
-                    days: num,
+                    days: Some(num),
+                    hours,
+                    minutes,
                     seconds,
                     ..Default::default()
                 },
@@ -274,7 +272,7 @@ where
             input,
             Duration {
                 sign,
-                weeks: num,
+                weeks: Some(num),
                 ..Default::default()
             },
         )),
@@ -530,7 +528,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             Duration {
-                weeks: 7,
+                weeks: Some(7),
                 ..Default::default()
             },
             value
@@ -543,8 +541,10 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             Duration {
-                days: 15,
-                seconds: 5 * 60 * 60 + 20,
+                days: Some(15),
+                hours: Some(5),
+                minutes: Some(0),
+                seconds: Some(20),
                 ..Default::default()
             },
             value
@@ -558,7 +558,8 @@ mod tests {
         assert_eq!(
             Duration {
                 sign: -1,
-                seconds: 10 * 60 + 20,
+                minutes: Some(10),
+                seconds: Some(20),
                 ..Default::default()
             },
             value
@@ -615,7 +616,8 @@ mod tests {
             Period {
                 start: b"19970101T180000Z",
                 end: PeriodEnd::Duration(Duration {
-                    seconds: 5 * 60 * 60 + 30 * 60,
+                    hours: Some(5),
+                    minutes: Some(30),
                     ..Default::default()
                 })
             },

@@ -3,7 +3,7 @@ pub(crate) mod recur;
 pub mod types;
 pub(crate) mod uri;
 mod value;
-mod value_types;
+pub(crate) mod value_types;
 
 use crate::parser::param::{other_params, params};
 use crate::parser::property::types::{
