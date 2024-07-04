@@ -19,21 +19,27 @@ mod param;
 mod pre;
 mod property;
 
-pub use object::types::ICalendar;
+pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
 pub use param::ParamValue;
-pub use property::component::AttachValue;
+pub use property::component::{Action, AttachValue, DurationOrDateTime};
 pub use property::recur::RecurRulePart;
-pub use property::types::{IanaProperty, XProperty};
-pub use property::value_types::{Duration, Period, PeriodEnd};
+pub use property::types::{
+    CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
+    XProperty,
+};
+pub use property::value_types::{Duration, Period, PeriodEnd, UtcOffset};
 pub use property::{
-    AttachProperty, AttendeeProperty, CategoriesProperty, Classification, ClassificationProperty,
-    CommentProperty, ContactProperty, CreatedProperty, Date, DateOrDateTime,
-    DateOrDateTimeOrPeriod, DateTime, DateTimeEndProperty, DateTimeStampProperty,
-    DateTimeStartProperty, DescriptionProperty, DurationProperty, ExceptionDateTimesProperty,
+    ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, Classification,
+    ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty, Date,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, DateTimeCompletedProperty,
+    DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
+    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
     GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
-    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
-    RelatedToProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
-    SummaryProperty, Time, TimeTransparencyProperty, UniqueIdentifierProperty, UrlProperty,
+    PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty,
+    RecurrenceRuleProperty, RelatedToProperty, RepeatCountProperty, RequestStatusProperty,
+    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, Time,
+    TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
+    TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
 };
 
 #[derive(Clone, Debug, PartialEq)]

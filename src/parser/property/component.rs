@@ -637,6 +637,7 @@ where
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimeZoneIdProperty<'a> {
     pub other_params: Vec<ParamValue<'a>>,
+    pub unique_registry_id: bool,
     pub value: Vec<u8>,
 }
 
@@ -647,17 +648,11 @@ pub fn prop_time_zone_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], TimeZoneId
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, other_params, _, (unique, value), _)) = tuple((
         tag_no_case("TZID"),
         cut(other_params),
         char(':'),
-        tuple((opt(char('/')), prop_value_text)).map(|(prefix, mut value)| {
-            if let Some('/') = prefix {
-                value.insert(0, b'/');
-            }
-
-            value
-        }),
+        tuple((opt(char('/')), prop_value_text)),
         tag("\r\n"),
     ))(input)?;
 
@@ -665,6 +660,7 @@ where
         input,
         TimeZoneIdProperty {
             other_params,
+            unique_registry_id: unique.is_some(),
             value,
         },
     ))
@@ -1890,6 +1886,7 @@ RSVP to team leader."#
             prop,
             TimeZoneIdProperty {
                 other_params: vec![],
+                unique_registry_id: false,
                 value: b"America/New_York".to_vec(),
             }
         );
@@ -1904,7 +1901,8 @@ RSVP to team leader."#
             prop,
             TimeZoneIdProperty {
                 other_params: vec![],
-                value: b"/example.org/America/New_York".to_vec(),
+                unique_registry_id: true,
+                value: b"example.org/America/New_York".to_vec(),
             }
         );
     }

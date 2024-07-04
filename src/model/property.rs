@@ -236,8 +236,8 @@ pub enum ComponentProperty {
     DateTimeStamp(DateTimeStampProperty),
     UniqueIdentifier(UniqueIdentifierProperty),
     DateTimeStart(DateTimeStartProperty),
-    Class(ClassificationProperty),
-    Created(CreatedProperty),
+    Classification(ClassificationProperty),
+    DateTimeCreated(CreatedProperty),
     Description(DescriptionProperty),
     GeographicPosition(GeographicPositionProperty),
     LastModified(LastModifiedProperty),
@@ -263,10 +263,10 @@ pub enum ComponentProperty {
     RelatedTo(RelatedToProperty),
     Resources(ResourcesProperty),
     RecurrenceDateTimes(RecurrenceDateTimesProperty),
-    Completed(CompletedProperty),
+    DateTimeCompleted(DateTimeCompletedProperty),
     PercentComplete(PercentCompleteProperty),
-    DueDateTime(DueDateTimeProperty),
-    FreeBusy(FreeBusyProperty),
+    DateTimeDue(DateTimeDueProperty),
+    FreeBusyTime(FreeBusyTimeProperty),
     TimeZoneId(TimeZoneIdProperty),
     TimeZoneUrl(TimeZoneUrlProperty),
     TimeZoneOffsetTo(TimeZoneOffsetToProperty),
@@ -523,7 +523,7 @@ where
         }
     }
 
-    impl_finish_component_property_build!(ComponentProperty::Class);
+    impl_finish_component_property_build!(ComponentProperty::Classification);
 }
 
 impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
@@ -554,7 +554,7 @@ where
         }
     }
 
-    impl_finish_component_property_build!(ComponentProperty::Created);
+    impl_finish_component_property_build!(ComponentProperty::DateTimeCreated);
 }
 
 impl_other_component_params_builder!(CreatedPropertyBuilder<P>);
@@ -1509,7 +1509,7 @@ where
 
 impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
-pub struct CompletedProperty {
+pub struct DateTimeCompletedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
     pub(crate) params: Vec<Param>,
@@ -1517,7 +1517,7 @@ pub struct CompletedProperty {
 
 pub struct CompletedPropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: CompletedProperty,
+    inner: DateTimeCompletedProperty,
 }
 
 impl<P> CompletedPropertyBuilder<P>
@@ -1527,7 +1527,7 @@ where
     pub(crate) fn new(owner: P, date: time::Date, time: time::Time) -> CompletedPropertyBuilder<P> {
         CompletedPropertyBuilder {
             owner,
-            inner: CompletedProperty {
+            inner: DateTimeCompletedProperty {
                 date,
                 time,
                 params: Vec::new(),
@@ -1535,7 +1535,7 @@ where
         }
     }
 
-    impl_finish_component_property_build!(ComponentProperty::Completed);
+    impl_finish_component_property_build!(ComponentProperty::DateTimeCompleted);
 }
 
 impl_other_component_params_builder!(CompletedPropertyBuilder<P>);
@@ -1569,18 +1569,18 @@ where
 
 impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
-pub struct DueDateTimeProperty {
+pub struct DateTimeDueProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct DueDateTimePropertyBuilder<P: AddComponentProperty> {
+pub struct DateTimeDuePropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: DueDateTimeProperty,
+    inner: DateTimeDueProperty,
 }
 
-impl<P> DueDateTimePropertyBuilder<P>
+impl<P> DateTimeDuePropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
@@ -1588,7 +1588,7 @@ where
         owner: P,
         date: time::Date,
         time: Option<time::Time>,
-    ) -> DueDateTimePropertyBuilder<P> {
+    ) -> DateTimeDuePropertyBuilder<P> {
         let mut params = Vec::new();
 
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
@@ -1597,30 +1597,30 @@ where
             params.push(Param::ValueType { value: Value::Date })
         }
 
-        DueDateTimePropertyBuilder {
+        DateTimeDuePropertyBuilder {
             owner,
-            inner: DueDateTimeProperty { date, time, params },
+            inner: DateTimeDueProperty { date, time, params },
         }
     }
 
     tz_id_param!();
 
-    impl_finish_component_property_build!(ComponentProperty::DueDateTime);
+    impl_finish_component_property_build!(ComponentProperty::DateTimeDue);
 }
 
-impl_other_component_params_builder!(DueDateTimePropertyBuilder<P>);
+impl_other_component_params_builder!(DateTimeDuePropertyBuilder<P>);
 
-pub struct FreeBusyProperty {
+pub struct FreeBusyTimeProperty {
     pub(crate) value: Vec<Period>,
     pub(crate) params: Vec<Param>,
 }
 
-pub struct FreeBusyPropertyBuilder<P: AddComponentProperty> {
+pub struct FreeBusyTimePropertyBuilder<P: AddComponentProperty> {
     owner: P,
-    inner: FreeBusyProperty,
+    inner: FreeBusyTimeProperty,
 }
 
-impl<P> FreeBusyPropertyBuilder<P>
+impl<P> FreeBusyTimePropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
@@ -1628,10 +1628,10 @@ where
         owner: P,
         free_busy_time_type: FreeBusyTimeType,
         value: Vec<Period>,
-    ) -> FreeBusyPropertyBuilder<P> {
-        FreeBusyPropertyBuilder {
+    ) -> FreeBusyTimePropertyBuilder<P> {
+        FreeBusyTimePropertyBuilder {
             owner,
-            inner: FreeBusyProperty {
+            inner: FreeBusyTimeProperty {
                 value,
                 params: vec![Param::FreeBusyTimeType {
                     fb_type: free_busy_time_type,
@@ -1640,10 +1640,10 @@ where
         }
     }
 
-    impl_finish_component_property_build!(ComponentProperty::FreeBusy);
+    impl_finish_component_property_build!(ComponentProperty::FreeBusyTime);
 }
 
-impl_other_component_params_builder!(FreeBusyPropertyBuilder<P>);
+impl_other_component_params_builder!(FreeBusyTimePropertyBuilder<P>);
 
 pub struct TimeZoneIdProperty {
     pub(crate) value: String,
@@ -1710,14 +1710,14 @@ where
 impl_other_component_params_builder!(TimeZoneUrlPropertyBuilder<P>);
 
 pub struct TimeZoneOffset {
-    sign: u8,
-    hours: u8,
-    minutes: u8,
-    seconds: Option<u8>,
+    pub(crate) sign: i8,
+    pub(crate) hours: u8,
+    pub(crate) minutes: u8,
+    pub(crate) seconds: Option<u8>,
 }
 
 impl TimeZoneOffset {
-    pub fn new(sign: u8, hours: u8, minutes: u8, seconds: Option<u8>) -> Self {
+    pub fn new(sign: i8, hours: u8, minutes: u8, seconds: Option<u8>) -> Self {
         TimeZoneOffset {
             sign,
             hours,

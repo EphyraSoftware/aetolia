@@ -7,7 +7,8 @@ pub(crate) mod value_types;
 
 use crate::parser::param::{other_params, params};
 use crate::parser::property::types::{
-    CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
+    CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
+    XProperty,
 };
 use crate::parser::{iana_token, value, x_name, Error};
 use crate::single;
@@ -24,7 +25,7 @@ use nom::{IResult, Parser};
 pub use value::*;
 pub use value_types::*;
 
-pub fn prop_product_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ProductId<'a>, E>
+pub fn prop_product_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ProductIdProperty<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -38,7 +39,7 @@ where
 
     Ok((
         input,
-        ProductId {
+        ProductIdProperty {
             other_params: params,
             value,
         },

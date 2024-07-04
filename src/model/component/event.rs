@@ -19,12 +19,12 @@ use crate::model::{
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, CategoriesPropertyBuilder, CreatedPropertyBuilder,
     DateTimeEndPropertyBuilder, DateTimeStartPropertyBuilder, Duration, DurationPropertyBuilder,
-    GeographicPositionPropertyBuilder, IanaComponentPropertyBuilder, LocationPropertyBuilder,
-    OrganizerPropertyBuilder, ParticipationStatusEvent, PriorityPropertyBuilder,
-    RecurrenceDateTimesPropertyBuilder, RecurrenceIdPropertyBuilder, RecurrenceRule,
-    RecurrenceRulePropertyBuilder, RelatedToPropertyBuilder, RequestStatusPropertyBuilder,
-    ResourcesPropertyBuilder, SequencePropertyBuilder, StatusEvent, StatusProperty,
-    StatusPropertyBuilder, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
+    GeographicPositionPropertyBuilder, ICalObject, IanaComponentPropertyBuilder,
+    LocationPropertyBuilder, OrganizerPropertyBuilder, ParticipationStatusEvent,
+    PriorityPropertyBuilder, RecurrenceDateTimesPropertyBuilder, RecurrenceIdPropertyBuilder,
+    RecurrenceRule, RecurrenceRulePropertyBuilder, RelatedToPropertyBuilder,
+    RequestStatusPropertyBuilder, ResourcesPropertyBuilder, SequencePropertyBuilder, StatusEvent,
+    StatusProperty, StatusPropertyBuilder, TimeTransparencyPropertyBuilder, UrlPropertyBuilder,
 };
 use crate::prelude::{
     AttachPropertyBuilder, AttendeePropertyBuilder, ClassificationPropertyBuilder,
@@ -35,7 +35,22 @@ use crate::prelude::{
 
 pub struct EventComponent {
     pub(crate) properties: Vec<ComponentProperty>,
-    alarms: Vec<CalendarComponent>,
+    pub(crate) alarms: Vec<CalendarComponent>,
+}
+
+impl EventComponent {
+    pub fn new() -> Self {
+        EventComponent {
+            properties: Vec::new(),
+            alarms: Vec::new(),
+        }
+    }
+}
+
+impl Default for EventComponent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct EventComponentBuilder {
@@ -47,10 +62,7 @@ impl EventComponentBuilder {
     pub(crate) fn new(owner: ICalObjectBuilder) -> Self {
         EventComponentBuilder {
             owner,
-            inner: EventComponent {
-                properties: Vec::new(),
-                alarms: Vec::new(),
-            },
+            inner: EventComponent::new(),
         }
     }
 

@@ -13,7 +13,7 @@ use crate::model::{
     XComponentPropertyBuilder,
 };
 use crate::prelude::alarm::AddAlarmComponent;
-use crate::prelude::DueDateTimePropertyBuilder;
+use crate::prelude::DateTimeDuePropertyBuilder;
 
 pub struct ToDoComponent {
     pub(crate) properties: Vec<ComponentProperty>,
@@ -88,8 +88,8 @@ impl ToDoComponentBuilder {
         self,
         date: time::Date,
         time: Option<time::Time>,
-    ) -> DueDateTimePropertyBuilder<Self> {
-        DueDateTimePropertyBuilder::new(self, date, time)
+    ) -> DateTimeDuePropertyBuilder<Self> {
+        DateTimeDuePropertyBuilder::new(self, date, time)
     }
 
     add_duration!();

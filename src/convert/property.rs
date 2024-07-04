@@ -466,6 +466,404 @@ impl ToModel for DateOrDateTimeOrPeriod<'_> {
     }
 }
 
+impl ToModel for crate::parser::ProductIdProperty<'_> {
+    type Model = crate::model::ProductIdProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::ProductIdProperty {
+            value: convert_string(&self.value),
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::VersionProperty<'_> {
+    type Model = crate::model::VersionProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::VersionProperty {
+            min_version: self.min_version.map(convert_string),
+            max_version: convert_string(self.max_version),
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::CalendarScaleProperty<'_> {
+    type Model = crate::model::CalendarScaleProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::CalendarScaleProperty {
+            value: convert_string(&self.value),
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::MethodProperty<'_> {
+    type Model = crate::model::MethodProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::MethodProperty {
+            value: convert_string(self.value),
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::CalendarProperty<'_> {
+    type Model = crate::model::CalendarProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        match self {
+            crate::parser::CalendarProperty::ProductId(product_id) => Ok(
+                crate::model::CalendarProperty::ProductId(product_id.to_model()?),
+            ),
+            crate::parser::CalendarProperty::Version(version) => {
+                Ok(crate::model::CalendarProperty::Version(version.to_model()?))
+            }
+            crate::parser::CalendarProperty::CalendarScale(cal_scale) => Ok(
+                crate::model::CalendarProperty::CalendarScale(cal_scale.to_model()?),
+            ),
+            crate::parser::CalendarProperty::Method(method) => {
+                Ok(crate::model::CalendarProperty::Method(method.to_model()?))
+            }
+            crate::parser::CalendarProperty::XProperty(x_prop) => Ok(
+                crate::model::CalendarProperty::XProperty(x_prop.to_model()?),
+            ),
+            crate::parser::CalendarProperty::IanaProperty(iana_prop) => Ok(
+                crate::model::CalendarProperty::IanaProperty(iana_prop.to_model()?),
+            ),
+        }
+    }
+}
+
+impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
+    type Model = crate::model::DateTimeCompletedProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        let (date, time) = (&self.value).try_into()?;
+
+        Ok(crate::model::DateTimeCompletedProperty {
+            date,
+            time,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::PercentCompleteProperty<'_> {
+    type Model = crate::model::PercentCompleteProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::PercentCompleteProperty {
+            value: self.value,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::DateTimeDueProperty<'_> {
+    type Model = crate::model::DateTimeDueProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        let (date, maybe_time) = self.value.to_model()?;
+
+        Ok(crate::model::DateTimeDueProperty {
+            date,
+            time: maybe_time,
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::FreeBusyTimeProperty<'_> {
+    type Model = crate::model::FreeBusyTimeProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::FreeBusyTimeProperty {
+            value: self.value.to_model()?,
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::TimeZoneIdProperty<'_> {
+    type Model = crate::model::TimeZoneIdProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::TimeZoneIdProperty {
+            value: convert_string(&self.value),
+            unique_registry_id: self.unique_registry_id,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::TimeZoneUrlProperty<'_> {
+    type Model = crate::model::TimeZoneUrlProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::TimeZoneUrlProperty {
+            value: convert_string(self.value),
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::TimeZoneOffsetProperty<'_> {
+    type Model = crate::model::TimeZoneOffsetToProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::TimeZoneOffsetToProperty {
+            offset: self.value.to_model()?,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::UtcOffset {
+    type Model = crate::model::TimeZoneOffset;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::TimeZoneOffset {
+            sign: self.sign,
+            hours: self.hours as u8,
+            minutes: self.minutes as u8,
+            seconds: self.seconds.map(|s| s as u8),
+        })
+    }
+}
+
+impl ToModel for crate::parser::TimeZoneNameProperty<'_> {
+    type Model = crate::model::TimeZoneNameProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::TimeZoneNameProperty {
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::ActionProperty<'_> {
+    type Model = crate::model::ActionProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::ActionProperty {
+            value: self.value.to_model()?,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::Action<'_> {
+    type Model = crate::model::Action;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(match self {
+            crate::parser::Action::Audio => crate::model::Action::Audio,
+            crate::parser::Action::Display => crate::model::Action::Display,
+            crate::parser::Action::Email => crate::model::Action::Email,
+            crate::parser::Action::XName(name) => crate::model::Action::XName(convert_string(name)),
+            crate::parser::Action::IanaToken(token) => {
+                crate::model::Action::IanaToken(convert_string(token))
+            }
+        })
+    }
+}
+
+impl ToModel for crate::parser::TriggerProperty<'_> {
+    type Model = crate::model::Trigger;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        match &self.value {
+            crate::parser::DurationOrDateTime::DateTime(date_time) => {
+                let (date, time) = date_time.try_into()?;
+                Ok(crate::model::Trigger::Absolute(
+                    crate::model::AbsoluteTriggerProperty {
+                        date,
+                        time,
+                        params: self.params.to_model()?,
+                    },
+                ))
+            }
+            crate::parser::DurationOrDateTime::Duration(duration) => Ok(
+                crate::model::Trigger::Relative(crate::model::RelativeTriggerProperty {
+                    value: duration.to_model()?,
+                    params: self.params.to_model()?,
+                }),
+            ),
+        }
+    }
+}
+
+impl ToModel for crate::parser::RepeatCountProperty<'_> {
+    type Model = crate::model::RepeatProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::RepeatProperty {
+            value: self.value,
+            params: self.other_params.to_model()?,
+        })
+    }
+}
+
+impl ToModel for crate::parser::ComponentProperty<'_> {
+    type Model = crate::model::ComponentProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        match self {
+            crate::parser::ComponentProperty::DateTimeStamp(date_time_stamp) => Ok(
+                crate::model::ComponentProperty::DateTimeStamp(date_time_stamp.to_model()?),
+            ),
+            crate::parser::ComponentProperty::UniqueIdentifier(unique_identifier) => Ok(
+                crate::model::ComponentProperty::UniqueIdentifier(unique_identifier.to_model()?),
+            ),
+            crate::parser::ComponentProperty::DateTimeStart(date_time_start) => Ok(
+                crate::model::ComponentProperty::DateTimeStart(date_time_start.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Classification(classification) => Ok(
+                crate::model::ComponentProperty::Classification(classification.to_model()?),
+            ),
+            crate::parser::ComponentProperty::DateTimeCreated(created) => Ok(
+                crate::model::ComponentProperty::DateTimeCreated(created.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Description(description) => Ok(
+                crate::model::ComponentProperty::Description(description.to_model()?),
+            ),
+            crate::parser::ComponentProperty::GeographicPosition(geo_pos) => Ok(
+                crate::model::ComponentProperty::GeographicPosition(geo_pos.to_model()?),
+            ),
+            crate::parser::ComponentProperty::LastModified(last_modified) => Ok(
+                crate::model::ComponentProperty::LastModified(last_modified.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Location(location) => Ok(
+                crate::model::ComponentProperty::Location(location.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Organizer(organizer) => Ok(
+                crate::model::ComponentProperty::Organizer(organizer.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Priority(priority) => Ok(
+                crate::model::ComponentProperty::Priority(priority.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Sequence(sequence) => Ok(
+                crate::model::ComponentProperty::Sequence(sequence.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Status(status) => {
+                Ok(crate::model::ComponentProperty::Status(status.to_model()?))
+            }
+            crate::parser::ComponentProperty::Summary(summary) => Ok(
+                crate::model::ComponentProperty::Summary(summary.to_model()?),
+            ),
+            crate::parser::ComponentProperty::TimeTransparency(time_transparency) => Ok(
+                crate::model::ComponentProperty::TimeTransparency(time_transparency.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Url(url) => {
+                Ok(crate::model::ComponentProperty::Url(url.to_model()?))
+            }
+            crate::parser::ComponentProperty::RecurrenceId(recurrence_id) => Ok(
+                crate::model::ComponentProperty::RecurrenceId(recurrence_id.to_model()?),
+            ),
+            crate::parser::ComponentProperty::RecurrenceRule(recurrence_rule) => Ok(
+                crate::model::ComponentProperty::RecurrenceRule(recurrence_rule.to_model()?),
+            ),
+            crate::parser::ComponentProperty::DateTimeEnd(date_time_end) => Ok(
+                crate::model::ComponentProperty::DateTimeEnd(date_time_end.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Duration(duration) => Ok(
+                crate::model::ComponentProperty::Duration(duration.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Attach(attach) => {
+                Ok(crate::model::ComponentProperty::Attach(attach.to_model()?))
+            }
+            crate::parser::ComponentProperty::Attendee(attendee) => Ok(
+                crate::model::ComponentProperty::Attendee(attendee.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Categories(categories) => Ok(
+                crate::model::ComponentProperty::Categories(categories.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Comment(comment) => Ok(
+                crate::model::ComponentProperty::Comment(comment.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Contact(contact) => Ok(
+                crate::model::ComponentProperty::Contact(contact.to_model()?),
+            ),
+            crate::parser::ComponentProperty::ExceptionDateTimes(exception_date_times) => {
+                Ok(crate::model::ComponentProperty::ExceptionDateTimes(
+                    exception_date_times.to_model()?,
+                ))
+            }
+            crate::parser::ComponentProperty::RequestStatus(request_status) => Ok(
+                crate::model::ComponentProperty::RequestStatus(request_status.to_model()?),
+            ),
+            crate::parser::ComponentProperty::RelatedTo(related_to) => Ok(
+                crate::model::ComponentProperty::RelatedTo(related_to.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Resources(resources) => Ok(
+                crate::model::ComponentProperty::Resources(resources.to_model()?),
+            ),
+            crate::parser::ComponentProperty::RecurrenceDateTimes(recurrence_date_times) => {
+                Ok(crate::model::ComponentProperty::RecurrenceDateTimes(
+                    recurrence_date_times.to_model()?,
+                ))
+            }
+            crate::parser::ComponentProperty::DateTimeCompleted(date_time_completed) => Ok(
+                crate::model::ComponentProperty::DateTimeCompleted(date_time_completed.to_model()?),
+            ),
+            crate::parser::ComponentProperty::PercentComplete(percent_complete) => Ok(
+                crate::model::ComponentProperty::PercentComplete(percent_complete.to_model()?),
+            ),
+            crate::parser::ComponentProperty::DateTimeDue(date_time_due) => Ok(
+                crate::model::ComponentProperty::DateTimeDue(date_time_due.to_model()?),
+            ),
+            crate::parser::ComponentProperty::FreeBusyTime(free_busy_time) => Ok(
+                crate::model::ComponentProperty::FreeBusyTime(free_busy_time.to_model()?),
+            ),
+            crate::parser::ComponentProperty::TimeZoneId(time_zone_id) => Ok(
+                crate::model::ComponentProperty::TimeZoneId(time_zone_id.to_model()?),
+            ),
+            crate::parser::ComponentProperty::TimeZoneUrl(time_zone_url) => Ok(
+                crate::model::ComponentProperty::TimeZoneUrl(time_zone_url.to_model()?),
+            ),
+            crate::parser::ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to) => Ok(
+                crate::model::ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to.to_model()?),
+            ),
+            crate::parser::ComponentProperty::TimeZoneOffsetFrom(time_zone_offset_from) => {
+                let to = time_zone_offset_from.to_model()?;
+                Ok(crate::model::ComponentProperty::TimeZoneOffsetFrom(
+                    crate::model::TimeZoneOffsetFromProperty {
+                        offset: to.offset,
+                        params: to.params,
+                    },
+                ))
+            }
+            crate::parser::ComponentProperty::TimeZoneName(time_zone_name) => Ok(
+                crate::model::ComponentProperty::TimeZoneName(time_zone_name.to_model()?),
+            ),
+            crate::parser::ComponentProperty::Action(action) => {
+                Ok(crate::model::ComponentProperty::Action(action.to_model()?))
+            }
+            crate::parser::ComponentProperty::Trigger(trigger) => Ok(
+                crate::model::ComponentProperty::Trigger(trigger.to_model()?),
+            ),
+            crate::parser::ComponentProperty::RepeatCount(repeat_count) => Ok(
+                crate::model::ComponentProperty::Repeat(repeat_count.to_model()?),
+            ),
+            crate::parser::ComponentProperty::XProperty(x_prop) => Ok(
+                crate::model::ComponentProperty::XProperty(x_prop.to_model()?),
+            ),
+            crate::parser::ComponentProperty::IanaProperty(iana_prop) => Ok(
+                crate::model::ComponentProperty::IanaProperty(iana_prop.to_model()?),
+            ),
+            _ => {
+                // Standard and daylight components do not belong in this enum, needs fixing in the parser.
+                unimplemented!()
+            }
+        }
+    }
+}
+
 impl ToModel for crate::parser::Period<'_> {
     type Model = Period;
 

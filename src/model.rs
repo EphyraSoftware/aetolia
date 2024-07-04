@@ -301,13 +301,13 @@ mod tests {
                     _ => panic!("Expected DateTimeStart"),
                 }
                 match &e.properties[3] {
-                    ComponentProperty::Class(p) => {
+                    ComponentProperty::Classification(p) => {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected Class"),
                 }
                 match &e.properties[4] {
-                    ComponentProperty::Created(p) => {
+                    ComponentProperty::DateTimeCreated(p) => {
                         assert_eq!(p.params.len(), 1);
                     }
                     _ => panic!("Expected Created"),

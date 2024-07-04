@@ -1,3 +1,4 @@
+mod component;
 mod param;
 mod property;
 

@@ -4,7 +4,7 @@ use crate::model::{
     add_comment, add_contact, add_date_time_end, add_date_time_stamp, add_date_time_start,
     add_organizer, add_request_status, add_unique_identifier, add_url, impl_finish_component_build,
     impl_other_component_properties, AddComponentProperty, AttendeePropertyBuilder,
-    CalendarComponent, ComponentProperty, FreeBusyPropertyBuilder, ICalObjectBuilder,
+    CalendarComponent, ComponentProperty, FreeBusyTimePropertyBuilder, ICalObjectBuilder,
     IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
 };
 use crate::prelude::Period;
@@ -55,8 +55,8 @@ impl FreeBusyComponentBuilder {
         self,
         free_busy_time_type: FreeBusyTimeType,
         periods: Vec<Period>,
-    ) -> FreeBusyPropertyBuilder<Self> {
-        FreeBusyPropertyBuilder::new(self, free_busy_time_type, periods)
+    ) -> FreeBusyTimePropertyBuilder<Self> {
+        FreeBusyTimePropertyBuilder::new(self, free_busy_time_type, periods)
     }
 
     add_request_status!();

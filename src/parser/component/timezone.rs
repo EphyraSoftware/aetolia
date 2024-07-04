@@ -30,8 +30,8 @@ where
                 component_standard.map(ComponentProperty::Standard),
                 component_daylight.map(ComponentProperty::Daylight),
             )),
-            prop_x.map(ComponentProperty::XProp),
-            prop_iana.map(ComponentProperty::IanaProp),
+            prop_x.map(ComponentProperty::XProperty),
+            prop_iana.map(ComponentProperty::IanaProperty),
         )))),
         tag("END:VTIMEZONE\r\n"),
     ))(input)?;
@@ -85,8 +85,8 @@ where
             prop_recurrence_date_times.map(ComponentProperty::RecurrenceDateTimes),
             prop_time_zone_name.map(ComponentProperty::TimeZoneName),
         )),
-        prop_x.map(ComponentProperty::XProp),
-        prop_iana.map(ComponentProperty::IanaProp),
+        prop_x.map(ComponentProperty::XProperty),
+        prop_iana.map(ComponentProperty::IanaProperty),
     )))(input)
 }
 
@@ -114,6 +114,7 @@ pub mod tests {
                     properties[0],
                     ComponentProperty::TimeZoneId(TimeZoneIdProperty {
                         other_params: vec![],
+                        unique_registry_id: false,
                         value: b"America/New_York".to_vec(),
                     })
                 );

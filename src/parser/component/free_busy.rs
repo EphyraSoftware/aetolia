@@ -36,8 +36,8 @@ where
                 prop_free_busy_time.map(ComponentProperty::FreeBusyTime),
                 prop_request_status.map(ComponentProperty::RequestStatus),
             )),
-            prop_x.map(ComponentProperty::XProp),
-            prop_iana.map(ComponentProperty::IanaProp),
+            prop_x.map(ComponentProperty::XProperty),
+            prop_iana.map(ComponentProperty::IanaProperty),
         )))),
         tag("END:VFREEBUSY\r\n"),
     ))(input)?;

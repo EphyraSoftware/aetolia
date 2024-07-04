@@ -31,8 +31,8 @@ where
                 prop_summary.map(ComponentProperty::Summary),
                 prop_attendee.map(ComponentProperty::Attendee),
             )),
-            prop_x.map(ComponentProperty::XProp),
-            prop_iana.map(ComponentProperty::IanaProp),
+            prop_x.map(ComponentProperty::XProperty),
+            prop_iana.map(ComponentProperty::IanaProperty),
         ))),
         tag("END:VALARM\r\n"),
     ))(input)?;
@@ -46,10 +46,10 @@ mod tests {
     use crate::common::Value;
     use crate::parser::param::ParamValue;
     use crate::parser::property::{
-        Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration,
-        DurationOrDateTime, DurationProperty, RepeatCountProperty, Time, TriggerProperty,
+        ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration, DurationOrDateTime,
+        DurationProperty, RepeatCountProperty, Time, TriggerProperty,
     };
-    use crate::parser::Error;
+    use crate::parser::{Action, Error};
     use crate::test_utils::check_rem;
 
     #[test]

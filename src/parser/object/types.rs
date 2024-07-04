@@ -1,5 +1,6 @@
 use crate::parser::property::types::{
-    CalendarScaleProperty, IanaProperty, MethodProperty, ProductId, VersionProperty, XProperty,
+    CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
+    XProperty,
 };
 use crate::parser::property::{
     ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, ClassificationProperty,
@@ -23,12 +24,12 @@ pub struct ICalendar<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum CalendarProperty<'a> {
-    ProductId(ProductId<'a>),
+    ProductId(ProductIdProperty<'a>),
     Version(VersionProperty<'a>),
-    CalScale(CalendarScaleProperty<'a>),
+    CalendarScale(CalendarScaleProperty<'a>),
     Method(MethodProperty<'a>),
-    XProp(XProperty<'a>),
-    IanaProp(IanaProperty<'a>),
+    XProperty(XProperty<'a>),
+    IanaProperty(IanaProperty<'a>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -77,8 +78,8 @@ pub enum ComponentProperty<'a> {
     Action(ActionProperty<'a>),
     Trigger(TriggerProperty<'a>),
     RepeatCount(RepeatCountProperty<'a>),
-    XProp(XProperty<'a>),
-    IanaProp(IanaProperty<'a>),
+    XProperty(XProperty<'a>),
+    IanaProperty(IanaProperty<'a>),
 }
 
 #[derive(Debug, PartialEq)]

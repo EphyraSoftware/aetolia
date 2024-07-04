@@ -52,8 +52,8 @@ where
                 prop_recurrence_date_times.map(ComponentProperty::RecurrenceDateTimes),
                 prop_request_status.map(ComponentProperty::RequestStatus),
             )),
-            prop_x.map(ComponentProperty::XProp),
-            prop_iana.map(ComponentProperty::IanaProp),
+            prop_x.map(ComponentProperty::XProperty),
+            prop_iana.map(ComponentProperty::IanaProperty),
         )))),
         tag("END:VJOURNAL\r\n"),
     ))(input)?;

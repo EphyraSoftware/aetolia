@@ -7,7 +7,7 @@ use crate::model::{
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, impl_finish_component_build, impl_other_component_properties,
     AddComponentProperty, AttendeePropertyBuilder, CalendarComponent, CompletedPropertyBuilder,
-    ComponentProperty, DueDateTimePropertyBuilder, ICalObjectBuilder, IanaComponentPropertyBuilder,
+    ComponentProperty, DateTimeDuePropertyBuilder, ICalObjectBuilder, IanaComponentPropertyBuilder,
     ParticipationStatusJournal, ParticipationStatusToDo, PercentCompletePropertyBuilder,
     StatusJournal, StatusPropertyBuilder, StatusToDo, XComponentPropertyBuilder,
 };

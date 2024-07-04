@@ -1,7 +1,7 @@
 use crate::parser::param::ParamValue;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ProductId<'a> {
+pub struct ProductIdProperty<'a> {
     pub other_params: Vec<ParamValue<'a>>,
     pub value: Vec<u8>,
 }

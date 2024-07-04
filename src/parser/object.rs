@@ -81,10 +81,10 @@ where
     alt((
         prop_product_id.map(CalendarProperty::ProductId),
         prop_version.map(CalendarProperty::Version),
-        prop_calendar_scale.map(CalendarProperty::CalScale),
+        prop_calendar_scale.map(CalendarProperty::CalendarScale),
         prop_method.map(CalendarProperty::Method),
-        prop_x.map(CalendarProperty::XProp),
-        prop_iana.map(CalendarProperty::IanaProp),
+        prop_x.map(CalendarProperty::XProperty),
+        prop_iana.map(CalendarProperty::IanaProperty),
     ))
     .parse(input)
 }
