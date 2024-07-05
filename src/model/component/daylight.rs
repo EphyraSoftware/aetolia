@@ -11,6 +11,20 @@ pub struct DaylightComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
 
+impl DaylightComponent {
+    pub(crate) fn new() -> Self {
+        DaylightComponent {
+            properties: Vec::new(),
+        }
+    }
+}
+
+impl Default for DaylightComponent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct DaylightComponentBuilder {
     owner: TimeZoneComponentBuilder,
     inner: DaylightComponent,

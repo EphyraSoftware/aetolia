@@ -6,8 +6,17 @@ use crate::model::property::{AddComponentProperty, ComponentProperty, XComponent
 use crate::model::IanaComponentPropertyBuilder;
 
 pub struct XComponent {
-    name: String,
+    pub(crate) name: String,
     pub(crate) properties: Vec<ComponentProperty>,
+}
+
+impl XComponent {
+    pub(crate) fn new(name: String) -> Self {
+        XComponent {
+            name,
+            properties: Vec::new(),
+        }
+    }
 }
 
 impl AddComponentProperty for XComponentBuilder {

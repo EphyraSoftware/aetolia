@@ -13,6 +13,21 @@ pub struct TimeZoneComponent {
     pub(crate) components: Vec<CalendarComponent>,
 }
 
+impl TimeZoneComponent {
+    pub(crate) fn new() -> Self {
+        TimeZoneComponent {
+            properties: Vec::new(),
+            components: Vec::new(),
+        }
+    }
+}
+
+impl Default for TimeZoneComponent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct TimeZoneComponentBuilder {
     owner: ICalObjectBuilder,
     pub(crate) inner: TimeZoneComponent,

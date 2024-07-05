@@ -13,6 +13,20 @@ pub struct FreeBusyComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
 
+impl FreeBusyComponent {
+    pub(crate) fn new() -> Self {
+        FreeBusyComponent {
+            properties: Vec::new(),
+        }
+    }
+}
+
+impl Default for FreeBusyComponent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct FreeBusyComponentBuilder {
     owner: ICalObjectBuilder,
     inner: FreeBusyComponent,

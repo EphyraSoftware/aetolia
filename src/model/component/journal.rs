@@ -16,6 +16,20 @@ pub struct JournalComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
 
+impl JournalComponent {
+    pub(crate) fn new() -> Self {
+        JournalComponent {
+            properties: Vec::new(),
+        }
+    }
+}
+
+impl Default for JournalComponent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct JournalComponentBuilder {
     owner: ICalObjectBuilder,
     inner: JournalComponent,

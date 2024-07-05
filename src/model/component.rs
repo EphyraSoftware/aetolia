@@ -9,13 +9,15 @@ mod time_zone;
 mod todo;
 pub mod x_component;
 
-use crate::model::component::daylight::DaylightComponent;
-use crate::model::component::standard::StandardComponent;
+pub use crate::model::component::daylight::DaylightComponent;
+pub use crate::model::component::standard::StandardComponent;
 pub use alarm::AlarmComponent;
 pub use free_busy::{FreeBusyComponent, FreeBusyComponentBuilder};
+pub use iana_component::{IanaComponent, IanaComponentBuilder};
 pub use journal::{JournalComponent, JournalComponentBuilder};
 pub use time_zone::{TimeZoneComponent, TimeZoneComponentBuilder};
 pub use todo::{ToDoComponent, ToDoComponentBuilder};
+pub use x_component::{XComponent, XComponentBuilder};
 
 pub enum CalendarComponent {
     Event(EventComponent),
@@ -64,8 +66,6 @@ macro_rules! impl_other_component_properties {
 pub(crate) use impl_other_component_properties;
 
 use crate::model::component::event::EventComponent;
-use crate::model::component::iana_component::IanaComponent;
-use crate::model::component::x_component::XComponent;
 
 macro_rules! add_date_time_stamp {
     () => {

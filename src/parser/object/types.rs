@@ -73,8 +73,6 @@ pub enum ComponentProperty<'a> {
     TimeZoneOffsetTo(TimeZoneOffsetProperty<'a>),
     TimeZoneOffsetFrom(TimeZoneOffsetProperty<'a>),
     TimeZoneName(TimeZoneNameProperty<'a>),
-    Standard(CalendarComponent<'a>),
-    Daylight(CalendarComponent<'a>),
     Action(ActionProperty<'a>),
     Trigger(TriggerProperty<'a>),
     RepeatCount(RepeatCountProperty<'a>),
@@ -106,6 +104,7 @@ pub enum CalendarComponent<'a> {
     },
     TimeZone {
         properties: Vec<ComponentProperty<'a>>,
+        components: Vec<CalendarComponent<'a>>,
     },
     Alarm {
         properties: Vec<ComponentProperty<'a>>,

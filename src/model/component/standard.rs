@@ -11,6 +11,20 @@ pub struct StandardComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
 
+impl StandardComponent {
+    pub(crate) fn new() -> Self {
+        StandardComponent {
+            properties: Vec::new(),
+        }
+    }
+}
+
+impl Default for StandardComponent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct StandardComponentBuilder {
     owner: TimeZoneComponentBuilder,
     inner: StandardComponent,

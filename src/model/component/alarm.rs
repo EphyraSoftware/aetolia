@@ -9,7 +9,21 @@ use crate::model::{
 use crate::prelude::{ActionPropertyBuilder, AddComponentProperty};
 
 pub struct AlarmComponent {
-    properties: Vec<ComponentProperty>,
+    pub(crate) properties: Vec<ComponentProperty>,
+}
+
+impl AlarmComponent {
+    pub(crate) fn new() -> Self {
+        AlarmComponent {
+            properties: Vec::new(),
+        }
+    }
+}
+
+impl Default for AlarmComponent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub trait AddAlarmComponent {

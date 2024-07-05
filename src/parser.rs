@@ -142,9 +142,9 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
 
 #[derive(Debug, PartialEq)]
 pub struct ContentLine<'a> {
-    property_name: &'a [u8],
-    params: Vec<ParamValue<'a>>,
-    value: Vec<u8>,
+    pub(crate) property_name: &'a [u8],
+    pub(crate) params: Vec<ParamValue<'a>>,
+    pub(crate) value: Vec<u8>,
 }
 
 /// All ASCII control characters except tab (%x09).

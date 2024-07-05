@@ -2,7 +2,7 @@ mod recur;
 
 use crate::convert::{convert_string, ToModel};
 use crate::model::Period;
-use crate::parser::{DateOrDateTime, DateOrDateTimeOrPeriod};
+use crate::parser::{ContentLine, DateOrDateTime, DateOrDateTimeOrPeriod};
 use anyhow::Context;
 use chrono::{Datelike, Timelike};
 
@@ -856,11 +856,19 @@ impl ToModel for crate::parser::ComponentProperty<'_> {
             crate::parser::ComponentProperty::IanaProperty(iana_prop) => Ok(
                 crate::model::ComponentProperty::IanaProperty(iana_prop.to_model()?),
             ),
-            _ => {
-                // Standard and daylight components do not belong in this enum, needs fixing in the parser.
-                unimplemented!()
-            }
         }
+    }
+}
+
+impl ToModel for ContentLine<'_> {
+    type Model = crate::model::IanaProperty;
+
+    fn to_model(&self) -> anyhow::Result<Self::Model> {
+        Ok(crate::model::IanaProperty {
+            name: convert_string(self.property_name),
+            value: convert_string(&self.value),
+            params: self.params.to_model()?,
+        })
     }
 }
 

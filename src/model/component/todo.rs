@@ -17,7 +17,22 @@ use crate::prelude::DateTimeDuePropertyBuilder;
 
 pub struct ToDoComponent {
     pub(crate) properties: Vec<ComponentProperty>,
-    alarms: Vec<CalendarComponent>,
+    pub(crate) alarms: Vec<CalendarComponent>,
+}
+
+impl ToDoComponent {
+    pub(crate) fn new() -> Self {
+        ToDoComponent {
+            properties: Vec::new(),
+            alarms: Vec::new(),
+        }
+    }
+}
+
+impl Default for ToDoComponent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct ToDoComponentBuilder {

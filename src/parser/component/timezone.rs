@@ -14,6 +14,12 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
+#[derive(Debug, PartialEq)]
+enum PropertyOrComponent<'a> {
+    Property(ComponentProperty<'a>),
+    Component(CalendarComponent<'a>),
+}
+
 pub fn component_timezone<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where
     E: ParseError<&'a [u8]>
@@ -24,19 +30,51 @@ where
         tag("BEGIN:VTIMEZONE\r\n"),
         cut(many0(alt((
             alt((
-                prop_time_zone_id.map(ComponentProperty::TimeZoneId),
-                prop_last_modified.map(ComponentProperty::LastModified),
-                prop_time_zone_url.map(ComponentProperty::TimeZoneUrl),
-                component_standard.map(ComponentProperty::Standard),
-                component_daylight.map(ComponentProperty::Daylight),
+                prop_time_zone_id
+                    .map(ComponentProperty::TimeZoneId)
+                    .map(PropertyOrComponent::Property),
+                prop_last_modified
+                    .map(ComponentProperty::LastModified)
+                    .map(PropertyOrComponent::Property),
+                prop_time_zone_url
+                    .map(ComponentProperty::TimeZoneUrl)
+                    .map(PropertyOrComponent::Property),
+                component_standard.map(PropertyOrComponent::Component),
+                component_daylight.map(PropertyOrComponent::Component),
             )),
-            prop_x.map(ComponentProperty::XProperty),
-            prop_iana.map(ComponentProperty::IanaProperty),
+            prop_x
+                .map(ComponentProperty::XProperty)
+                .map(PropertyOrComponent::Property),
+            prop_iana
+                .map(ComponentProperty::IanaProperty)
+                .map(PropertyOrComponent::Property),
         )))),
         tag("END:VTIMEZONE\r\n"),
     ))(input)?;
 
-    Ok((input, CalendarComponent::TimeZone { properties }))
+    let (properties, components): (Vec<PropertyOrComponent>, Vec<PropertyOrComponent>) = properties
+        .into_iter()
+        .partition(|p| matches!(p, PropertyOrComponent::Property(_)));
+
+    Ok((
+        input,
+        CalendarComponent::TimeZone {
+            properties: properties
+                .into_iter()
+                .map(|p| match p {
+                    PropertyOrComponent::Property(p) => p,
+                    _ => unreachable!(),
+                })
+                .collect(),
+            components: components
+                .into_iter()
+                .map(|c| match c {
+                    PropertyOrComponent::Component(c) => c,
+                    _ => unreachable!(),
+                })
+                .collect(),
+        },
+    ))
 }
 
 pub fn component_standard<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
@@ -107,8 +145,12 @@ pub mod tests {
         check_rem(rem, 0);
 
         match component {
-            CalendarComponent::TimeZone { properties } => {
-                assert_eq!(properties.len(), 4);
+            CalendarComponent::TimeZone {
+                properties,
+                components,
+            } => {
+                assert_eq!(properties.len(), 2);
+                assert_eq!(components.len(), 2);
 
                 assert_eq!(
                     properties[0],
@@ -139,8 +181,8 @@ pub mod tests {
                     })
                 );
 
-                match &properties[2] {
-                    ComponentProperty::Standard(CalendarComponent::Standard { properties }) => {
+                match &components[0] {
+                    CalendarComponent::Standard { properties } => {
                         assert_eq!(properties.len(), 4);
 
                         assert_eq!(
@@ -200,8 +242,8 @@ pub mod tests {
                     _ => panic!("Unexpected component type"),
                 }
 
-                match &properties[3] {
-                    ComponentProperty::Daylight(CalendarComponent::Daylight { properties }) => {
+                match &components[1] {
+                    CalendarComponent::Daylight { properties } => {
                         assert_eq!(properties.len(), 4);
 
                         assert_eq!(
