@@ -13,9 +13,9 @@ mod convert;
 mod model;
 mod parser;
 
+mod serialize;
 #[cfg(test)]
 mod test_utils;
-mod serialize;
 
 pub mod prelude {
     pub use crate::model::*;

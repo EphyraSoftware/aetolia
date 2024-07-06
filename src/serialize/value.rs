@@ -1,13 +1,13 @@
-use std::io::Write;
 use crate::serialize::WriteModel;
+use std::io::Write;
 
 impl WriteModel for (time::Date, time::Time, bool) {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         self.0.write_model(writer)?;
-        writer.write(b"T")?;
+        writer.write_all(b"T")?;
         self.1.write_model(writer)?;
         if self.2 {
-            writer.write(b"Z")?;
+            writer.write_all(b"Z")?;
         }
 
         Ok(())
@@ -17,13 +17,13 @@ impl WriteModel for (time::Date, time::Time, bool) {
 impl WriteModel for time::Date {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         let year = self.year();
-        if 0 <= year && year < 10 {
-            writer.write(&[0, 0, 0, year as u8])?;
-        } else if 10 <= year && year < 100 {
-            writer.write(&[0, 0, year as u8 / 10, year as u8 % 10])?;
-        } else if 100 <= year && year < 1000 {
-            writer.write(&[0, year as u8 / 100, year as u8 / 10 % 10, year as u8 % 10])?;
-        } else if 1000 <= year && year < 10000 {
+        if (0..10).contains(&year) {
+            writer.write_all(&[0, 0, 0, year as u8])?;
+        } else if (10..100).contains(&year) {
+            writer.write_all(&[0, 0, year as u8 / 10, year as u8 % 10])?;
+        } else if (100..1000).contains(&year) {
+            writer.write_all(&[0, year as u8 / 100, year as u8 / 10 % 10, year as u8 % 10])?;
+        } else if (1000..10000).contains(&year) {
             write!(writer, "{}", year)?;
         } else {
             return Err(anyhow::anyhow!("Year [{year}] out of range"));

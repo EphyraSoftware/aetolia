@@ -19,6 +19,7 @@ mod param;
 mod pre;
 mod property;
 
+pub use object::ical_object;
 pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
 pub use param::ParamValue;
 pub use property::component::{Action, AttachValue, DurationOrDateTime};
@@ -41,7 +42,6 @@ pub use property::{
     TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
     TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
 };
-pub use object::ical_object;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {

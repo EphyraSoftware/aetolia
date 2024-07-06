@@ -1,8 +1,8 @@
+mod component;
+mod object;
 mod param;
 mod property;
 mod value;
-mod component;
-mod object;
 
 use std::io::Write;
 

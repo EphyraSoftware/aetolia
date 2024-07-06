@@ -1,7 +1,7 @@
 mod component;
+mod object;
 mod param;
 mod property;
-mod object;
 
 pub trait ToModel {
     type Model;

@@ -1,5 +1,5 @@
-use std::io::Write;
 use crate::serialize::WriteModel;
+use std::io::Write;
 
 impl WriteModel for crate::model::Param {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
