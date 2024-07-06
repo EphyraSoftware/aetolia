@@ -16,13 +16,14 @@ impl ToModel for crate::parser::DateTimeStampProperty<'_> {
                 time::Month::try_from(self.value.date.month).context("Invalid month")?,
                 self.value.date.day,
             )
-            .context("Invalid date")?,
+                .context("Invalid date")?,
             time: time::Time::from_hms(
                 self.value.time.hour,
                 self.value.time.minute,
                 self.value.time.second,
             )
             .context("Invalid time")?,
+            is_utc: self.value.time.is_utc,
             params: self.other_params.to_model()?,
         })
     }
@@ -913,7 +914,7 @@ impl TryFrom<&crate::parser::Date> for time::Date {
             time::Month::try_from(value.month).context("Invalid month")?,
             value.day,
         )
-        .context("Invalid date")
+            .context("Invalid date")
     }
 }
 
@@ -933,7 +934,7 @@ fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Ti
     let date_time = chrono::DateTime::parse_from_rfc3339(
         std::str::from_utf8(raw).context("Invalid date string")?,
     )
-    .context("Date failed to parse")?;
+        .context("Date failed to parse")?;
 
     Ok((
         time::Date::from_calendar_date(
@@ -941,12 +942,12 @@ fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Ti
             time::Month::try_from(date_time.month() as u8).context("Should be a valid month")?,
             date_time.day() as u8,
         )
-        .context("Invalid date")?,
+            .context("Invalid date")?,
         time::Time::from_hms(
             date_time.hour() as u8,
             date_time.minute() as u8,
             date_time.second() as u8,
         )
-        .context("Invalid time")?,
+            .context("Invalid time")?,
     ))
 }

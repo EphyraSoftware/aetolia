@@ -20,7 +20,7 @@ impl ICalObject {
         }
     }
 
-    fn new() -> ICalObject {
+    pub(crate) fn new() -> ICalObject {
         ICalObject {
             properties: Vec::new(),
             components: Vec::new(),

@@ -397,6 +397,7 @@ impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 pub struct DateTimeStampProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -419,9 +420,15 @@ where
             inner: DateTimeStampProperty {
                 date,
                 time,
+                is_utc: false,
                 params: Vec::new(),
             },
         }
+    }
+
+    pub fn add_utc(mut self) -> Self {
+        self.inner.is_utc = true;
+        self
     }
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeStamp);

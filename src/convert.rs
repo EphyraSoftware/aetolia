@@ -1,8 +1,9 @@
 mod component;
 mod param;
 mod property;
+mod object;
 
-trait ToModel {
+pub trait ToModel {
     type Model;
 
     fn to_model(&self) -> anyhow::Result<Self::Model>;
@@ -16,14 +17,6 @@ where
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         self.iter().map(ToModel::to_model).collect()
-    }
-}
-
-impl ToModel for crate::parser::ICalendar<'_> {
-    type Model = crate::model::ICalObject;
-
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
-        todo!()
     }
 }
 

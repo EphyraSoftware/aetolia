@@ -15,6 +15,7 @@ mod parser;
 
 #[cfg(test)]
 mod test_utils;
+mod serialize;
 
 pub mod prelude {
     pub use crate::model::*;
