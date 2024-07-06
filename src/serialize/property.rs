@@ -132,6 +132,18 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b":")?;
                 (property.date, property.time, property.is_utc).write_model(writer)?;
             }
+            ComponentProperty::Duration(property) => {
+                writer.write_all(b"DURATION")?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                property.duration.write_model(writer)?;
+            }
+            ComponentProperty::Attach(property) => {
+                writer.write_all(b"ATTACH")?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                writer.write_all(property.value.as_bytes())?;
+            }
             _ => {
                 unimplemented!()
             }

@@ -1099,8 +1099,7 @@ where
 impl_other_component_params_builder!(DurationPropertyBuilder<P>);
 
 pub struct AttachProperty {
-    pub(crate) value_uri: Option<String>,
-    pub(crate) value_binary: Option<String>,
+    pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1117,8 +1116,7 @@ where
         AttachPropertyBuilder {
             owner,
             inner: AttachProperty {
-                value_uri: Some(uri),
-                value_binary: None,
+                value: uri,
                 params: Vec::new(),
             },
         }
@@ -1128,8 +1126,7 @@ where
         AttachPropertyBuilder {
             owner,
             inner: AttachProperty {
-                value_uri: None,
-                value_binary: Some(binary),
+                value: binary,
                 params: vec![
                     Param::Encoding {
                         encoding: Encoding::Base64,

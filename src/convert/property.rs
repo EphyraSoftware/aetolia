@@ -283,14 +283,13 @@ impl ToModel for crate::parser::AttachProperty<'_> {
     type Model = crate::model::AttachProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (uri, binary) = match self.value {
-            crate::parser::AttachValue::Uri(uri) => (Some(convert_string(uri)), None),
-            crate::parser::AttachValue::Binary(binary) => (None, Some(convert_string(binary))),
+        let value = match self.value {
+            crate::parser::AttachValue::Uri(uri) => convert_string(uri),
+            crate::parser::AttachValue::Binary(binary) => convert_string(binary),
         };
 
         Ok(crate::model::AttachProperty {
-            value_uri: uri,
-            value_binary: binary,
+            value,
             params: self.params.to_model()?,
         })
     }

@@ -630,3 +630,58 @@ impl WriteModel for time::Month {
         Ok(())
     }
 }
+
+impl WriteModel for crate::model::Duration {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        let write_time: fn(&mut W, &crate::model::Duration) -> anyhow::Result<()> =
+            |writer, duration| {
+                if duration.hours.is_some()
+                    || duration.minutes.is_some()
+                    || duration.seconds.is_some()
+                {
+                    writer.write_all(b"T")?;
+                } else {
+                    return Ok(());
+                }
+
+                if let Some(hours) = duration.hours {
+                    write!(writer, "{}H", hours)?;
+
+                    if let Some(minutes) = duration.minutes {
+                        write!(writer, "{}M", minutes)?;
+
+                        if let Some(seconds) = duration.seconds {
+                            write!(writer, "{}S", seconds)?;
+                        }
+                    }
+                } else if let Some(minutes) = duration.minutes {
+                    write!(writer, "{}M", minutes)?;
+
+                    if let Some(seconds) = duration.seconds {
+                        write!(writer, "{}S", seconds)?;
+                    }
+                } else if let Some(seconds) = duration.seconds {
+                    write!(writer, "{}S", seconds)?;
+                }
+
+                Ok(())
+            };
+
+        if self.sign < 0 {
+            writer.write_all(b"-")?;
+        }
+
+        writer.write_all(b"P")?;
+
+        if let Some(weeks) = &self.weeks {
+            write!(writer, "{}W", weeks)?;
+        } else if let Some(days) = &self.days {
+            write!(writer, "{}D", days)?;
+            write_time(writer, self);
+        } else {
+            write_time(writer, self);
+        }
+
+        Ok(())
+    }
+}
