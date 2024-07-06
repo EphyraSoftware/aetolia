@@ -2,7 +2,7 @@ use crate::common::{OffsetWeekday, RecurFreq, Weekday};
 
 pub struct RecurrenceRule {
     pub freq: RecurFreq,
-    pub until: Option<(time::Date, Option<time::Time>)>,
+    pub until: Option<(time::Date, Option<time::Time>, bool)>,
     pub count: Option<u64>,
     pub interval: Option<u64>,
     pub by_second: Option<Vec<u8>>,
@@ -37,8 +37,8 @@ impl RecurrenceRule {
         }
     }
 
-    pub fn set_until(mut self, date: time::Date, time: Option<time::Time>) -> Self {
-        self.until = Some((date, time));
+    pub fn set_until(mut self, date: time::Date, time: Option<time::Time>, is_utc: bool) -> Self {
+        self.until = Some((date, time, is_utc));
         self
     }
 

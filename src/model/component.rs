@@ -362,7 +362,7 @@ macro_rules! add_exception_date_times {
     () => {
         pub fn add_exception_date_times(
             self,
-            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>)>,
+            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>, bool)>,
         ) -> $crate::model::property::ExceptionDateTimesPropertyBuilder<Self> {
             $crate::model::property::ExceptionDateTimesPropertyBuilder::new(self, date_times)
         }
@@ -421,7 +421,7 @@ macro_rules! add_recurrence_date {
     () => {
         pub fn add_recurrence_date_date_times(
             self,
-            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>)>,
+            date_times: std::vec::Vec<(time::Date, std::option::Option<time::Time>, bool)>,
         ) -> $crate::model::property::RecurrenceDateTimesPropertyBuilder<Self> {
             $crate::model::property::RecurrenceDateTimesPropertyBuilder::new_date_times(
                 self, date_times,

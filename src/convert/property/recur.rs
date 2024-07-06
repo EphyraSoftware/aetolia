@@ -20,8 +20,8 @@ impl ToModel for Vec<RecurRulePart> {
                     anyhow::bail!("FREQ can only be specified once")
                 }
                 RecurRulePart::Until(date_time) => {
-                    let (date, maybe_time) = date_time.to_model()?;
-                    rule = rule.set_until(date, maybe_time);
+                    let (date, maybe_time, is_utc) = date_time.to_model()?;
+                    rule = rule.set_until(date, maybe_time, is_utc);
                 }
                 RecurRulePart::Count(count) => {
                     rule = rule.set_count(*count);

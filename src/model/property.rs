@@ -5,7 +5,7 @@ use crate::model::object::ICalObjectBuilder;
 use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
-    altrep_param, common_name_param, directory_entry_reference_param, language_param,
+    add_is_utc, altrep_param, common_name_param, directory_entry_reference_param, language_param,
     sent_by_param, tz_id_param,
 };
 use std::fmt::Display;
@@ -426,10 +426,7 @@ where
         }
     }
 
-    pub fn add_utc(mut self) -> Self {
-        self.inner.is_utc = true;
-        self
-    }
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeStamp);
 }
@@ -468,6 +465,7 @@ impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 pub struct DateTimeStartProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -495,11 +493,18 @@ where
 
         DateTimeStartPropertyBuilder {
             owner,
-            inner: DateTimeStartProperty { date, time, params },
+            inner: DateTimeStartProperty {
+                date,
+                time,
+                is_utc: false,
+                params,
+            },
         }
     }
 
     tz_id_param!();
+
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeStart);
 }
@@ -538,6 +543,7 @@ impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 pub struct CreatedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -556,10 +562,13 @@ where
             inner: CreatedProperty {
                 date,
                 time,
+                is_utc: false,
                 params: Vec::new(),
             },
         }
     }
+
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeCreated);
 }
@@ -636,6 +645,7 @@ impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 pub struct LastModifiedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -658,10 +668,13 @@ where
             inner: LastModifiedProperty {
                 date,
                 time,
+                is_utc: false,
                 params: Vec::new(),
             },
         }
     }
+
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::LastModified);
 }
@@ -929,6 +942,7 @@ impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 pub struct RecurrenceIdProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -956,11 +970,18 @@ where
 
         RecurrenceIdPropertyBuilder {
             owner,
-            inner: RecurrenceIdProperty { date, time, params },
+            inner: RecurrenceIdProperty {
+                date,
+                time,
+                is_utc: false,
+                params,
+            },
         }
     }
 
     tz_id_param!();
+
+    add_is_utc!();
 
     pub fn add_range(mut self, range: Range) -> Self {
         self.inner.params.push(Param::Range { range });
@@ -1004,6 +1025,7 @@ impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 pub struct DateTimeEndProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1031,7 +1053,12 @@ where
 
         DateTimeEndPropertyBuilder {
             owner,
-            inner: DateTimeEndProperty { date, time, params },
+            inner: DateTimeEndProperty {
+                date,
+                time,
+                is_utc: false,
+                params,
+            },
         }
     }
 
@@ -1303,7 +1330,7 @@ where
 impl_other_component_params_builder!(ContactPropertyBuilder<P>);
 
 pub struct ExceptionDateTimesProperty {
-    pub(crate) date_times: Vec<(time::Date, Option<time::Time>)>,
+    pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1316,9 +1343,9 @@ impl<P> ExceptionDateTimesPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
+    pub(crate) fn new(owner: P, date_times: Vec<(time::Date, Option<time::Time>, bool)>) -> Self {
         let mut params = Vec::new();
-        if let Some((_, None)) = date_times.first() {
+        if let Some((_, None, _)) = date_times.first() {
             params.push(Param::ValueType { value: Value::Date });
         }
 
@@ -1466,7 +1493,7 @@ pub enum PeriodEnd {
 }
 
 pub struct RecurrenceDateTimesProperty {
-    pub(crate) date_times: Vec<(time::Date, Option<time::Time>)>,
+    pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
     pub(crate) periods: Vec<Period>,
     pub(crate) params: Vec<Param>,
 }
@@ -1480,9 +1507,12 @@ impl<P> RecurrenceDateTimesPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub fn new_date_times(owner: P, date_times: Vec<(time::Date, Option<time::Time>)>) -> Self {
+    pub fn new_date_times(
+        owner: P,
+        date_times: Vec<(time::Date, Option<time::Time>, bool)>,
+    ) -> Self {
         let mut params = Vec::new();
-        if let Some((_, None)) = date_times.first() {
+        if let Some((_, None, _)) = date_times.first() {
             params.push(Param::ValueType { value: Value::Date });
         }
 
@@ -1519,6 +1549,7 @@ impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 pub struct DateTimeCompletedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1537,10 +1568,13 @@ where
             inner: DateTimeCompletedProperty {
                 date,
                 time,
+                is_utc: false,
                 params: Vec::new(),
             },
         }
     }
+
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeCompleted);
 }
@@ -1579,6 +1613,7 @@ impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 pub struct DateTimeDueProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1606,11 +1641,18 @@ where
 
         DateTimeDuePropertyBuilder {
             owner,
-            inner: DateTimeDueProperty { date, time, params },
+            inner: DateTimeDueProperty {
+                date,
+                time,
+                is_utc: false,
+                params,
+            },
         }
     }
 
     tz_id_param!();
+
+    add_is_utc!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeDue);
 }
@@ -1903,6 +1945,7 @@ impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 pub struct AbsoluteTriggerProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
+    pub(crate) is_utc: bool,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1925,12 +1968,15 @@ where
             inner: AbsoluteTriggerProperty {
                 date,
                 time,
+                is_utc: false,
                 params: vec![Param::ValueType {
                     value: Value::DateTime,
                 }],
             },
         }
     }
+
+    add_is_utc!();
 
     pub fn finish_property(mut self) -> P {
         self.owner

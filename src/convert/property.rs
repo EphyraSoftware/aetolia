@@ -44,11 +44,12 @@ impl ToModel for crate::parser::DateTimeStartProperty<'_> {
     type Model = crate::model::DateTimeStartProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time) = self.value.to_model()?;
+        let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeStartProperty {
             date,
             time: maybe_time,
+            is_utc,
             params: self.params.to_model()?,
         })
     }
@@ -89,11 +90,12 @@ impl ToModel for crate::parser::CreatedProperty<'_> {
     type Model = crate::model::CreatedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, time) = (&self.value).try_into()?;
+        let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::CreatedProperty {
             date,
             time,
+            is_utc,
             params: self.other_params.to_model()?,
         })
     }
@@ -126,11 +128,12 @@ impl ToModel for crate::parser::LastModifiedProperty<'_> {
     type Model = crate::model::LastModifiedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, time) = (&self.value).try_into()?;
+        let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::LastModifiedProperty {
             date,
             time,
+            is_utc,
             params: self.other_params.to_model()?,
         })
     }
@@ -228,11 +231,12 @@ impl ToModel for crate::parser::RecurrenceIdProperty<'_> {
     type Model = crate::model::RecurrenceIdProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time) = self.value.to_model()?;
+        let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::RecurrenceIdProperty {
             date,
             time: maybe_time,
+            is_utc,
             params: self.params.to_model()?,
         })
     }
@@ -253,11 +257,12 @@ impl ToModel for crate::parser::DateTimeEndProperty<'_> {
     type Model = crate::model::DateTimeEndProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time) = self.value.to_model()?;
+        let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeEndProperty {
             date,
             time: maybe_time,
+            is_utc,
             params: self.params.to_model()?,
         })
     }
@@ -453,14 +458,17 @@ impl ToModel for crate::parser::Duration {
 }
 
 impl ToModel for DateOrDateTimeOrPeriod<'_> {
-    type Model = (Option<(time::Date, Option<time::Time>)>, Option<Period>);
+    type Model = (
+        Option<(time::Date, Option<time::Time>, bool)>,
+        Option<Period>,
+    );
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match self {
-            DateOrDateTimeOrPeriod::Date(date) => Ok((Some((date.try_into()?, None)), None)),
+            DateOrDateTimeOrPeriod::Date(date) => Ok((Some((date.try_into()?, None, false)), None)),
             DateOrDateTimeOrPeriod::DateTime(date_time) => {
-                let (date, time) = date_time.try_into()?;
-                Ok((Some((date, Some(time))), None))
+                let (date, time, is_utc) = date_time.try_into()?;
+                Ok((Some((date, Some(time), is_utc)), None))
             }
             DateOrDateTimeOrPeriod::Period(period) => Ok((None, Some(period.to_model()?))),
         }
@@ -543,11 +551,12 @@ impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
     type Model = crate::model::DateTimeCompletedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, time) = (&self.value).try_into()?;
+        let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::DateTimeCompletedProperty {
             date,
             time,
+            is_utc,
             params: self.other_params.to_model()?,
         })
     }
@@ -568,11 +577,12 @@ impl ToModel for crate::parser::DateTimeDueProperty<'_> {
     type Model = crate::model::DateTimeDueProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time) = self.value.to_model()?;
+        let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeDueProperty {
             date,
             time: maybe_time,
+            is_utc,
             params: self.params.to_model()?,
         })
     }
@@ -680,11 +690,12 @@ impl ToModel for crate::parser::TriggerProperty<'_> {
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match &self.value {
             crate::parser::DurationOrDateTime::DateTime(date_time) => {
-                let (date, time) = date_time.try_into()?;
+                let (date, time, is_utc) = date_time.try_into()?;
                 Ok(crate::model::Trigger::Absolute(
                     crate::model::AbsoluteTriggerProperty {
                         date,
                         time,
+                        is_utc,
                         params: self.params.to_model()?,
                     },
                 ))
@@ -892,14 +903,14 @@ impl ToModel for crate::parser::Period<'_> {
 }
 
 impl ToModel for DateOrDateTime {
-    type Model = (time::Date, Option<time::Time>);
+    type Model = (time::Date, Option<time::Time>, bool);
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(match self {
-            DateOrDateTime::Date(date) => (date.try_into()?, None),
+            DateOrDateTime::Date(date) => (date.try_into()?, None, false),
             DateOrDateTime::DateTime(datetime) => {
-                let (date, time) = datetime.try_into()?;
-                (date, Some(time))
+                let (date, time, is_utc) = datetime.try_into()?;
+                (date, Some(time), is_utc)
             }
         })
     }
@@ -918,7 +929,7 @@ impl TryFrom<&crate::parser::Date> for time::Date {
     }
 }
 
-impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time) {
+impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time, bool) {
     type Error = anyhow::Error;
 
     fn try_from(value: &crate::parser::DateTime) -> Result<Self, Self::Error> {
@@ -926,6 +937,7 @@ impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time) {
             time::Date::try_from(&value.date)?,
             time::Time::from_hms(value.time.hour, value.time.minute, value.time.second)
                 .context("Invalid time")?,
+            value.time.is_utc,
         ))
     }
 }

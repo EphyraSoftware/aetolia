@@ -224,6 +224,7 @@ mod tests {
             .add_exception_date_times(vec![(
                 Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
                 None,
+                true,
             )])
             .add_tz_id("America/New_York", true)
             .add_x_param("x-special-param", "my-value")
