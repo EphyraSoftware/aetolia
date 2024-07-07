@@ -685,3 +685,97 @@ impl WriteModel for crate::model::Duration {
         Ok(())
     }
 }
+
+impl WriteModel for crate::common::Status {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        use crate::common::Status;
+
+        match self {
+            Status::Tentative => {
+                writer.write_all(b"TENTATIVE")?;
+            }
+            Status::Confirmed => {
+                writer.write_all(b"CONFIRMED")?;
+            }
+            Status::Cancelled => {
+                writer.write_all(b"CANCELLED")?;
+            }
+            Status::NeedsAction => {
+                writer.write_all(b"NEEDS-ACTION")?;
+            }
+            Status::Completed => {
+                writer.write_all(b"COMPLETED")?;
+            }
+            Status::InProcess => {
+                writer.write_all(b"IN-PROCESS")?;
+            }
+            Status::Draft => {
+                writer.write_all(b"DRAFT")?;
+            }
+            Status::Final => {
+                writer.write_all(b"FINAL")?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl WriteModel for crate::model::Period {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        self.start.write_model(writer)?;
+        writer.write_all(b"/")?;
+        match &self.end {
+            crate::model::PeriodEnd::Duration(duration) => {
+                duration.write_model(writer)?;
+            }
+            crate::model::PeriodEnd::DateTime(date_time) => {
+                date_time.write_model(writer)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl WriteModel for crate::model::TimeZoneOffset {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        if self.sign < 0 {
+            writer.write_all(b"-")?;
+        }
+
+        write!(writer, "{:02}:{:02}", self.hours, self.minutes)?;
+
+        if let Some(seconds) = self.seconds {
+            write!(writer, ":{:02}", seconds)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl WriteModel for crate::model::Action {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        use crate::model::Action;
+
+        match self {
+            Action::Audio => {
+                writer.write_all(b"AUDIO")?;
+            }
+            Action::Display => {
+                writer.write_all(b"DISPLAY")?;
+            }
+            Action::Email => {
+                writer.write_all(b"EMAIL")?;
+            }
+            Action::XName(name) => {
+                writer.write_all(name.as_bytes())?;
+            }
+            Action::IanaToken(token) => {
+                writer.write_all(token.as_bytes())?;
+            }
+        }
+
+        Ok(())
+    }
+}

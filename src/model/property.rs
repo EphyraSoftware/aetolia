@@ -1458,7 +1458,7 @@ impl_other_component_params_builder!(ResourcesPropertyBuilder<P>);
 
 #[derive(Clone, Debug)]
 pub struct Period {
-    pub start: (time::Date, time::Time),
+    pub start: (time::Date, time::Time, bool),
     pub end: PeriodEnd,
 }
 
@@ -1468,16 +1468,22 @@ impl Period {
         start_time: time::Time,
         end_date: time::Date,
         end_time: time::Time,
+        is_utc: bool,
     ) -> Self {
         Period {
-            start: (start_date, start_time),
-            end: PeriodEnd::DateTime((end_date, end_time)),
+            start: (start_date, start_time, is_utc),
+            end: PeriodEnd::DateTime((end_date, end_time, is_utc)),
         }
     }
 
-    pub fn new_start(start_date: time::Date, start_time: time::Time, duration: Duration) -> Self {
+    pub fn new_start(
+        start_date: time::Date,
+        start_time: time::Time,
+        is_utc: bool,
+        duration: Duration,
+    ) -> Self {
         Period {
-            start: (start_date, start_time),
+            start: (start_date, start_time, is_utc),
             end: PeriodEnd::Duration(duration),
         }
     }
@@ -1485,7 +1491,7 @@ impl Period {
 
 #[derive(Clone, Debug)]
 pub enum PeriodEnd {
-    DateTime((time::Date, time::Time)),
+    DateTime((time::Date, time::Time, bool)),
     Duration(Duration),
 }
 

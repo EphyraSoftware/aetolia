@@ -941,7 +941,7 @@ impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time, bool) {
     }
 }
 
-fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Time)> {
+fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Time, bool)> {
     let date_time = chrono::DateTime::parse_from_rfc3339(
         std::str::from_utf8(raw).context("Invalid date string")?,
     )
@@ -960,5 +960,6 @@ fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Ti
             date_time.second() as u8,
         )
         .context("Invalid time")?,
+        date_time.offset().local_minus_utc() == 0,
     ))
 }
