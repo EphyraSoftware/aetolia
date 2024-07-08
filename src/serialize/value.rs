@@ -34,35 +34,9 @@ impl WriteModel for (time::Date, Option<time::Time>, bool) {
 impl WriteModel for time::Date {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         let year = self.year();
-        if (0..10).contains(&year) {
-            writer.write_all(&[0, 0, 0, year as u8])?;
-        } else if (10..100).contains(&year) {
-            writer.write_all(&[0, 0, year as u8 / 10, year as u8 % 10])?;
-        } else if (100..1000).contains(&year) {
-            writer.write_all(&[0, year as u8 / 100, year as u8 / 10 % 10, year as u8 % 10])?;
-        } else if (1000..10000).contains(&year) {
-            write!(writer, "{}", year)?;
-        } else {
-            return Err(anyhow::anyhow!("Year [{year}] out of range"));
-        }
-
-        match self.month() {
-            m @ time::Month::October | m @ time::Month::November | m @ time::Month::December => {
-                write!(writer, "{}", m as u8)?;
-            }
-            m => {
-                write!(writer, "0{}", m as u8)?;
-            }
-        }
-
-        match self.day() {
-            d @ 10..=31 => {
-                write!(writer, "{}", d)?;
-            }
-            d => {
-                write!(writer, "0{}", d)?;
-            }
-        }
+        write!(writer, "{:0>4}", year)?;
+        write!(writer, "{:0>2}", self.month() as u8)?;
+        write!(writer, "{:0>2}", self.day())?;
 
         Ok(())
     }

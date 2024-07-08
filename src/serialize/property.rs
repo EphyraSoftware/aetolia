@@ -71,7 +71,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"PRIORITY")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(&[property.value])?;
+                write!(writer, "{}", property.value)?;
             }
             ComponentProperty::Sequence(property) => {
                 writer.write_all(b"SEQUENCE")?;
@@ -327,10 +327,7 @@ impl WriteModel for crate::model::ComponentProperty {
 
 impl WriteModel for &[crate::model::Param] {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        if let Some(param) = self.first() {
-            param.write_model(writer)?;
-        }
-        for param in self.iter().skip(1) {
+        for param in self.iter() {
             writer.write_all(b";")?;
             param.write_model(writer)?;
         }

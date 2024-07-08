@@ -248,6 +248,7 @@ mod tests {
             .add_recurrence_date_periods(vec![Period::new_start(
                 Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
                 time::Time::from_hms(14, 30, 0).unwrap(),
+                true,
                 Duration::hours(1, 1).build(),
             )])
             .add_tz_id("America/New_York", true)
