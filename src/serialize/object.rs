@@ -20,18 +20,50 @@ impl WriteModel for crate::model::ICalObject {
 
 impl WriteModel for crate::model::CalendarProperty {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        use crate::model::CalendarProperty;
+
         match self {
-            crate::model::CalendarProperty::ProductId(property) => {
+            CalendarProperty::ProductId(property) => {
                 writer.write_all(b"PRODID")?;
-                for param in &property.params {
-                    writer.write_all(b";")?;
-                    param.write_model(writer)?;
-                }
+                property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
                 writer.write_all(property.value.as_bytes())?;
             }
-            _ => {
-                unimplemented!()
+            CalendarProperty::Version(property) => {
+                writer.write_all(b"VERSION")?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+
+                if let Some(min_version) = &property.min_version {
+                    write!(writer, "{};", min_version)?;
+                }
+
+                writer.write_all(property.max_version.as_bytes())?;
+            }
+            CalendarProperty::CalendarScale(property) => {
+                writer.write_all(b"CALSCALE")?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                writer.write_all(property.value.as_bytes())?;
+            }
+            CalendarProperty::Method(property) => {
+                writer.write_all(b"METHOD")?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                writer.write_all(property.value.as_bytes())?;
+            }
+            CalendarProperty::XProperty(property) => {
+                writer.write_all(b"X-")?;
+                writer.write_all(property.name.as_bytes())?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                writer.write_all(property.value.as_bytes())?;
+            }
+            CalendarProperty::IanaProperty(property) => {
+                writer.write_all(property.name.as_bytes())?;
+                property.params.as_slice().write_model(writer)?;
+                writer.write_all(b":")?;
+                writer.write_all(property.value.as_bytes())?;
             }
         }
 
