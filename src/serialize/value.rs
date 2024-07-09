@@ -718,10 +718,10 @@ impl WriteModel for crate::model::TimeZoneOffset {
             writer.write_all(b"-")?;
         }
 
-        write!(writer, "{:02}:{:02}", self.hours, self.minutes)?;
+        write!(writer, "{:02}{:02}", self.hours, self.minutes)?;
 
         if let Some(seconds) = self.seconds {
-            write!(writer, ":{:02}", seconds)?;
+            write!(writer, "{:02}", seconds)?;
         }
 
         Ok(())
@@ -749,6 +749,25 @@ impl WriteModel for crate::model::Action {
                 writer.write_all(token.as_bytes())?;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl WriteModel for String {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        let mut out = Vec::with_capacity(self.len());
+        for c in self.chars() {
+            if matches!(c as u8, b';' | b'\\' | b',') {
+                out.extend_from_slice(&[b'\\', c as u8]);
+            } else if c == '\n' {
+                out.extend_from_slice(&[b'\\', b'n']);
+            } else {
+                out.push(c as u8);
+            }
+        }
+
+        writer.write_all(out.as_slice())?;
 
         Ok(())
     }

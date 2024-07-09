@@ -4,7 +4,6 @@ use crate::convert::{convert_string, ToModel};
 use crate::model::Period;
 use crate::parser::{ContentLine, DateOrDateTime, DateOrDateTimeOrPeriod};
 use anyhow::Context;
-use chrono::{Datelike, Timelike};
 
 impl ToModel for crate::parser::DateTimeStampProperty<'_> {
     type Model = crate::model::DateTimeStampProperty;
@@ -456,7 +455,7 @@ impl ToModel for crate::parser::Duration {
     }
 }
 
-impl ToModel for DateOrDateTimeOrPeriod<'_> {
+impl ToModel for DateOrDateTimeOrPeriod {
     type Model = (
         Option<(time::Date, Option<time::Time>, bool)>,
         Option<Period>,
@@ -883,15 +882,15 @@ impl ToModel for ContentLine<'_> {
     }
 }
 
-impl ToModel for crate::parser::Period<'_> {
+impl ToModel for crate::parser::Period {
     type Model = Period;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(Period {
-            start: convert_date_time_iso8601(self.start)?,
+            start: (&self.start).try_into()?,
             end: match &self.end {
                 crate::parser::PeriodEnd::DateTime(date_time) => {
-                    crate::model::PeriodEnd::DateTime(convert_date_time_iso8601(date_time)?)
+                    crate::model::PeriodEnd::DateTime(date_time.try_into()?)
                 }
                 crate::parser::PeriodEnd::Duration(duration) => {
                     crate::model::PeriodEnd::Duration(duration.to_model()?)
@@ -939,27 +938,4 @@ impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time, bool) {
             value.time.is_utc,
         ))
     }
-}
-
-fn convert_date_time_iso8601(raw: &[u8]) -> anyhow::Result<(time::Date, time::Time, bool)> {
-    let date_time = chrono::DateTime::parse_from_rfc3339(
-        std::str::from_utf8(raw).context("Invalid date string")?,
-    )
-    .context("Date failed to parse")?;
-
-    Ok((
-        time::Date::from_calendar_date(
-            date_time.year(),
-            time::Month::try_from(date_time.month() as u8).context("Should be a valid month")?,
-            date_time.day() as u8,
-        )
-        .context("Invalid date")?,
-        time::Time::from_hms(
-            date_time.hour() as u8,
-            date_time.minute() as u8,
-            date_time.second() as u8,
-        )
-        .context("Invalid time")?,
-        date_time.offset().local_minus_utc() == 0,
-    ))
 }

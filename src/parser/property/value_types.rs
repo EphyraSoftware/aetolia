@@ -43,14 +43,14 @@ impl Default for Duration {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Period<'a> {
-    pub start: &'a [u8],
-    pub end: PeriodEnd<'a>,
+pub struct Period {
+    pub start: DateTime,
+    pub end: PeriodEnd,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum PeriodEnd<'a> {
-    DateTime(&'a [u8]),
+pub enum PeriodEnd {
+    DateTime(DateTime),
     Duration(Duration),
 }
 
@@ -69,8 +69,8 @@ pub enum DateOrDateTime {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum DateOrDateTimeOrPeriod<'a> {
+pub enum DateOrDateTimeOrPeriod {
     Date(Date),
     DateTime(DateTime),
-    Period(Period<'a>),
+    Period(Period),
 }

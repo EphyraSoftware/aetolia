@@ -576,7 +576,7 @@ where
 #[derive(Debug, Eq, PartialEq)]
 pub struct FreeBusyTimeProperty<'a> {
     pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<Period<'a>>,
+    pub value: Vec<Period>,
 }
 
 /// Parse a FREEBUSY property.
@@ -1016,7 +1016,7 @@ where
 #[derive(Debug, Eq, PartialEq)]
 pub struct RecurrenceDateTimesProperty<'a> {
     pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<DateOrDateTimeOrPeriod<'a>>,
+    pub value: Vec<DateOrDateTimeOrPeriod>,
 }
 
 /// Parse an RDATE property.
@@ -1805,7 +1805,19 @@ RSVP to team leader."#
                     fb_type: FreeBusyTimeType::BusyUnavailable,
                 },],
                 value: vec![Period {
-                    start: b"19970308T160000Z",
+                    start: DateTime {
+                        date: Date {
+                            year: 1997,
+                            month: 3,
+                            day: 8,
+                        },
+                        time: Time {
+                            hour: 16,
+                            minute: 0,
+                            second: 0,
+                            is_utc: true,
+                        },
+                    },
                     end: PeriodEnd::Duration(Duration {
                         sign: 1,
                         hours: Some(8),
@@ -1832,7 +1844,19 @@ RSVP to team leader."#
                 },],
                 value: vec![
                     Period {
-                        start: b"19970308T160000Z",
+                        start: DateTime {
+                            date: Date {
+                                year: 1997,
+                                month: 3,
+                                day: 8,
+                            },
+                            time: Time {
+                                hour: 16,
+                                minute: 0,
+                                second: 0,
+                                is_utc: true,
+                            },
+                        },
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
                             hours: Some(3),
@@ -1840,7 +1864,19 @@ RSVP to team leader."#
                         }),
                     },
                     Period {
-                        start: b"19970308T200000Z",
+                        start: DateTime {
+                            date: Date {
+                                year: 1997,
+                                month: 3,
+                                day: 8,
+                            },
+                            time: Time {
+                                hour: 20,
+                                minute: 0,
+                                second: 0,
+                                is_utc: true,
+                            },
+                        },
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
                             hours: Some(1),
@@ -2309,11 +2345,47 @@ RSVP to team leader."#
                 },],
                 value: vec![
                     DateOrDateTimeOrPeriod::Period(Period {
-                        start: b"19960403T020000Z",
-                        end: PeriodEnd::DateTime(b"19960403T040000Z"),
+                        start: DateTime {
+                            date: Date {
+                                year: 1996,
+                                month: 4,
+                                day: 3,
+                            },
+                            time: Time {
+                                hour: 2,
+                                minute: 0,
+                                second: 0,
+                                is_utc: true,
+                            },
+                        },
+                        end: PeriodEnd::DateTime(DateTime {
+                            date: Date {
+                                year: 1996,
+                                month: 4,
+                                day: 3,
+                            },
+                            time: Time {
+                                hour: 4,
+                                minute: 0,
+                                second: 0,
+                                is_utc: true,
+                            },
+                        }),
                     }),
                     DateOrDateTimeOrPeriod::Period(Period {
-                        start: b"19960404T010000Z",
+                        start: DateTime {
+                            date: Date {
+                                year: 1996,
+                                month: 4,
+                                day: 4,
+                            },
+                            time: Time {
+                                hour: 1,
+                                minute: 0,
+                                second: 0,
+                                is_utc: true,
+                            },
+                        },
                         end: PeriodEnd::Duration(Duration {
                             sign: 1,
                             hours: Some(3),

@@ -117,6 +117,129 @@ END:VCALENDAR\r\n";
         round_trip_ical_object(example_2);
     }
 
+    #[test]
+    fn rtt_journal() {
+        let example_1 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VJOURNAL\r\n\
+UID:19970901T130000Z-123405@example.com\r\n\
+DTSTAMP:19970901T130000Z\r\n\
+DTSTART;VALUE=DATE:19970317\r\n\
+SUMMARY:Staff meeting minutes\r\n\
+DESCRIPTION:1. Staff meeting: Participants include Joe\\, Lisa\\, and Bob. Aurora project plans were reviewed. There is currently no budget reserves for this project. Lisa will escalate to management. Next meeting on Tuesday.\\n 2. Telephone Conference: ABC Corp. sales representative called to discuss new printer. Promised to get us a demo by Friday.\\n3. Henry Miller (Handsoff Insurance): Car was totaled by tree. Is looking into a loaner car. 555-2323 (tel).\r\n\
+END:VJOURNAL\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_1);
+    }
+
+    #[test]
+    fn rtt_free_busy() {
+        let example_1 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VFREEBUSY\r\n\
+UID:19970901T082949Z-FA43EF@example.com\r\n\
+ORGANIZER:mailto:jane_doe@example.com\r\n\
+ATTENDEE:mailto:john_public@example.com\r\n\
+DTSTART:19971015T050000Z\r\n\
+DTEND:19971016T050000Z\r\n\
+DTSTAMP:19970901T083000Z\r\n\
+END:VFREEBUSY\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_1);
+
+        let example_2 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VFREEBUSY\r\n\
+UID:19970901T095957Z-76A912@example.com\r\n\
+ORGANIZER:mailto:jane_doe@example.com\r\n\
+ATTENDEE:mailto:john_public@example.com\r\n\
+DTSTAMP:19970901T100000Z\r\n\
+FREEBUSY:19971015T050000Z/PT8H30M,19971015T160000Z/PT5H30M,19971015T223000Z/PT6H30M\r\n\
+URL:http://example.com/pub/busy/jpublic-01.ifb\r\n\
+COMMENT:This iCalendar file contains busy time information for the next three months.\r\n\
+END:VFREEBUSY\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_2);
+
+        let example_3 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VFREEBUSY\r\n\
+UID:19970901T115957Z-76A912@example.com\r\n\
+DTSTAMP:19970901T120000Z\r\n\
+ORGANIZER:jsmith@example.com\r\n\
+DTSTART:19980313T141711Z\r\n\
+DTEND:19980410T141711Z\r\n\
+FREEBUSY:19980314T233000Z/19980315T003000Z\r\n\
+FREEBUSY:19980316T153000Z/19980316T163000Z\r\n\
+FREEBUSY:19980318T030000Z/19980318T040000Z\r\n\
+URL:http://www.example.com/calendar/busytime/jsmith.ifb\r\n\
+END:VFREEBUSY\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_3);
+    }
+
+    #[ignore = "needs a fix for ordering of rrule parts"]
+    #[test]
+    fn rtt_time_zone() {
+        let example_1 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19670430T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=-1SU;UNTIL=19730429T070000Z\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19671029T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU;UNTIL=20061029T060000Z\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19740106T020000\r\n\
+RDATE:19750223T020000\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19760425T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=-1SU;UNTIL=19860427T070000Z\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19870405T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=1SU;UNTIL=20060402T070000Z\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:20070311T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:20071104T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_1);
+    }
+
     fn round_trip_ical_object(content: &str) {
         let (rem, object) = crate::parser::ical_object::<Error>(content.as_bytes()).unwrap();
         check_rem(rem, 0);

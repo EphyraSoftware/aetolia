@@ -320,28 +320,16 @@ where
     Ok((input, sign as i32 * num))
 }
 
-#[inline]
-const fn is_iso_8601_basic(c: u8) -> bool {
-    matches!(c, b'0'..=b'9' | b'T' | b'Z' | b'-' | b'+' | b':')
-}
-
-fn iso_8601_basic<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
-where
-    E: ParseError<&'a [u8]> + From<Error<'a>>,
-{
-    take_while_m_n(1, 21, is_iso_8601_basic)(input)
-}
-
-pub fn prop_value_period<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Period<'a>, E>
+pub fn prop_value_period<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Period, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (start, _, end)) = tuple((
-        iso_8601_basic,
+        prop_value_date_time,
         char('/'),
         alt((
             prop_value_duration.map(PeriodEnd::Duration),
-            iso_8601_basic.map(PeriodEnd::DateTime),
+            prop_value_date_time.map(PeriodEnd::DateTime),
         )),
     ))(input)?;
 
@@ -601,8 +589,32 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             Period {
-                start: b"19970101T180000Z",
-                end: PeriodEnd::DateTime(b"19970102T070000Z")
+                start: DateTime {
+                    date: Date {
+                        year: 1997,
+                        month: 1,
+                        day: 1
+                    },
+                    time: Time {
+                        hour: 18,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true
+                    }
+                },
+                end: PeriodEnd::DateTime(DateTime {
+                    date: Date {
+                        year: 1997,
+                        month: 1,
+                        day: 2
+                    },
+                    time: Time {
+                        hour: 7,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true
+                    }
+                })
             },
             value
         );
@@ -614,7 +626,19 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             Period {
-                start: b"19970101T180000Z",
+                start: DateTime {
+                    date: Date {
+                        year: 1997,
+                        month: 1,
+                        day: 1
+                    },
+                    time: Time {
+                        hour: 18,
+                        minute: 0,
+                        second: 0,
+                        is_utc: true
+                    }
+                },
                 end: PeriodEnd::Duration(Duration {
                     hours: Some(5),
                     minutes: Some(30),

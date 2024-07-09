@@ -16,7 +16,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"UID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::DateTimeStart(property) => {
                 writer.write_all(b"DTSTART")?;
@@ -40,7 +40,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DESCRIPTION")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::GeographicPosition(property) => {
                 writer.write_all(b"GEO")?;
@@ -59,7 +59,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"LOCATION")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Organizer(property) => {
                 writer.write_all(b"ORGANIZER")?;
@@ -83,7 +83,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"SUMMARY")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::TimeTransparency(property) => {
                 writer.write_all(b"TRANSP")?;
@@ -155,23 +155,24 @@ impl WriteModel for crate::model::ComponentProperty {
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
                 if let Some(category) = property.value.first() {
-                    write!(writer, "{}", category)?;
+                    category.write_model(writer)?;
                 }
                 for category in property.value.iter().skip(1) {
-                    write!(writer, ",{}", category)?;
+                    writer.write_all(b",")?;
+                    category.write_model(writer)?;
                 }
             }
             ComponentProperty::Comment(property) => {
                 writer.write_all(b"COMMENT")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Contact(property) => {
                 writer.write_all(b"CONTACT")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::ExceptionDateTimes(property) => {
                 writer.write_all(b"EXDATE")?;
@@ -195,17 +196,18 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"RELATED-TO")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Resources(property) => {
                 writer.write_all(b"RESOURCES")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
                 if let Some(resource) = property.value.first() {
-                    write!(writer, "{}", resource)?;
+                    resource.write_model(writer)?;
                 }
                 for resource in property.value.iter().skip(1) {
-                    write!(writer, ",{}", resource)?;
+                    writer.write_all(b",")?;
+                    resource.write_model(writer)?;
                 }
             }
             ComponentProperty::RecurrenceDateTimes(property) => {
@@ -278,7 +280,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"TZNAME")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                writer.write_all(property.value.as_bytes())?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Action(property) => {
                 writer.write_all(b"ACTION")?;

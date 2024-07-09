@@ -611,7 +611,7 @@ mod tests {
             authority.host,
             Host::IpAddr(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 16)))
         );
-        assert_eq!(authority.port.clone().unwrap(), 80);
+        assert_eq!(authority.port.unwrap(), 80);
         check_serialize_raw(uri, raw);
     }
 
