@@ -1,104 +1,100 @@
+use std::collections::HashSet;
 use crate::common::{OffsetWeekday, RecurFreq, Weekday};
+use crate::parser::DateOrDateTime;
+
+pub enum RecurRulePart {
+    Freq(RecurFreq),
+    Until((time::Date, Option<time::Time>, bool)),
+    Count(u64),
+    Interval(u64),
+    BySecList(Vec<u8>),
+    ByMinute(Vec<u8>),
+    ByHour(Vec<u8>),
+    ByDay(Vec<OffsetWeekday>),
+    ByMonthDay(Vec<i8>),
+    ByYearDay(Vec<i16>),
+    ByWeekNumber(Vec<i8>),
+    ByMonth(Vec<time::Month>),
+    BySetPos(Vec<i16>),
+    WeekStart(Weekday),
+}
 
 pub struct RecurrenceRule {
-    pub freq: RecurFreq,
-    pub until: Option<(time::Date, Option<time::Time>, bool)>,
-    pub count: Option<u64>,
-    pub interval: Option<u64>,
-    pub by_second: Option<Vec<u8>>,
-    pub by_minute: Option<Vec<u8>>,
-    pub by_hour: Option<Vec<u8>>,
-    pub by_day: Option<Vec<OffsetWeekday>>,
-    pub by_month_day: Option<Vec<i8>>,
-    pub by_year_day: Option<Vec<i16>>,
-    pub by_week_number: Option<Vec<i8>>,
-    pub by_month: Option<Vec<time::Month>>,
-    pub by_set_pos: Option<Vec<i16>>,
-    pub week_start: Option<Weekday>,
+    pub parts: Vec<RecurRulePart>
 }
 
 impl RecurrenceRule {
     pub fn new(freq: RecurFreq) -> Self {
+        let mut parts = Vec::new();
+        parts.push(RecurRulePart::Freq(freq));
+
         RecurrenceRule {
-            freq,
-            until: None,
-            count: None,
-            interval: None,
-            by_second: None,
-            by_minute: None,
-            by_hour: None,
-            by_day: None,
-            by_month_day: None,
-            by_year_day: None,
-            by_week_number: None,
-            by_month: None,
-            by_set_pos: None,
-            week_start: None,
+            parts
         }
     }
 
     pub fn set_until(mut self, date: time::Date, time: Option<time::Time>, is_utc: bool) -> Self {
-        self.until = Some((date, time, is_utc));
+        self.parts.push(RecurRulePart::Until((date, time, is_utc)));
         self
     }
 
     pub fn set_count(mut self, count: u64) -> Self {
-        self.count = Some(count);
+        self.parts.push(RecurRulePart::Count(count));
         self
     }
 
     pub fn set_interval(mut self, interval: u64) -> Self {
-        self.interval = Some(interval);
+        self.parts.push(RecurRulePart::Interval(interval));
         self
     }
 
     pub fn set_by_second(mut self, by_second: Vec<u8>) -> Self {
-        self.by_second = Some(by_second);
+        self.parts.push(RecurRulePart::BySecList(by_second));
         self
     }
 
     pub fn set_by_minute(mut self, by_minute: Vec<u8>) -> Self {
-        self.by_minute = Some(by_minute);
+        self.parts.push(RecurRulePart::ByMinute(by_minute));
         self
     }
 
     pub fn set_by_hour(mut self, by_hour: Vec<u8>) -> Self {
-        self.by_hour = Some(by_hour);
+        self.parts.push(RecurRulePart::ByHour(by_hour));
         self
     }
 
     pub fn set_by_day(mut self, by_day: Vec<OffsetWeekday>) -> Self {
-        self.by_day = Some(by_day);
+        self.parts.push(RecurRulePart::ByDay(by_day));
         self
     }
 
     pub fn set_by_month_day(mut self, by_month_day: Vec<i8>) -> Self {
-        self.by_month_day = Some(by_month_day);
+        self.parts.push(RecurRulePart::ByMonthDay(by_month_day));
         self
     }
 
     pub fn set_by_year_day(mut self, by_year_day: Vec<i16>) -> Self {
-        self.by_year_day = Some(by_year_day);
+        self.parts.push(RecurRulePart::ByYearDay(by_year_day));
         self
     }
 
     pub fn set_by_week_number(mut self, by_week_number: Vec<i8>) -> Self {
-        self.by_week_number = Some(by_week_number);
+        self.parts.push(RecurRulePart::ByWeekNumber(by_week_number));
         self
     }
 
     pub fn set_by_month(mut self, by_month: Vec<time::Month>) -> Self {
-        self.by_month = Some(by_month);
+        self.parts.push(RecurRulePart::ByMonth(by_month));
         self
     }
 
     pub fn set_by_set_pos(mut self, by_set_pos: Vec<i16>) -> Self {
-        self.by_set_pos = Some(by_set_pos);
+        self.parts.push(RecurRulePart::BySetPos(by_set_pos));
         self
     }
 
     pub fn set_week_start(mut self, week_start: Weekday) -> Self {
-        self.week_start = Some(week_start);
+        self.parts.push(RecurRulePart::WeekStart(week_start));
         self
     }
 }

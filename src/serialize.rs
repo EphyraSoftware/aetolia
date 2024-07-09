@@ -178,7 +178,6 @@ END:VCALENDAR\r\n";
         round_trip_ical_object(example_3);
     }
 
-    #[ignore = "needs a fix for ordering of rrule parts"]
     #[test]
     fn rtt_time_zone() {
         let example_1 = "BEGIN:VCALENDAR\r\n\
@@ -238,6 +237,104 @@ END:VTIMEZONE\r\n\
 END:VCALENDAR\r\n";
 
         round_trip_ical_object(example_1);
+
+        let example_2 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:20071104T020000\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:20070311T020000\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_2);
+
+        let example_3 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+TZURL:http://zones.example.com/tz/America-New_York.ics\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:20071104T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:20070311T020000\r\n\
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_3);
+
+        let example_4 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:Fictitious\r\n\
+LAST-MODIFIED:19870101T000000Z\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19671029T020000\r\n\
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19870405T020000\r\n\
+RRULE:FREQ=YEARLY;BYDAY=1SU;BYMONTH=4;UNTIL=19980404T070000Z\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_4);
+
+        let example_5 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:Fictitious\r\n\
+LAST-MODIFIED:19870101T000000Z\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19671029T020000\r\n\
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19870405T020000\r\n\
+RRULE:FREQ=YEARLY;BYDAY=1SU;BYMONTH=4;UNTIL=19980404T070000Z\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:19990424T020000\r\n\
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=4\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_5);
     }
 
     fn round_trip_ical_object(content: &str) {

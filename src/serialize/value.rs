@@ -424,82 +424,77 @@ impl WriteModel for crate::common::TimeTransparency {
 
 impl WriteModel for crate::model::RecurrenceRule {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        writer.write_all(b"FREQ=")?;
-        self.freq.write_model(writer)?;
+Fix         use crate::model::RecurRulePart;
 
-        if let Some(until) = &self.until {
-            writer.write_all(b";UNTIL=")?;
-            until.write_model(writer)?;
-        }
-
-        if let Some(count) = &self.count {
-            write!(writer, ";COUNT={}", count)?;
-        }
-
-        if let Some(interval) = &self.interval {
-            write!(writer, ";INTERVAL={}", interval)?;
-        }
-
-        if let Some(by_second) = &self.by_second {
-            write!(writer, ";BYSECOND=")?;
-            by_second.write_model(writer)?;
-        }
-
-        if let Some(by_minute) = &self.by_minute {
-            write!(writer, ";BYMINUTE=")?;
-            by_minute.write_model(writer)?;
-        }
-
-        if let Some(by_hour) = &self.by_hour {
-            write!(writer, ";BYHOUR=")?;
-            by_hour.write_model(writer)?;
-        }
-
-        if let Some(by_day) = &self.by_day {
-            write!(writer, ";BYDAY=")?;
-            if let Some(day) = by_day.first() {
-                day.write_model(writer)?;
+        for part in &self.parts {
+            match part {
+                RecurRulePart::Freq(freq) => {
+                    writer.write_all(b"FREQ=")?;
+                    freq.write_model(writer)?;
+                }
+                RecurRulePart::Until((date, time, is_utc)) => {
+                    writer.write_all(b";UNTIL=")?;
+                    (*date, *time, *is_utc).write_model(writer)?;
+                }
+                RecurRulePart::Count(count) => {
+                    write!(writer, ";COUNT={}", count)?;
+                }
+                RecurRulePart::Interval(interval) => {
+                    write!(writer, ";INTERVAL={}", interval)?;
+                }
+                RecurRulePart::BySecList(by_second) => {
+                    write!(writer, ";BYSECOND=")?;
+                    by_second.write_model(writer)?;
+                }
+                RecurRulePart::ByMinute(by_minute) => {
+                    write!(writer, ";BYMINUTE=")?;
+                    by_minute.write_model(writer)?;
+                }
+                RecurRulePart::ByHour(by_hour) => {
+                    write!(writer, ";BYHOUR=")?;
+                    by_hour.write_model(writer)?;
+                }
+                RecurRulePart::ByDay(by_day) => {
+                    write!(writer, ";BYDAY=")?;
+                    if let Some(day) = by_day.first() {
+                        day.write_model(writer)?;
+                    }
+                    for day in by_day.iter().skip(1) {
+                        write!(writer, ",")?;
+                        day.write_model(writer)?;
+                    }
+                }
+                RecurRulePart::ByMonthDay(by_month_day) => {
+                    write!(writer, ";BYMONTHDAY=")?;
+                    by_month_day.write_model(writer)?;
+                }
+                RecurRulePart::ByYearDay(by_year_day) => {
+                    write!(writer, ";BYYEARDAY=")?;
+                    by_year_day.write_model(writer)?;
+                }
+                RecurRulePart::ByWeekNumber(by_week_number) => {
+                    write!(writer, ";BYWEEKNO=")?;
+                    by_week_number.write_model(writer)?;
+                }
+                RecurRulePart::ByMonth(by_month) => {
+                    write!(writer, ";BYMONTH=")?;
+                    if let Some(month) = by_month.first() {
+                        month.write_model(writer)?;
+                    }
+                    for month in by_month.iter().skip(1) {
+                        write!(writer, ",")?;
+                        month.write_model(writer)?;
+                    }
+                }
+                RecurRulePart::BySetPos(by_set_pos) => {
+                    write!(writer, ";BYSETPOS=")?;
+                    by_set_pos.write_model(writer)?;
+                }
+                RecurRulePart::WeekStart(week_start) => {
+                    write!(writer, ";WKST=")?;
+                    week_start.write_model(writer)?;
+                }
             }
-            for day in by_day.iter().skip(1) {
-                write!(writer, ",")?;
-                day.write_model(writer)?;
-            }
-        }
-
-        if let Some(by_month_day) = &self.by_month_day {
-            write!(writer, ";BYMONTHDAY=")?;
-            by_month_day.write_model(writer)?;
-        }
-
-        if let Some(by_year_day) = &self.by_year_day {
-            write!(writer, ";BYYEARDAY=")?;
-            by_year_day.write_model(writer)?;
-        }
-
-        if let Some(by_week_number) = &self.by_week_number {
-            write!(writer, ";BYWEEKNO=")?;
-            by_week_number.write_model(writer)?;
-        }
-
-        if let Some(by_month) = &self.by_month {
-            write!(writer, ";BYMONTH=")?;
-            if let Some(month) = by_month.first() {
-                month.write_model(writer)?;
-            }
-            for month in by_month.iter().skip(1) {
-                write!(writer, ",")?;
-                month.write_model(writer)?;
-            }
-        }
-
-        if let Some(by_set_pos) = &self.by_set_pos {
-            write!(writer, ";BYSETPOS=")?;
-            by_set_pos.write_model(writer)?;
-        }
-
-        if let Some(week_start) = &self.week_start {
-            write!(writer, ";WKST=")?;
-            (*week_start).write_model(writer)?;
         }
 
         Ok(())
