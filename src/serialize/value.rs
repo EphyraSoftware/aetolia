@@ -424,7 +424,7 @@ impl WriteModel for crate::common::TimeTransparency {
 
 impl WriteModel for crate::model::RecurrenceRule {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-Fix         use crate::model::RecurRulePart;
+        use crate::model::RecurRulePart;
 
         for part in &self.parts {
             match part {

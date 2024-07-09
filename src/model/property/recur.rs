@@ -1,6 +1,6 @@
-use std::collections::HashSet;
 use crate::common::{OffsetWeekday, RecurFreq, Weekday};
 use crate::parser::DateOrDateTime;
+use std::collections::HashSet;
 
 pub enum RecurRulePart {
     Freq(RecurFreq),
@@ -20,16 +20,13 @@ pub enum RecurRulePart {
 }
 
 pub struct RecurrenceRule {
-    pub parts: Vec<RecurRulePart>
+    pub parts: Vec<RecurRulePart>,
 }
 
 impl RecurrenceRule {
     pub fn new(freq: RecurFreq) -> Self {
-        let mut parts = Vec::new();
-        parts.push(RecurRulePart::Freq(freq));
-
         RecurrenceRule {
-            parts
+            parts: vec![RecurRulePart::Freq(freq)],
         }
     }
 

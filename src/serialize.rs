@@ -337,6 +337,52 @@ END:VCALENDAR\r\n";
         round_trip_ical_object(example_5);
     }
 
+    #[test]
+    fn rtt_alarm() {
+        let example_1 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+BEGIN:VALARM\r\n\
+TRIGGER;VALUE=DATE-TIME:19970317T133000Z\r\n\
+REPEAT:4\r\n\
+DURATION:PT15M\r\n\
+ACTION:AUDIO\r\n\
+ATTACH;FMTTYPE=audio/basic:ftp://example.com/pub/sounds/bell-01.aud\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_1);
+
+        let example_2 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+BEGIN:VALARM\r\n\
+TRIGGER:-PT30M\r\n\
+REPEAT:2\r\n\
+DURATION:PT15M\r\n\
+ACTION:DISPLAY\r\n\
+DESCRIPTION:Breakfast meeting with executive\\n team at 8:30 AM EST.\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_2);
+
+        let example_3 = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+BEGIN:VALARM\r\n\
+TRIGGER;RELATED=END:-P2D\r\n\
+ACTION:EMAIL\r\n\
+ATTENDEE:mailto:john_doe@example.com\r\n\
+SUMMARY:*** REMINDER: SEND AGENDA FOR WEEKLY STAFF MEETING ***\r\n\
+DESCRIPTION:A draft agenda needs to be sent out to the attendees to the weekly managers meeting (MGR-LIST). Attached is a pointer the document template for the agenda file.\r\n\
+ATTACH;FMTTYPE=application/msword:http://example.com/templates/agenda.doc\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        round_trip_ical_object(example_3);
+    }
+
     fn round_trip_ical_object(content: &str) {
         let (rem, object) = crate::parser::ical_object::<Error>(content.as_bytes()).unwrap();
         check_rem(rem, 0);
