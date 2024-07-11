@@ -279,6 +279,60 @@ pub enum ComponentProperty {
     XProperty(XProperty),
 }
 
+impl ComponentProperty {
+    pub fn params(&self) -> &[Param] {
+        match self {
+            ComponentProperty::DateTimeStamp(p) => &p.params,
+            ComponentProperty::UniqueIdentifier(p) => &p.params,
+            ComponentProperty::DateTimeStart(p) => &p.params,
+            ComponentProperty::Classification(p) => &p.params,
+            ComponentProperty::DateTimeCreated(p) => &p.params,
+            ComponentProperty::Description(p) => &p.params,
+            ComponentProperty::GeographicPosition(p) => &p.params,
+            ComponentProperty::LastModified(p) => &p.params,
+            ComponentProperty::Location(p) => &p.params,
+            ComponentProperty::Organizer(p) => &p.params,
+            ComponentProperty::Priority(p) => &p.params,
+            ComponentProperty::Sequence(p) => &p.params,
+            ComponentProperty::Summary(p) => &p.params,
+            ComponentProperty::TimeTransparency(p) => &p.params,
+            ComponentProperty::RequestStatus(p) => &p.params,
+            ComponentProperty::Url(p) => &p.params,
+            ComponentProperty::RecurrenceId(p) => &p.params,
+            ComponentProperty::RecurrenceRule(p) => &p.params,
+            ComponentProperty::DateTimeEnd(p) => &p.params,
+            ComponentProperty::Duration(p) => &p.params,
+            ComponentProperty::Attach(p) => &p.params,
+            ComponentProperty::Attendee(p) => &p.params,
+            ComponentProperty::Categories(p) => &p.params,
+            ComponentProperty::Comment(p) => &p.params,
+            ComponentProperty::Contact(p) => &p.params,
+            ComponentProperty::ExceptionDateTimes(p) => &p.params,
+            ComponentProperty::Status(p) => &p.params,
+            ComponentProperty::RelatedTo(p) => &p.params,
+            ComponentProperty::Resources(p) => &p.params,
+            ComponentProperty::RecurrenceDateTimes(p) => &p.params,
+            ComponentProperty::DateTimeCompleted(p) => &p.params,
+            ComponentProperty::PercentComplete(p) => &p.params,
+            ComponentProperty::DateTimeDue(p) => &p.params,
+            ComponentProperty::FreeBusyTime(p) => &p.params,
+            ComponentProperty::TimeZoneId(p) => &p.params,
+            ComponentProperty::TimeZoneUrl(p) => &p.params,
+            ComponentProperty::TimeZoneOffsetTo(p) => &p.params,
+            ComponentProperty::TimeZoneOffsetFrom(p) => &p.params,
+            ComponentProperty::TimeZoneName(p) => &p.params,
+            ComponentProperty::Action(p) => &p.params,
+            ComponentProperty::Trigger(p) => match p {
+                Trigger::Relative(p) => &p.params,
+                Trigger::Absolute(p) => &p.params,
+            },
+            ComponentProperty::Repeat(p) => &p.params,
+            ComponentProperty::IanaProperty(p) => &p.params,
+            ComponentProperty::XProperty(p) => &p.params,
+        }
+    }
+}
+
 pub enum Trigger {
     Relative(RelativeTriggerProperty),
     Absolute(AbsoluteTriggerProperty),
