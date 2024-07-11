@@ -1,12 +1,12 @@
 mod error;
 
-use anyhow::Context;
 use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
+use anyhow::Context;
 
-pub use error::*;
 use crate::common::{Encoding, Value};
 use crate::serialize::WriteModel;
+pub use error::*;
 
 pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
@@ -59,7 +59,9 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
     Ok(errors)
 }
 
-fn validate_component_properties(properties: &[ComponentProperty]) -> anyhow::Result<Vec<ComponentPropertyError>> {
+fn validate_component_properties(
+    properties: &[ComponentProperty],
+) -> anyhow::Result<Vec<ComponentPropertyError>> {
     let mut errors = Vec::new();
 
     for (index, property) in properties.iter().enumerate() {
@@ -89,7 +91,11 @@ fn validate_component_properties(properties: &[ComponentProperty]) -> anyhow::Re
     Ok(errors)
 }
 
-fn check_encoding_for_binary_values(errors: &mut Vec<ComponentPropertyError>, property: &ComponentProperty, property_index: usize) -> anyhow::Result<()> {
+fn check_encoding_for_binary_values(
+    errors: &mut Vec<ComponentPropertyError>,
+    property: &ComponentProperty,
+    property_index: usize,
+) -> anyhow::Result<()> {
     let declared_value_type = get_declared_value_type(property);
 
     if let Some((value_type, value_type_index)) = declared_value_type {
@@ -101,7 +107,9 @@ fn check_encoding_for_binary_values(errors: &mut Vec<ComponentPropertyError>, pr
 
                     if *encoding != Encoding::Base64 {
                         let mut msg = b"Property is declared to have a binary value but the encoding is set to ".to_vec();
-                        encoding.write_model(&mut msg).context("Failed to write encoding to model")?;
+                        encoding
+                            .write_model(&mut msg)
+                            .context("Failed to write encoding to model")?;
                         msg.extend_from_slice(", instead of BASE64".as_bytes());
 
                         errors.push(ComponentPropertyError {
@@ -246,6 +254,12 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
             Param::Language { .. } => {
                 // Nothing further to validate
             }
+            Param::Members { .. } => {
+                validate_member_param(&mut errors, param, index, &property_info);
+            }
+            Param::Other { name, .. } | Param::Others { name, .. } if name == "MEMBER" => {
+                validate_member_param(&mut errors, param, index, &property_info);
+            }
             _ => {
                 unimplemented!()
             }
@@ -339,14 +353,35 @@ fn validate_dir_param(
     }
 }
 
-fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
-    property.params().iter().enumerate().find_map(|(index, param)| {
-        if let Param::ValueType { value } = param {
-            return Some((value.clone(), index));
-        }
+// RFC 5545, Section 3.2.11
+fn validate_member_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Group or list membership (MEMBER) is not allowed for this property type"
+                .to_string(),
+        });
+    }
+}
 
-        None
-    })
+fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
+    property
+        .params()
+        .iter()
+        .enumerate()
+        .find_map(|(index, param)| {
+            if let Param::ValueType { value } = param {
+                return Some((value.clone(), index));
+            }
+
+            None
+        })
 }
 
 fn calendar_property_name(property: &CalendarProperty) -> &str {
@@ -379,6 +414,12 @@ fn param_name(param: &Param) -> &str {
         Param::DelegatedFrom { .. } => "DELEGATED-FROM",
         Param::DelegatedTo { .. } => "DELEGATED-TO",
         Param::DirectoryEntryReference { .. } => "DIR",
+        Param::ValueType { .. } => "VALUE",
+        Param::Encoding { .. } => "ENCODING",
+        Param::FormatType { .. } => "FMTTYPE",
+        Param::FreeBusyTimeType { .. } => "FBTYPE",
+        Param::Language { .. } => "LANGUAGE",
+        Param::Members { .. } => "MEMBER",
         Param::Other { name, .. } => name,
         Param::Others { name, .. } => name,
         _ => unimplemented!(),
@@ -600,6 +641,35 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn member_on_version_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+VERSION;MEMBER=\"mailto:hello@test.net\":2.0\r\n\
+BEGIN:X-NONE\r\n\
+empty:value\r\n\
+END:X-NONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In calendar property \"VERSION\" at index 0: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn member_on_description_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DESCRIPTION;MEMBER=\"mailto:hello@test.net\":some text\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
