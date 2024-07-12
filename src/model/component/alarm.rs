@@ -8,6 +8,7 @@ use crate::model::{
 };
 use crate::prelude::{ActionPropertyBuilder, AddComponentProperty};
 
+#[derive(Debug)]
 pub struct AlarmComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

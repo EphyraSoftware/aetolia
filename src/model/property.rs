@@ -232,6 +232,7 @@ impl MethodPropertyBuilder {
 
 impl_other_params_builder!(MethodPropertyBuilder);
 
+#[derive(Debug)]
 pub enum ComponentProperty {
     DateTimeStamp(DateTimeStampProperty),
     UniqueIdentifier(UniqueIdentifierProperty),
@@ -333,11 +334,13 @@ impl ComponentProperty {
     }
 }
 
+#[derive(Debug)]
 pub enum Trigger {
     Relative(RelativeTriggerProperty),
     Absolute(AbsoluteTriggerProperty),
 }
 
+#[derive(Debug)]
 pub struct XProperty {
     pub(crate) name: String,
     pub(crate) value: String,
@@ -366,6 +369,7 @@ impl XPropertyBuilder {
 
 impl_other_params_builder!(XPropertyBuilder);
 
+#[derive(Debug)]
 pub struct IanaProperty {
     pub(crate) name: String,
     pub(crate) value: String,
@@ -448,6 +452,7 @@ where
 
 impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DateTimeStampProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
@@ -487,6 +492,7 @@ where
 
 impl_other_component_params_builder!(DateTimeStampPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct UniqueIdentifierProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -516,6 +522,7 @@ where
 
 impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DateTimeStartProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
@@ -565,6 +572,7 @@ where
 
 impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct ClassificationProperty {
     pub(crate) value: Classification,
     pub(crate) params: Vec<Param>,
@@ -594,6 +602,7 @@ where
 
 impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct CreatedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
@@ -629,6 +638,7 @@ where
 
 impl_other_component_params_builder!(CreatedPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DescriptionProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -661,6 +671,7 @@ where
 
 impl_other_component_params_builder!(DescriptionPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct GeographicPositionProperty {
     pub(crate) latitude: f64,
     pub(crate) longitude: f64,
@@ -696,6 +707,7 @@ where
 
 impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct LastModifiedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
@@ -735,6 +747,7 @@ where
 
 impl_other_component_params_builder!(LastModifiedPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct LocationProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -767,6 +780,7 @@ where
 
 impl_other_component_params_builder!(LocationPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct OrganizerProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -804,6 +818,7 @@ where
 
 impl_other_component_params_builder!(OrganizerPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct PriorityProperty {
     pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
@@ -833,6 +848,7 @@ where
 
 impl_other_component_params_builder!(PriorityPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct SequenceProperty {
     pub(crate) value: u32,
     pub(crate) params: Vec<Param>,
@@ -862,6 +878,7 @@ where
 
 impl_other_component_params_builder!(SequencePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RequestStatusProperty {
     pub(crate) status_code: Vec<u32>,
     pub(crate) description: String,
@@ -902,6 +919,7 @@ where
 
 impl_other_component_params_builder!(RequestStatusPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct SummaryProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -934,6 +952,7 @@ where
 
 impl_other_component_params_builder!(SummaryPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeTransparencyProperty {
     pub(crate) value: TimeTransparency,
     pub(crate) params: Vec<Param>,
@@ -963,6 +982,7 @@ where
 
 impl_other_component_params_builder!(TimeTransparencyPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct UrlProperty {
     // TODO should be a URI
     pub(crate) value: String,
@@ -993,6 +1013,7 @@ where
 
 impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RecurrenceIdProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
@@ -1047,6 +1068,7 @@ where
 
 impl_other_component_params_builder!(RecurrenceIdPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RecurrenceRuleProperty {
     pub(crate) rule: RecurrenceRule,
     pub(crate) params: Vec<Param>,
@@ -1076,6 +1098,7 @@ where
 
 impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DateTimeEndProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
@@ -1123,6 +1146,7 @@ where
 
 impl_other_component_params_builder!(DateTimeEndPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DurationProperty {
     pub(crate) duration: Duration,
     pub(crate) params: Vec<Param>,
@@ -1152,6 +1176,7 @@ where
 
 impl_other_component_params_builder!(DurationPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct AttachProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1210,6 +1235,7 @@ where
 
 impl_other_component_params_builder!(AttachPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct AttendeeProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1285,6 +1311,7 @@ where
 
 impl_other_component_params_builder!(AttendeePropertyBuilder<P, PS>);
 
+#[derive(Debug)]
 pub struct CategoriesProperty {
     pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
@@ -1316,6 +1343,7 @@ where
 
 impl_other_component_params_builder!(CategoriesPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct CommentProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1348,6 +1376,7 @@ where
 
 impl_other_component_params_builder!(CommentPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct ContactProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1380,6 +1409,7 @@ where
 
 impl_other_component_params_builder!(ContactPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct ExceptionDateTimesProperty {
     pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
     pub(crate) params: Vec<Param>,
@@ -1413,6 +1443,7 @@ where
 
 impl_other_component_params_builder!(ExceptionDateTimesPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct StatusProperty {
     pub(crate) value: Status,
     pub(crate) params: Vec<Param>,
@@ -1442,6 +1473,7 @@ where
 
 impl_other_component_params_builder!(StatusPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RelatedToProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1478,6 +1510,7 @@ where
 
 impl_other_component_params_builder!(RelatedToPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct ResourcesProperty {
     pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
@@ -1549,6 +1582,7 @@ pub enum PeriodEnd {
     Duration(Duration),
 }
 
+#[derive(Debug)]
 pub struct RecurrenceDateTimesProperty {
     pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
     pub(crate) periods: Vec<Period>,
@@ -1603,6 +1637,7 @@ where
 
 impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DateTimeCompletedProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
@@ -1638,6 +1673,7 @@ where
 
 impl_other_component_params_builder!(CompletedPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct PercentCompleteProperty {
     pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
@@ -1667,6 +1703,7 @@ where
 
 impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct DateTimeDueProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
@@ -1716,6 +1753,7 @@ where
 
 impl_other_component_params_builder!(DateTimeDuePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct FreeBusyTimeProperty {
     pub(crate) value: Vec<Period>,
     pub(crate) params: Vec<Param>,
@@ -1751,6 +1789,7 @@ where
 
 impl_other_component_params_builder!(FreeBusyTimePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeZoneIdProperty {
     pub(crate) value: String,
     pub(crate) unique_registry_id: bool,
@@ -1786,6 +1825,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneIdPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeZoneUrlProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1815,6 +1855,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneUrlPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeZoneOffset {
     pub(crate) sign: i8,
     pub(crate) hours: u8,
@@ -1833,6 +1874,7 @@ impl TimeZoneOffset {
     }
 }
 
+#[derive(Debug)]
 pub struct TimeZoneOffsetToProperty {
     pub(crate) offset: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
@@ -1862,6 +1904,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneOffsetToPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeZoneOffsetFromProperty {
     pub(crate) offset: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
@@ -1891,6 +1934,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneOffsetFromPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct TimeZoneNameProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -1922,6 +1966,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneNamePropertyBuilder<P>);
 
+#[derive(Debug)]
 pub enum Action {
     Audio,
     Display,
@@ -1930,6 +1975,7 @@ pub enum Action {
     IanaToken(String),
 }
 
+#[derive(Debug)]
 pub struct ActionProperty {
     pub(crate) value: Action,
     pub(crate) params: Vec<Param>,
@@ -1959,6 +2005,7 @@ where
 
 impl_other_component_params_builder!(ActionPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RelativeTriggerProperty {
     pub(crate) value: Duration,
     pub(crate) params: Vec<Param>,
@@ -1999,6 +2046,7 @@ where
 
 impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct AbsoluteTriggerProperty {
     pub(crate) date: time::Date,
     pub(crate) time: time::Time,
@@ -2044,6 +2092,7 @@ where
 
 impl_other_component_params_builder!(AbsoluteTriggerPropertyBuilder<P>);
 
+#[derive(Debug)]
 pub struct RepeatProperty {
     pub(crate) value: u32,
     pub(crate) params: Vec<Param>,

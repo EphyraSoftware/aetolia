@@ -12,6 +12,7 @@ use crate::model::{
     StatusJournal, StatusPropertyBuilder, StatusToDo, XComponentPropertyBuilder,
 };
 
+#[derive(Debug)]
 pub struct JournalComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

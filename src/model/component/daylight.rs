@@ -7,6 +7,7 @@ use crate::model::{
     TimeZoneOffsetToProperty, TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
 };
 
+#[derive(Debug)]
 pub struct DaylightComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

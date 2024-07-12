@@ -15,6 +15,7 @@ use crate::model::{
 use crate::prelude::alarm::AddAlarmComponent;
 use crate::prelude::DateTimeDuePropertyBuilder;
 
+#[derive(Debug)]
 pub struct ToDoComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) alarms: Vec<CalendarComponent>,

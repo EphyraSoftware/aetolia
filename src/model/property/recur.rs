@@ -2,6 +2,7 @@ use crate::common::{OffsetWeekday, RecurFreq, Weekday};
 use crate::parser::DateOrDateTime;
 use std::collections::HashSet;
 
+#[derive(Debug)]
 pub enum RecurRulePart {
     Freq(RecurFreq),
     Until((time::Date, Option<time::Time>, bool)),
@@ -19,6 +20,7 @@ pub enum RecurRulePart {
     WeekStart(Weekday),
 }
 
+#[derive(Debug)]
 pub struct RecurrenceRule {
     pub parts: Vec<RecurRulePart>,
 }

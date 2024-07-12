@@ -33,6 +33,7 @@ use crate::prelude::{
     UniqueIdentifierPropertyBuilder,
 };
 
+#[derive(Debug)]
 pub struct EventComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) alarms: Vec<CalendarComponent>,

@@ -19,6 +19,7 @@ pub use time_zone::{TimeZoneComponent, TimeZoneComponentBuilder};
 pub use todo::{ToDoComponent, ToDoComponentBuilder};
 pub use x_component::{XComponent, XComponentBuilder};
 
+#[derive(Debug)]
 pub enum CalendarComponent {
     Event(EventComponent),
     ToDo(ToDoComponent),

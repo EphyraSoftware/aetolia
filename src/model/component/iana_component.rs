@@ -7,6 +7,7 @@ use crate::model::property::{
 };
 use crate::model::XComponentPropertyBuilder;
 
+#[derive(Debug)]
 pub struct IanaComponent {
     pub(crate) name: String,
     pub(crate) properties: Vec<ComponentProperty>,
