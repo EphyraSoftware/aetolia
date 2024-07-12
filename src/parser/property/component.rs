@@ -62,7 +62,7 @@ where
     });
 
     if is_base_64 && is_binary {
-        let (input, (v, _)) = tuple((prop_value_binary, tag("\r\n")))(input)?;
+        let (input, (v, _)) = tuple((cut(prop_value_binary), tag("\r\n")))(input)?;
 
         Ok((
             input,
@@ -72,7 +72,7 @@ where
             },
         ))
     } else {
-        let (input, (v, _)) = tuple((recognize(param_value_uri), tag("\r\n")))(input)?;
+        let (input, (v, _)) = tuple((cut(recognize(param_value_uri)), tag("\r\n")))(input)?;
 
         Ok((
             input,
@@ -99,12 +99,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("CATEGORIES"),
-        cut(params),
-        char(':'),
-        separated_list1(char(','), prop_value_text),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            separated_list1(char(','), prop_value_text),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, CategoriesProperty { params, value }))
@@ -134,18 +136,20 @@ pub fn prop_classification<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("CLASS"),
-        cut(other_params),
-        char(':'),
-        alt((
-            tag_no_case("PUBLIC").map(|_| Classification::Public),
-            tag_no_case("PRIVATE").map(|_| Classification::Private),
-            tag_no_case("CONFIDENTIAL").map(|_| Classification::Confidential),
-            x_name.map(Classification::XName),
-            iana_token.map(Classification::IanaToken),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            alt((
+                tag_no_case("PUBLIC").map(|_| Classification::Public),
+                tag_no_case("PRIVATE").map(|_| Classification::Private),
+                tag_no_case("CONFIDENTIAL").map(|_| Classification::Confidential),
+                x_name.map(Classification::XName),
+                iana_token.map(Classification::IanaToken),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -172,12 +176,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("COMMENT"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, CommentProperty { params, value }))
@@ -198,12 +199,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DESCRIPTION"),
-        cut(params),
-        char(':'),
-        prop_value_text.map(|v| v),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            prop_value_text.map(|v| v),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, DescriptionProperty { params, value }))
@@ -225,12 +228,14 @@ pub fn prop_geographic_position<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, (latitude, _, longitude), _)) = tuple((
+    let (input, (_, (other_params, _, (latitude, _, longitude), _))) = tuple((
         tag_no_case("GEO"),
-        cut(other_params),
-        char(':'),
-        tuple((prop_value_float, char(';'), prop_value_float)),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            tuple((prop_value_float, char(';'), prop_value_float)),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -258,12 +263,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("LOCATION"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, LocationProperty { params, value }))
@@ -284,12 +286,14 @@ pub fn prop_percent_complete<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("PERCENT-COMPLETE"),
-        cut(other_params),
-        char(':'),
-        verify(prop_value_integer, |v| 0 <= *v && *v <= 100).map(|v| v as u8),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            verify(prop_value_integer, |v| 0 <= *v && *v <= 100).map(|v| v as u8),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -314,12 +318,14 @@ pub fn prop_priority<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], PriorityProper
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("PRIORITY"),
-        cut(other_params),
-        char(':'),
-        verify(prop_value_integer, |v| 0 <= *v && *v <= 9).map(|v| v as u8),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            verify(prop_value_integer, |v| 0 <= *v && *v <= 9).map(|v| v as u8),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -346,12 +352,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RESOURCES"),
-        cut(params),
-        char(':'),
-        separated_list1(char(','), prop_value_text),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            separated_list1(char(','), prop_value_text),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, ResourcesProperty { params, value }))
@@ -370,21 +378,23 @@ pub fn prop_status<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], StatusProperty<'
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("STATUS"),
-        cut(other_params),
-        char(':'),
-        alt((
-            tag_no_case("TENTATIVE").map(|_| Status::Tentative),
-            tag_no_case("CONFIRMED").map(|_| Status::Confirmed),
-            tag_no_case("CANCELLED").map(|_| Status::Cancelled),
-            tag_no_case("NEEDS-ACTION").map(|_| Status::NeedsAction),
-            tag_no_case("COMPLETED").map(|_| Status::Completed),
-            tag_no_case("IN-PROCESS").map(|_| Status::InProcess),
-            tag_no_case("DRAFT").map(|_| Status::Draft),
-            tag_no_case("FINAL").map(|_| Status::Final),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            alt((
+                tag_no_case("TENTATIVE").map(|_| Status::Tentative),
+                tag_no_case("CONFIRMED").map(|_| Status::Confirmed),
+                tag_no_case("CANCELLED").map(|_| Status::Cancelled),
+                tag_no_case("NEEDS-ACTION").map(|_| Status::NeedsAction),
+                tag_no_case("COMPLETED").map(|_| Status::Completed),
+                tag_no_case("IN-PROCESS").map(|_| Status::InProcess),
+                tag_no_case("DRAFT").map(|_| Status::Draft),
+                tag_no_case("FINAL").map(|_| Status::Final),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -411,12 +421,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("SUMMARY"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, SummaryProperty { params, value }))
@@ -437,12 +444,14 @@ pub fn prop_date_time_completed<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("COMPLETED"),
-        cut(other_params),
-        char(':'),
-        prop_value_date_time,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_date_time,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -469,15 +478,17 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DTEND"),
-        cut(params),
-        char(':'),
-        alt((
-            prop_value_date_time.map(DateOrDateTime::DateTime),
-            prop_value_date.map(DateOrDateTime::Date),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            alt((
+                prop_value_date_time.map(DateOrDateTime::DateTime),
+                prop_value_date.map(DateOrDateTime::Date),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, DateTimeEndProperty { params, value }))
@@ -498,15 +509,17 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DUE"),
-        cut(params),
-        char(':'),
-        alt((
-            prop_value_date_time.map(DateOrDateTime::DateTime),
-            prop_value_date.map(DateOrDateTime::Date),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            alt((
+                prop_value_date_time.map(DateOrDateTime::DateTime),
+                prop_value_date.map(DateOrDateTime::Date),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, DateTimeDueProperty { params, value }))
@@ -529,15 +542,17 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DTSTART"),
-        cut(params),
-        char(':'),
-        alt((
-            prop_value_date_time.map(DateOrDateTime::DateTime),
-            prop_value_date.map(DateOrDateTime::Date),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            alt((
+                prop_value_date_time.map(DateOrDateTime::DateTime),
+                prop_value_date.map(DateOrDateTime::Date),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, DateTimeStartProperty { params, value }))
@@ -556,12 +571,14 @@ pub fn prop_duration<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DurationProper
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("DURATION"),
-        cut(other_params),
-        char(':'),
-        prop_value_duration,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_duration,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -588,12 +605,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("FREEBUSY"),
-        cut(params),
-        char(':'),
-        separated_list1(char(','), prop_value_period),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            separated_list1(char(','), prop_value_period),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, FreeBusyTimeProperty { params, value }))
@@ -614,15 +633,17 @@ pub fn prop_time_transparency<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("TRANSP"),
-        cut(other_params),
-        char(':'),
-        alt((
-            tag_no_case("OPAQUE").map(|_| TimeTransparency::Opaque),
-            tag_no_case("TRANSPARENT").map(|_| TimeTransparency::Transparent),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            alt((
+                tag_no_case("OPAQUE").map(|_| TimeTransparency::Opaque),
+                tag_no_case("TRANSPARENT").map(|_| TimeTransparency::Transparent),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -648,12 +669,14 @@ pub fn prop_time_zone_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], TimeZoneId
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, (unique, value), _)) = tuple((
+    let (input, (_, (other_params, _, (unique, value), _))) = tuple((
         tag_no_case("TZID"),
-        cut(other_params),
-        char(':'),
-        tuple((opt(char('/')), prop_value_text)),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            tuple((opt(char('/')), prop_value_text)),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -681,12 +704,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("TZNAME"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, TimeZoneNameProperty { params, value }))
@@ -707,12 +727,14 @@ pub fn prop_time_zone_offset_from<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("TZOFFSETFROM"),
-        cut(other_params),
-        char(':'),
-        prop_value_utc_offset,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_utc_offset,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -733,12 +755,14 @@ pub fn prop_time_zone_offset_to<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("TZOFFSETTO"),
-        cut(other_params),
-        char(':'),
-        prop_value_utc_offset,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_utc_offset,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -765,12 +789,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("TZURL"),
-        cut(other_params),
-        char(':'),
-        recognize(param_value_uri),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            cut(recognize(param_value_uri)),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -797,12 +823,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, uri, _)) = tuple((
+    let (input, (_, (params, _, uri, _))) = tuple((
         tag_no_case("ATTENDEE"),
-        cut(params),
-        char(':'),
-        recognize(prop_value_calendar_user_address),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            cut(recognize(prop_value_calendar_user_address)),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, AttendeeProperty { params, value: uri }))
@@ -823,12 +851,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("CONTACT"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, ContactProperty { params, value }))
@@ -849,12 +874,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, uri, _)) = tuple((
+    let (input, (_, (params, _, uri, _))) = tuple((
         tag_no_case("ORGANIZER"),
-        cut(params),
-        char(':'),
-        recognize(prop_value_calendar_user_address),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            recognize(prop_value_calendar_user_address),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, OrganizerProperty { params, value: uri }))
@@ -875,15 +902,17 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RECURRENCE-ID"),
-        cut(params),
-        char(':'),
-        alt((
-            prop_value_date_time.map(DateOrDateTime::DateTime),
-            prop_value_date.map(DateOrDateTime::Date),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            alt((
+                prop_value_date_time.map(DateOrDateTime::DateTime),
+                prop_value_date.map(DateOrDateTime::Date),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, RecurrenceIdProperty { params, value }))
@@ -904,12 +933,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RELATED-TO"),
-        cut(params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
     ))(input)?;
 
     Ok((input, RelatedToProperty { params, value }))
@@ -930,12 +956,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("URL"),
-        cut(other_params),
-        char(':'),
-        param_value_uri,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            param_value_uri,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -962,12 +990,14 @@ pub fn prop_unique_identifier<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("UID"),
-        cut(other_params),
-        char(':'),
-        prop_value_text,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -996,18 +1026,20 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("EXDATE"),
-        cut(params),
-        char(':'),
-        separated_list1(
-            char(','),
-            alt((
-                prop_value_date_time.map(DateOrDateTime::DateTime),
-                prop_value_date.map(DateOrDateTime::Date),
-            )),
-        ),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            separated_list1(
+                char(','),
+                alt((
+                    prop_value_date_time.map(DateOrDateTime::DateTime),
+                    prop_value_date.map(DateOrDateTime::Date),
+                )),
+            ),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, ExceptionDateTimesProperty { params, value }))
@@ -1030,19 +1062,21 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RDATE"),
-        cut(params),
-        char(':'),
-        separated_list1(
-            char(','),
-            alt((
-                prop_value_period.map(DateOrDateTimeOrPeriod::Period),
-                prop_value_date_time.map(DateOrDateTimeOrPeriod::DateTime),
-                prop_value_date.map(DateOrDateTimeOrPeriod::Date),
-            )),
-        ),
-        tag("\r\n"),
+        cut(tuple((
+            params,
+            char(':'),
+            separated_list1(
+                char(','),
+                alt((
+                    prop_value_period.map(DateOrDateTimeOrPeriod::Period),
+                    prop_value_date_time.map(DateOrDateTimeOrPeriod::DateTime),
+                    prop_value_date.map(DateOrDateTimeOrPeriod::Date),
+                )),
+            ),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, RecurrenceDateTimesProperty { params, value }))
@@ -1065,12 +1099,9 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("RRULE"),
-        cut(other_params),
-        char(':'),
-        recur,
-        tag("\r\n"),
+        cut(tuple((other_params, char(':'), recur, tag("\r\n")))),
     ))(input)?;
 
     Ok((
@@ -1104,18 +1135,20 @@ pub fn prop_action<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ActionProperty<'
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("ACTION"),
-        cut(other_params),
-        char(':'),
-        alt((
-            tag_no_case("AUDIO").map(|_| Action::Audio),
-            tag_no_case("DISPLAY").map(|_| Action::Display),
-            tag_no_case("EMAIL").map(|_| Action::Email),
-            x_name.map(Action::XName),
-            iana_token.map(Action::IanaToken),
-        )),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            alt((
+                tag_no_case("AUDIO").map(|_| Action::Audio),
+                tag_no_case("DISPLAY").map(|_| Action::Display),
+                tag_no_case("EMAIL").map(|_| Action::Email),
+                x_name.map(Action::XName),
+                iana_token.map(Action::IanaToken),
+            )),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1140,12 +1173,14 @@ pub fn prop_repeat_count<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RepeatCoun
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("REPEAT"),
-        cut(other_params),
-        char(':'),
-        prop_value_integer.map(|v| v as u32),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_integer.map(|v| v as u32),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1178,7 +1213,8 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag_no_case("TRIGGER"), cut(params), char(':')))(input)?;
+    let (input, (_, (params, _))) =
+        tuple((tag_no_case("TRIGGER"), cut(tuple((params, char(':'))))))(input)?;
 
     let value_choice = params
         .iter()
@@ -1194,10 +1230,10 @@ where
         .collect::<Vec<_>>();
 
     let (input, value) = match value_choice.as_slice() {
-        [1] | [] => prop_value_duration
+        [1] | [] => cut(prop_value_duration)
             .map(DurationOrDateTime::Duration)
             .parse(input),
-        [2] => prop_value_date_time
+        [2] => cut(prop_value_date_time)
             .map(DurationOrDateTime::DateTime)
             .parse(input),
         _ => {
@@ -1207,7 +1243,7 @@ where
         }
     }?;
 
-    let (input, _) = tag("\r\n")(input)?;
+    let (input, _) = cut(tag("\r\n"))(input)?;
 
     Ok((input, TriggerProperty { params, value }))
 }
@@ -1225,12 +1261,14 @@ pub fn prop_created<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CreatedProperty
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("CREATED"),
-        cut(other_params),
-        char(':'),
-        prop_value_date_time,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_date_time,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1257,12 +1295,14 @@ pub fn prop_date_time_stamp<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("DTSTAMP"),
-        cut(other_params),
-        char(':'),
-        prop_value_date_time,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_date_time,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1287,12 +1327,14 @@ pub fn prop_last_modified<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LastModif
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("LAST-MODIFIED"),
-        cut(other_params),
-        char(':'),
-        prop_value_date_time,
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_date_time,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1317,12 +1359,14 @@ pub fn prop_sequence<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], SequenceProper
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, other_params, _, value, _)) = tuple((
+    let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("SEQUENCE"),
-        cut(other_params),
-        char(':'),
-        prop_value_integer.map(|v| v as u32),
-        tag("\r\n"),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_integer.map(|v| v as u32),
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -1382,16 +1426,19 @@ where
         Ok((input, nums))
     }
 
-    let (input, (_, params, _, status_code, _, status_description, extra_data, _)) = tuple((
-        tag_no_case("REQUEST-STATUS"),
-        cut(params),
-        char(':'),
-        status_code,
-        char(';'),
-        prop_value_text,
-        opt(tuple((char(';'), prop_value_text)).map(|(_, v)| v)),
-        tag("\r\n"),
-    ))(input)?;
+    let (input, (_, (params, _, status_code, _, status_description, extra_data, _))) =
+        tuple((
+            tag_no_case("REQUEST-STATUS"),
+            cut(tuple((
+                params,
+                char(':'),
+                status_code,
+                char(';'),
+                prop_value_text,
+                opt(tuple((char(';'), prop_value_text)).map(|(_, v)| v)),
+                tag("\r\n"),
+            ))),
+        ))(input)?;
 
     Ok((
         input,
