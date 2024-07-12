@@ -4,7 +4,7 @@ use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalO
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
 use anyhow::Context;
 
-use crate::common::{Encoding, Value};
+use crate::common::{Encoding, ParticipationStatusUnknown, Status, Value};
 use crate::serialize::WriteModel;
 pub use error::*;
 
@@ -23,7 +23,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             CalendarComponent::Event(event) => {
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
-                        validate_component_properties(&event.properties)?,
+                        validate_component_properties(PropertyLocation::Event, &event.properties)?,
                         index,
                         component_name(component).to_string(),
                     )
@@ -33,7 +33,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             CalendarComponent::TimeZone(time_zone) => {
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
-                        validate_component_properties(&time_zone.properties)?,
+                        validate_component_properties(PropertyLocation::TimeZone, &time_zone.properties)?,
                         index,
                         component_name(component).to_string(),
                     )
@@ -43,7 +43,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             CalendarComponent::XComponent(x_component) => {
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
-                        validate_component_properties(&x_component.properties)?,
+                        validate_component_properties(PropertyLocation::Other, &x_component.properties)?,
                         index,
                         component_name(component).to_string(),
                     )
@@ -60,6 +60,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
 }
 
 fn validate_component_properties(
+    property_location: PropertyLocation,
     properties: &[ComponentProperty],
 ) -> anyhow::Result<Vec<ComponentPropertyError>> {
     let mut errors = Vec::new();
@@ -69,10 +70,21 @@ fn validate_component_properties(
 
         match property {
             ComponentProperty::Description(description) => {
-                let property_info = PropertyInfo::new(ValueType::Text);
+                let property_info = PropertyInfo::new(property_location.clone(), ValueType::Text);
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&description.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::Attendee(attendee) => {
+                let property_info = PropertyInfo::new(property_location.clone(), ValueType::CalendarAddress);
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&attendee.params, property_info),
                         index,
                         component_property_name(property).to_string(),
                     )
@@ -148,6 +160,9 @@ fn check_encoding_for_binary_values(
 
 #[derive(Debug)]
 struct PropertyInfo {
+    /// The location that this property has been used in
+    property_location: PropertyLocation,
+    /// The required value type for this property
     value_type: ValueType,
     /// If the property has a VALUE parameter, regardless of whether that is valid on this
     /// property, then it will be populated here.
@@ -156,9 +171,20 @@ struct PropertyInfo {
     is_other: bool,
 }
 
+#[derive(Debug, Clone)]
+enum PropertyLocation {
+    Calendar,
+    Event,
+    ToDo,
+    Journal,
+    TimeZone,
+    Other,
+}
+
 impl PropertyInfo {
-    fn new(value_type: ValueType) -> Self {
+    fn new(property_location: PropertyLocation, value_type: ValueType) -> Self {
         PropertyInfo {
+            property_location,
             value_type,
             declared_value_type: None,
             is_other: false,
@@ -184,7 +210,7 @@ fn validate_calendar_properties(ical_object: &ICalObject) -> Vec<CalendarPropert
     for (index, property) in ical_object.properties.iter().enumerate() {
         match property {
             CalendarProperty::Version(version) => {
-                let property_info = PropertyInfo::new(ValueType::VersionValue);
+                let property_info = PropertyInfo::new(PropertyLocation::Calendar, ValueType::VersionValue);
                 errors.extend_from_slice(
                     CalendarPropertyError::many_from_param_errors(
                         validate_params(&version.params, property_info),
@@ -259,6 +285,9 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "MEMBER" => {
                 validate_member_param(&mut errors, param, index, &property_info);
+            }
+            Param::ParticipationStatus { status} => {
+                validate_part_stat_param(&mut errors, param, status, index, &property_info);
             }
             _ => {
                 unimplemented!()
@@ -370,6 +399,79 @@ fn validate_member_param(
     }
 }
 
+// RFC 5545, Section 3.2.12
+fn validate_part_stat_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    status: &ParticipationStatusUnknown,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    match &property_info.property_location {
+        PropertyLocation::Event => {
+            match status {
+                ParticipationStatusUnknown::NeedsAction | ParticipationStatusUnknown::Accepted | ParticipationStatusUnknown::Declined | ParticipationStatusUnknown::Tentative | ParticipationStatusUnknown::Delegated | ParticipationStatusUnknown::XName(_) | ParticipationStatusUnknown::IanaToken(_) => {
+                    // Valid values
+                }
+                _ => {
+                    errors.push(ParamError {
+                        index,
+                        name: param_name(param).to_string(),
+                        message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VEVENT component context"),
+                    });
+                }
+            }
+        }
+        PropertyLocation::ToDo => {
+            match status {
+                ParticipationStatusUnknown::NeedsAction | ParticipationStatusUnknown::Accepted | ParticipationStatusUnknown::Declined | ParticipationStatusUnknown::Tentative | ParticipationStatusUnknown::Delegated | ParticipationStatusUnknown::Completed | ParticipationStatusUnknown::InProcess | ParticipationStatusUnknown::XName(_) | ParticipationStatusUnknown::IanaToken(_) => {
+                    // Valid values
+                }
+                _ => {
+                    errors.push(ParamError {
+                        index,
+                        name: param_name(param).to_string(),
+                        message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VTODO component context"),
+                    });
+                }
+            }
+        }
+        PropertyLocation::Journal => {
+            match status {
+                ParticipationStatusUnknown::NeedsAction | ParticipationStatusUnknown::Accepted | ParticipationStatusUnknown::Declined | ParticipationStatusUnknown::XName(_) | ParticipationStatusUnknown::IanaToken(_) => {
+                    // Valid values
+                }
+                _ => {
+                    errors.push(ParamError {
+                        index,
+                        name: param_name(param).to_string(),
+                        message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VJOURNAL component context"),
+                    });
+                }
+            }
+        }
+        PropertyLocation::Other => {
+            // Permit in "other", we don't know how it's being used.
+        }
+        location => {
+            errors.push(ParamError {
+                index,
+                name: param_name(param).to_string(),
+                message: format!("Participation status (PARTSTAT) property is not expected in a [{location:?}] component context"),
+            });
+        }
+    }
+
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Participation status (PARTSTAT) is not allowed for this property type"
+                .to_string(),
+        });
+    }
+}
+
 fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
     property
         .params()
@@ -393,7 +495,8 @@ fn calendar_property_name(property: &CalendarProperty) -> &str {
 
 fn component_property_name(property: &ComponentProperty) -> &str {
     match property {
-        ComponentProperty::Description { .. } => "DESCRIPTION",
+        ComponentProperty::Description(_) => "DESCRIPTION",
+        ComponentProperty::Attendee(_) => "ATTENDEE",
         _ => unimplemented!(),
     }
 }
@@ -420,6 +523,7 @@ fn param_name(param: &Param) -> &str {
         Param::FreeBusyTimeType { .. } => "FBTYPE",
         Param::Language { .. } => "LANGUAGE",
         Param::Members { .. } => "MEMBER",
+        Param::ParticipationStatus { .. } => "PARTSTAT",
         Param::Other { name, .. } => name,
         Param::Others { name, .. } => name,
         _ => unimplemented!(),
@@ -670,6 +774,20 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn part_stat_wrong_value_in_event() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+ATTENDEE;PARTSTAT=COMPLETED:mailto:hello@test.net\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ATTENDEE\" at index 0: Invalid participation status (PARTSTAT) value [Completed] in a VEVENT component context", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
