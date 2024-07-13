@@ -244,6 +244,7 @@ enum ValueType {
     VersionValue,
     CalendarAddress,
     Text,
+    Duration,
 }
 
 fn validate_calendar_properties(ical_object: &ICalObject) -> Vec<CalendarPropertyError> {
@@ -331,6 +332,16 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
             }
             Param::ParticipationStatus { status } => {
                 validate_part_stat_param(&mut errors, param, status, index, &property_info);
+            }
+            Param::Range { .. } => {
+                // The parser should reject wrong values for this param and the builder won't let you
+                // specify a wrong value, so not useful to validate in this context.
+            }
+            Param::Related { .. } => {
+                validate_related_param(&mut errors, param, index, &property_info);
+            }
+            Param::Other { name, .. } | Param::Others { name, .. } if name == "RELATED" => {
+                validate_related_param(&mut errors, param, index, &property_info);
             }
             _ => {
                 unimplemented!()
@@ -514,6 +525,22 @@ fn validate_part_stat_param(
     }
 }
 
+// RFC 5545, Section 3.2.14
+fn validate_related_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::Duration {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Related (RELATED) is not allowed for this property type".to_string(),
+        });
+    }
+}
+
 fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
     property
         .params()
@@ -569,6 +596,7 @@ fn param_name(param: &Param) -> &str {
         Param::Language { .. } => "LANGUAGE",
         Param::Members { .. } => "MEMBER",
         Param::ParticipationStatus { .. } => "PARTSTAT",
+        Param::Related { .. } => "RELATED",
         Param::Other { name, .. } => name,
         Param::Others { name, .. } => name,
         _ => unimplemented!(),
@@ -861,6 +889,35 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Participation status (PARTSTAT) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn related_on_version_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+VERSION;RELATED=END:2.0\r\n\
+BEGIN:X-NONE\r\n\
+empty:value\r\n\
+END:X-NONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In calendar property \"VERSION\" at index 0: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn related_on_description_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DESCRIPTION;RELATED=START:some text\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
