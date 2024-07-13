@@ -343,6 +343,27 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
             Param::Other { name, .. } | Param::Others { name, .. } if name == "RELATED" => {
                 validate_related_param(&mut errors, param, index, &property_info);
             }
+            Param::RelationshipType { .. } => {
+                // Nothing further to validate
+            }
+            Param::Role { .. } => {
+                validate_role_param(&mut errors, param, index, &property_info);
+            }
+            Param::Other { name, .. } if name == "ROLE" => {
+                validate_role_param(&mut errors, param, index, &property_info);
+            }
+            Param::Rsvp { .. } => {
+                validate_rsvp_param(&mut errors, param, index, &property_info);
+            }
+            Param::Other { name, .. } if name == "RSVP" => {
+                validate_rsvp_param(&mut errors, param, index, &property_info);
+            }
+            Param::SentBy { address } => {
+                validate_sent_by_param(&mut errors, param, address, index, &property_info);
+            }
+            Param::Other { name, value } if name == "SENT-BY" => {
+                validate_sent_by_param(&mut errors, param, value, index, &property_info);
+            }
             _ => {
                 unimplemented!()
             }
@@ -541,6 +562,63 @@ fn validate_related_param(
     }
 }
 
+// RFC 5545, Section 3.2.16
+fn validate_role_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Participation role (ROLE) is not allowed for this property type".to_string(),
+        });
+    }
+}
+
+// RFC 5545, Section 3.2.17
+fn validate_rsvp_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "RSVP expectation (RSVP) is not allowed for this property type".to_string(),
+        });
+    }
+}
+
+// RFC 5545, Section 3.2.18
+fn validate_sent_by_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    address: &str,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Sent by (SENT-BY) is not allowed for this property type".to_string(),
+        });
+    }
+
+    if !address.starts_with("mailto:") {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Sent by (SENT-BY) must be a 'mailto:' URI".to_string(),
+        });
+    }
+}
+
 fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
     property
         .params()
@@ -597,6 +675,9 @@ fn param_name(param: &Param) -> &str {
         Param::Members { .. } => "MEMBER",
         Param::ParticipationStatus { .. } => "PARTSTAT",
         Param::Related { .. } => "RELATED",
+        Param::Role { .. } => "ROLE",
+        Param::Rsvp { .. } => "RSVP",
+        Param::SentBy { .. } => "SENT-BY",
         Param::Other { name, .. } => name,
         Param::Others { name, .. } => name,
         _ => unimplemented!(),
@@ -918,6 +999,107 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn role_on_version_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+VERSION;ROLE=CHAIR:2.0\r\n\
+BEGIN:X-NONE\r\n\
+empty:value\r\n\
+END:X-NONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In calendar property \"VERSION\" at index 0: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn role_on_description_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DESCRIPTION;ROLE=CHAIN:some text\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn rsvp_on_version_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+VERSION;RSVP=TRUE:2.0\r\n\
+BEGIN:X-NONE\r\n\
+empty:value\r\n\
+END:X-NONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In calendar property \"VERSION\" at index 0: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn rsvp_on_description_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DESCRIPTION;RSVP=FALSE:some text\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn sent_by_on_version_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+VERSION;SENT-BY=\"mailto:hello@test.net\":2.0\r\n\
+BEGIN:X-NONE\r\n\
+empty:value\r\n\
+END:X-NONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In calendar property \"VERSION\" at index 0: Sent by (SENT-BY) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn sent_by_on_description_property() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DESCRIPTION;SENT-BY=\"mailto:hello@test.net\":some text\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Sent by (SENT-BY) is not allowed for this property type", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn sent_by_with_invalid_protocol() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+ORGANIZER;SENT-BY=\"http:hello@test.net\":mailto:world@test.net\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 0: Sent by (SENT-BY) must be a 'mailto:' URI", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
