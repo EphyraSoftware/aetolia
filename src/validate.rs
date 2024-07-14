@@ -1,19 +1,38 @@
 mod error;
 
+use crate::common::{Encoding, ParticipationStatusUnknown, Status, Value};
 use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
+use crate::serialize::WriteModel;
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
 use anyhow::Context;
-
-use crate::common::{Encoding, ParticipationStatusUnknown, Status, Value};
-use crate::serialize::WriteModel;
 pub use error::*;
+use std::collections::HashSet;
 
 pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
 
+    let time_zone_ids = ical_object
+        .components
+        .iter()
+        .filter_map(|component| {
+            if let CalendarComponent::TimeZone(time_zone) = component {
+                for property in &time_zone.properties {
+                    if let ComponentProperty::TimeZoneId(tz_id) = property {
+                        return Some(tz_id.value.clone());
+                    }
+                }
+            }
+
+            None
+        })
+        .collect::<HashSet<_>>();
+
+    let calendar_info = CalendarInfo::new(time_zone_ids);
+
     errors.extend_from_slice(
         ICalendarError::many_from_calendar_property_errors(validate_calendar_properties(
             &ical_object,
+            &calendar_info,
         ))
         .as_slice(),
     );
@@ -23,7 +42,11 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             CalendarComponent::Event(event) => {
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
-                        validate_component_properties(PropertyLocation::Event, &event.properties)?,
+                        validate_component_properties(
+                            &calendar_info,
+                            PropertyLocation::Event,
+                            &event.properties,
+                        )?,
                         index,
                         component_name(component).to_string(),
                     )
@@ -33,7 +56,11 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             CalendarComponent::ToDo(to_do) => {
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
-                        validate_component_properties(PropertyLocation::ToDo, &to_do.properties)?,
+                        validate_component_properties(
+                            &calendar_info,
+                            PropertyLocation::ToDo,
+                            &to_do.properties,
+                        )?,
                         index,
                         component_name(component).to_string(),
                     )
@@ -44,6 +71,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
                         validate_component_properties(
+                            &calendar_info,
                             PropertyLocation::Journal,
                             &journal.properties,
                         )?,
@@ -57,6 +85,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
                         validate_component_properties(
+                            &calendar_info,
                             PropertyLocation::TimeZone,
                             &time_zone.properties,
                         )?,
@@ -70,6 +99,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                 errors.extend_from_slice(
                     ICalendarError::many_from_component_property_errors(
                         validate_component_properties(
+                            &calendar_info,
                             PropertyLocation::Other,
                             &x_component.properties,
                         )?,
@@ -89,6 +119,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
 }
 
 fn validate_component_properties(
+    calendar_info: &CalendarInfo,
     property_location: PropertyLocation,
     properties: &[ComponentProperty],
 ) -> anyhow::Result<Vec<ComponentPropertyError>> {
@@ -99,7 +130,8 @@ fn validate_component_properties(
 
         match property {
             ComponentProperty::Description(description) => {
-                let property_info = PropertyInfo::new(property_location.clone(), ValueType::Text);
+                let property_info =
+                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&description.params, property_info),
@@ -110,8 +142,11 @@ fn validate_component_properties(
                 );
             }
             ComponentProperty::Attendee(attendee) => {
-                let property_info =
-                    PropertyInfo::new(property_location.clone(), ValueType::CalendarAddress);
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    ValueType::CalendarAddress,
+                );
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&attendee.params, property_info),
@@ -122,11 +157,46 @@ fn validate_component_properties(
                 );
             }
             ComponentProperty::Organizer(organizer) => {
-                let property_info =
-                    PropertyInfo::new(property_location.clone(), ValueType::CalendarAddress);
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    ValueType::CalendarAddress,
+                );
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&organizer.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::DateTimeStart(date_time_start) => {
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    if date_time_start.time.is_some() {
+                        ValueType::DateTime
+                    } else {
+                        ValueType::Date
+                    },
+                )
+                .utc(date_time_start.is_utc);
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&date_time_start.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::TimeZoneId(time_zone_id) => {
+                let property_info =
+                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&time_zone_id.params, property_info),
                         index,
                         component_property_name(property).to_string(),
                     )
@@ -201,7 +271,19 @@ fn check_encoding_for_binary_values(
 }
 
 #[derive(Debug)]
-struct PropertyInfo {
+struct CalendarInfo {
+    /// The ids of the time zones that this calendar defines
+    time_zone_ids: HashSet<String>,
+}
+
+impl CalendarInfo {
+    fn new(time_zone_ids: HashSet<String>) -> Self {
+        CalendarInfo { time_zone_ids }
+    }
+}
+
+#[derive(Debug)]
+struct PropertyInfo<'a> {
     /// The location that this property has been used in
     property_location: PropertyLocation,
     /// The required value type for this property
@@ -209,8 +291,13 @@ struct PropertyInfo {
     /// If the property has a VALUE parameter, regardless of whether that is valid on this
     /// property, then it will be populated here.
     declared_value_type: Option<crate::common::Value>,
+    /// If the property value contains a time, then this field will be set. If that time is UTC,
+    /// then this field will be set to true.
+    value_is_utc: Option<bool>,
     /// This is an xProperty or ianaProperty
     is_other: bool,
+    /// Information about the calendar that contains this property
+    calendar_info: &'a CalendarInfo,
 }
 
 #[derive(Debug, Clone)]
@@ -223,14 +310,25 @@ enum PropertyLocation {
     Other,
 }
 
-impl PropertyInfo {
-    fn new(property_location: PropertyLocation, value_type: ValueType) -> Self {
+impl<'a> PropertyInfo<'a> {
+    fn new(
+        calendar_info: &'a CalendarInfo,
+        property_location: PropertyLocation,
+        value_type: ValueType,
+    ) -> Self {
         PropertyInfo {
             property_location,
             value_type,
             declared_value_type: None,
+            value_is_utc: None,
             is_other: false,
+            calendar_info,
         }
+    }
+
+    fn utc(mut self, is_utc: bool) -> Self {
+        self.value_is_utc = Some(is_utc);
+        self
     }
 
     fn other(mut self) -> Self {
@@ -245,16 +343,24 @@ enum ValueType {
     CalendarAddress,
     Text,
     Duration,
+    Date,
+    DateTime,
 }
 
-fn validate_calendar_properties(ical_object: &ICalObject) -> Vec<CalendarPropertyError> {
+fn validate_calendar_properties(
+    ical_object: &ICalObject,
+    calendar_info: &CalendarInfo,
+) -> Vec<CalendarPropertyError> {
     let mut errors = Vec::new();
 
     for (index, property) in ical_object.properties.iter().enumerate() {
         match property {
             CalendarProperty::Version(version) => {
-                let property_info =
-                    PropertyInfo::new(PropertyLocation::Calendar, ValueType::VersionValue);
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    PropertyLocation::Calendar,
+                    ValueType::VersionValue,
+                );
                 errors.extend_from_slice(
                     CalendarPropertyError::many_from_param_errors(
                         validate_params(&version.params, property_info),
@@ -277,7 +383,6 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
     let mut errors = Vec::new();
 
     for (index, param) in params.iter().enumerate() {
-        println!("{:?}", param);
         match param {
             Param::CommonName { name } => {
                 validate_cn_param(&mut errors, param, index, &property_info);
@@ -363,6 +468,26 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
             }
             Param::Other { name, value } if name == "SENT-BY" => {
                 validate_sent_by_param(&mut errors, param, value, index, &property_info);
+            }
+            Param::TimeZoneId { tz_id, unique } => {
+                validate_time_zone_id_param(
+                    &mut errors,
+                    param,
+                    tz_id,
+                    *unique,
+                    index,
+                    &property_info,
+                );
+            }
+            Param::Other { name, value } if name == "TZID" => {
+                validate_time_zone_id_param(
+                    &mut errors,
+                    param,
+                    value,
+                    false,
+                    index,
+                    &property_info,
+                );
             }
             _ => {
                 unimplemented!()
@@ -619,6 +744,44 @@ fn validate_sent_by_param(
     }
 }
 
+// RFC 5545, Section 3.2.19
+fn validate_time_zone_id_param(
+    errors: &mut Vec<ParamError>,
+    param: &Param,
+    tz_id: &String,
+    unique: bool,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if property_info.value_type == ValueType::Date {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Time zone ID (TZID) is not allowed for the property value type DATE"
+                .to_string(),
+        });
+        return;
+    }
+
+    if !unique && !property_info.calendar_info.time_zone_ids.contains(tz_id) {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: format!("Required time zone ID [{tz_id}] is not defined in the calendar"),
+        });
+    }
+
+    println!("{:?}", property_info.value_is_utc);
+    if let Some(true) = property_info.value_is_utc {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Time zone ID (TZID) cannot be specified on a property with a UTC time"
+                .to_string(),
+        });
+    }
+}
+
 fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize)> {
     property
         .params()
@@ -645,6 +808,8 @@ fn component_property_name(property: &ComponentProperty) -> &str {
         ComponentProperty::Description(_) => "DESCRIPTION",
         ComponentProperty::Attendee(_) => "ATTENDEE",
         ComponentProperty::Organizer(_) => "ORGANIZER",
+        ComponentProperty::TimeZoneId(_) => "TZID",
+        ComponentProperty::DateTimeStart(_) => "DTSTART",
         _ => unimplemented!(),
     }
 }
@@ -678,6 +843,7 @@ fn param_name(param: &Param) -> &str {
         Param::Role { .. } => "ROLE",
         Param::Rsvp { .. } => "RSVP",
         Param::SentBy { .. } => "SENT-BY",
+        Param::TimeZoneId { .. } => "TZID",
         Param::Other { name, .. } => name,
         Param::Others { name, .. } => name,
         _ => unimplemented!(),
@@ -1100,6 +1266,54 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 0: Sent by (SENT-BY) must be a 'mailto:' URI", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn missing_tz_id() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+DTSTART;TZID=missing:20240606T220000\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 0: Required time zone ID [missing] is not defined in the calendar", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn tz_id_specified_on_utc_start() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:any\r\n\
+END:VTIMEZONE\r\n\
+BEGIN:VEVENT\r\n\
+DTSTART;TZID=any:20240606T220000Z\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 0: Time zone ID (TZID) cannot be specified on a property with a UTC time", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn tz_id_specified_on_date_start() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:any\r\n\
+END:VTIMEZONE\r\n\
+BEGIN:VEVENT\r\n\
+DTSTART;TZID=any:20240606\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 0: Time zone ID (TZID) is not allowed for the property value type DATE", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
