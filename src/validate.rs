@@ -1,11 +1,17 @@
 mod error;
 
 use crate::common::{Encoding, ParticipationStatusUnknown, Status, Value};
-use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
+use crate::model::{
+    CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param, XProperty,
+};
+use crate::parser::{prop_value_date, prop_value_date_time, Error};
 use crate::serialize::WriteModel;
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
 use anyhow::Context;
 pub use error::*;
+use nom::character::streaming::char;
+use nom::multi::separated_list1;
+use nom::{AsBytes, Parser};
 use std::collections::HashSet;
 
 pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
@@ -206,6 +212,9 @@ fn validate_component_properties(
             ComponentProperty::IanaProperty(_) => {
                 // Nothing to validate
             }
+            ComponentProperty::XProperty(_) => {
+                // Nothing to validate
+            }
             _ => {
                 unimplemented!()
             }
@@ -223,51 +232,232 @@ fn check_encoding_for_binary_values(
     let declared_value_type = get_declared_value_type(property);
 
     if let Some((value_type, value_type_index)) = declared_value_type {
-        if value_type == Value::Binary {
-            let mut encoding_param_found = false;
-            for param in property.params() {
-                if let Param::Encoding { encoding } = param {
-                    encoding_param_found = true;
+        match value_type {
+            Value::Binary => {
+                let mut encoding_param_found = false;
+                for param in property.params() {
+                    if let Param::Encoding { encoding } = param {
+                        encoding_param_found = true;
 
-                    if *encoding != Encoding::Base64 {
-                        let mut msg = b"Property is declared to have a binary value but the encoding is set to ".to_vec();
-                        encoding
-                            .write_model(&mut msg)
-                            .context("Failed to write encoding to model")?;
-                        msg.extend_from_slice(", instead of BASE64".as_bytes());
+                        if *encoding != Encoding::Base64 {
+                            let mut msg = b"Property is declared to have a binary value but the encoding is set to ".to_vec();
+                            encoding
+                                .write_model(&mut msg)
+                                .context("Failed to write encoding to model")?;
+                            msg.extend_from_slice(", instead of BASE64".as_bytes());
 
-                        errors.push(ComponentPropertyError {
-                            message: String::from_utf8_lossy(&msg).to_string(),
+                            errors.push(ComponentPropertyError {
+                                message: String::from_utf8_lossy(&msg).to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Param {
+                                        index: value_type_index,
+                                        name: "VALUE".to_string(),
+                                    }),
+                                }),
+                            });
+                        }
+                    }
+                }
+
+                if !encoding_param_found {
+                    errors.push(ComponentPropertyError {
+                        message: "Property is declared to have a binary value but no encoding is set, must be set to BASE64".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Param {
+                                index: value_type_index,
+                                name: "VALUE".to_string(),
+                            }),
+                        }),
+                    });
+                }
+            }
+            Value::Boolean => match property {
+                ComponentProperty::XProperty(x_prop) if !is_boolean_valued(&x_prop.value) => {
+                    errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a boolean value but the value is not a boolean".to_string(),
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
-                                property_location: Some(WithinPropertyLocation::Param {
-                                    index: value_type_index,
-                                    name: "VALUE".to_string(),
-                                }),
+                                property_location: None,
+                            }),
+                        });
+                }
+                ComponentProperty::IanaProperty(iana_prop)
+                    if !is_boolean_valued(&iana_prop.value) =>
+                {
+                    errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a boolean value but the value is not a boolean".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                }
+                _ => {
+                    // Otherwise the value is boolean or not based on Rust typing
+                }
+            },
+            Value::CalendarAddress => {
+                let mut not_mailto = false;
+                match property {
+                    ComponentProperty::Attendee(_) | ComponentProperty::Organizer(_) => {
+                        errors.push(ComponentPropertyError {
+                            message:
+                                "Redundant value specification which matches the default value"
+                                    .to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                    ComponentProperty::XProperty(x_prop) if x_prop.value.starts_with("mailto:") => {
+                        not_mailto = true;
+                    }
+                    ComponentProperty::IanaProperty(iana_prop)
+                        if iana_prop.value.starts_with("mailto:") =>
+                    {
+                        not_mailto = true;
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a calendar address value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
                             }),
                         });
                     }
                 }
-            }
 
-            if !encoding_param_found {
-                errors.push(ComponentPropertyError {
-                    message: "Property is declared to have a binary value but no encoding is set, must be set to BASE64".to_string(),
-                    location: Some(ComponentPropertyLocation {
-                        index: property_index,
-                        name: component_property_name(property).to_string(),
-                        property_location: Some(WithinPropertyLocation::Param {
-                            index: value_type_index,
-                            name: "VALUE".to_string(),
+                if !not_mailto {
+                    errors.push(ComponentPropertyError {
+                        message: "Property is declared to have a calendar address value but the value is a mailto: URI".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: None,
                         }),
-                    }),
-                });
+                    });
+                }
+            }
+            Value::Date => {
+                let mut invalid = false;
+                match property {
+                    ComponentProperty::XProperty(x_prop) => {
+                        invalid = !is_date_valued(&x_prop.value);
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        invalid = !is_date_valued(&iana_prop.value);
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a date value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                            "Property is declared to have a date value but the value is not a date"
+                                .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            Value::DateTime => {
+                let mut invalid = false;
+                match property {
+                    ComponentProperty::DateTimeCompleted(_)
+                    | ComponentProperty::DateTimeCreated(_)
+                    | ComponentProperty::DateTimeStamp(_)
+                    | ComponentProperty::LastModified(_) => {
+                        errors.push(ComponentPropertyError {
+                            message:
+                                "Redundant value specification which matches the default value"
+                                    .to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                    ComponentProperty::XProperty(x_prop) => {
+                        invalid = !is_date_time_valued(&x_prop.value);
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        invalid = !is_date_time_valued(&iana_prop.value);
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a date-time value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                        "Property is declared to have a date-time value but the value is not a date-time"
+                            .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            _ => {
+                // Nothing to check
             }
         }
     }
 
     Ok(())
+}
+
+fn is_boolean_valued(property_value: &str) -> bool {
+    property_value.eq_ignore_ascii_case("TRUE") || property_value.eq_ignore_ascii_case("FALSE")
+}
+
+fn is_date_valued(property_value: &String) -> bool {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = separated_list1(char(','), prop_value_date::<Error>)(content.as_bytes());
+    result.is_ok()
+}
+
+fn is_date_time_valued(property_value: &String) -> bool {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = separated_list1(char(','), prop_value_date_time::<Error>)(content.as_bytes());
+    result.is_ok()
 }
 
 #[derive(Debug)]
@@ -621,10 +811,10 @@ fn validate_part_stat_param(
                 }
                 _ => {
                     errors.push(ParamError {
-                        index,
-                        name: param_name(param).to_string(),
-                        message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VEVENT component context"),
-                    });
+                            index,
+                            name: param_name(param).to_string(),
+                            message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VEVENT component context"),
+                        });
                 }
             }
         }
@@ -642,10 +832,10 @@ fn validate_part_stat_param(
                 }
                 _ => {
                     errors.push(ParamError {
-                        index,
-                        name: param_name(param).to_string(),
-                        message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VJOURNAL component context"),
-                    });
+                            index,
+                            name: param_name(param).to_string(),
+                            message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VJOURNAL component context"),
+                        });
                 }
             }
         }
@@ -654,10 +844,10 @@ fn validate_part_stat_param(
         }
         location => {
             errors.push(ParamError {
-                index,
-                name: param_name(param).to_string(),
-                message: format!("Participation status (PARTSTAT) property is not expected in a [{location:?}] component context"),
-            });
+                    index,
+                    name: param_name(param).to_string(),
+                    message: format!("Participation status (PARTSTAT) property is not expected in a [{location:?}] component context"),
+                });
         }
     }
 
@@ -810,6 +1000,8 @@ fn component_property_name(property: &ComponentProperty) -> &str {
         ComponentProperty::Organizer(_) => "ORGANIZER",
         ComponentProperty::TimeZoneId(_) => "TZID",
         ComponentProperty::DateTimeStart(_) => "DTSTART",
+        ComponentProperty::XProperty(x_prop) => &x_prop.name,
+        ComponentProperty::IanaProperty(iana_prop) => &iana_prop.name,
         _ => unimplemented!(),
     }
 }
@@ -1314,6 +1506,72 @@ END:VCALENDAR\r\n";
 
         assert_eq!(errors.len(), 1);
         assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 0: Time zone ID (TZID) is not allowed for the property value type DATE", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn x_prop_declares_boolean_but_is_not_boolean() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+X-HELLO;VALUE=BOOLEAN:123\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 0: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn iana_prop_declares_boolean_but_is_not_boolean() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+HELLO;VALUE=BOOLEAN:123\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"HELLO\" at index 0: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
+    }
+
+    #[test]
+    fn x_prop_declares_date() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+X-HELLO;VALUE=DATE:19900101\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+        assert_eq!(errors.len(), 0);
+    }
+
+    #[test]
+    fn x_prop_declares_date_and_is_multi() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+X-HELLO;VALUE=DATE:19900101,19920101\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+        assert_eq!(errors.len(), 0);
+    }
+
+    #[test]
+    fn x_prop_declares_date_and_is_not() {
+        let content = "BEGIN:VCALENDAR\r\n\
+BEGIN:VEVENT\r\n\
+X-HELLO;VALUE=DATE:TRUE\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 0: Property is declared to have a date value but the value is not a date", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {

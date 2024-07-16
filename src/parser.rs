@@ -29,6 +29,7 @@ pub use property::types::{
     XProperty,
 };
 pub use property::value_types::{Duration, Period, PeriodEnd, UtcOffset};
+pub(crate) use property::*;
 pub use property::{
     ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, Classification,
     ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty, Date,
