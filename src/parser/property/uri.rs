@@ -41,6 +41,7 @@ pub struct Uri<'a> {
     pub fragment: Option<&'a [u8]>,
 }
 
+// TODO can be a property or a param value, rename
 pub fn param_value_uri<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
 where
     E: ParseError<&'a [u8]>

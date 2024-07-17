@@ -7,9 +7,11 @@ use crate::model::{
     RecurrenceRule, XProperty,
 };
 use crate::parser::recur::recur;
+use crate::parser::uri::param_value_uri;
 use crate::parser::{
     prop_value_date, prop_value_date_time, prop_value_duration, prop_value_float,
-    prop_value_integer, prop_value_period, Error,
+    prop_value_integer, prop_value_period, prop_value_text, prop_value_time, prop_value_utc_offset,
+    Error,
 };
 use crate::serialize::WriteModel;
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
@@ -665,8 +667,230 @@ fn check_encoding_for_binary_values(
                     });
                 }
             }
-            _ => {
-                // Nothing to check
+            Value::Text => {
+                let mut invalid = false;
+
+                match property {
+                    // TODO Valid property types need to be listed
+                    ComponentProperty::XProperty(x_prop) => {
+                        invalid = !is_text_valued(&x_prop.value);
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        invalid = !is_text_valued(&iana_prop.value);
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a text value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                            "Property is declared to have a text value but the value is not a text"
+                                .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            Value::Time => {
+                let mut invalid = false;
+
+                match property {
+                    // TODO Valid property types need to be listed
+                    ComponentProperty::XProperty(x_prop) => {
+                        match is_time_valued(&x_prop.value) {
+                            Ok(times) => {
+                                for (index, time) in times.iter().enumerate() {
+                                    if let Err(e) = validate_time(time) {
+                                        errors.push(ComponentPropertyError {
+                                            message: format!(
+                                                "Found an invalid time at index {} - {:?}",
+                                                index, e
+                                            ),
+                                            location: Some(ComponentPropertyLocation {
+                                                index: property_index,
+                                                name: component_property_name(property).to_string(),
+                                                property_location: Some(
+                                                    WithinPropertyLocation::Value,
+                                                ),
+                                            }),
+                                        });
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                invalid = true;
+                            }
+                        }
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        match is_time_valued(&iana_prop.value) {
+                            Ok(times) => {
+                                for (index, time) in times.iter().enumerate() {
+                                    if let Err(e) = validate_time(time) {
+                                        errors.push(ComponentPropertyError {
+                                            message: format!(
+                                                "Found an invalid time at index {} - {:?}",
+                                                index, e
+                                            ),
+                                            location: Some(ComponentPropertyLocation {
+                                                index: property_index,
+                                                name: component_property_name(property).to_string(),
+                                                property_location: Some(
+                                                    WithinPropertyLocation::Value,
+                                                ),
+                                            }),
+                                        });
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                invalid = true;
+                            }
+                        }
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a time value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                            "Property is declared to have a time value but the value is not a time"
+                                .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            Value::Uri => {
+                let mut invalid = false;
+
+                match property {
+                    // TODO Valid property types need to be listed
+                    ComponentProperty::XProperty(x_prop) => {
+                        invalid = !is_uri_valued(&x_prop.value);
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        invalid = !is_uri_valued(&iana_prop.value);
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a URI value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                            "Property is declared to have a URI value but the value is not a URI"
+                                .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            Value::UtcOffset => {
+                let mut invalid = false;
+
+                match property {
+                    // TODO Valid property types need to be listed
+                    ComponentProperty::XProperty(x_prop) => {
+                        match is_utc_offset_valued(&x_prop.value) {
+                            Ok(offset) => {
+                                if let Err(e) = validate_utc_offset(&offset) {
+                                    errors.push(ComponentPropertyError {
+                                        message: format!("Found an invalid UTC offset - {:?}", e),
+                                        location: Some(ComponentPropertyLocation {
+                                            index: property_index,
+                                            name: component_property_name(property).to_string(),
+                                            property_location: Some(WithinPropertyLocation::Value),
+                                        }),
+                                    });
+                                }
+                            }
+                            Err(_) => {
+                                invalid = true;
+                            }
+                        }
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        match is_utc_offset_valued(&iana_prop.value) {
+                            Ok(offset) => {
+                                if let Err(e) = validate_utc_offset(&offset) {
+                                    errors.push(ComponentPropertyError {
+                                        message: format!("Found an invalid UTC offset - {:?}", e),
+                                        location: Some(ComponentPropertyLocation {
+                                            index: property_index,
+                                            name: component_property_name(property).to_string(),
+                                            property_location: Some(WithinPropertyLocation::Value),
+                                        }),
+                                    });
+                                }
+                            }
+                            Err(_) => {
+                                invalid = true;
+                            }
+                        }
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a UTC offset value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: None,
+                            }),
+                        });
+                    }
+                }
+
+                if invalid {
+                    errors.push(ComponentPropertyError {
+                        message:
+                        "Property is declared to have a UTC offset value but the value is not a UTC offset"
+                            .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            Value::XName(_) | Value::IanaToken(_) => {
+                // Nothing to validate, we don't know anything about the values these should take
             }
         }
     }
@@ -749,6 +973,51 @@ fn is_recur_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser:
     match result {
         Ok((rest, rule)) if rest.len() == 1 => Ok(rule),
         _ => anyhow::bail!("Not a valid recur rule"),
+    }
+}
+
+fn is_text_valued(property_value: &String) -> bool {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b'\r');
+    content.push(b'\n');
+
+    let result = separated_list1(char(','), prop_value_text::<Error>)(content.as_bytes());
+    match result {
+        Ok((rest, _)) => rest.len() == 1,
+        _ => false,
+    }
+}
+
+fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::Time>> {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = separated_list1(char(','), prop_value_time::<Error>)(content.as_bytes());
+    match result {
+        Ok((rest, times)) if rest.len() == 1 => Ok(times),
+        _ => anyhow::bail!("Not a valid time"),
+    }
+}
+
+fn is_uri_valued(property_value: &String) -> bool {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = param_value_uri::<Error>(content.as_bytes());
+    match result {
+        Ok((rest, _)) => rest.len() == 1,
+        _ => false,
+    }
+}
+
+fn is_utc_offset_valued(property_value: &String) -> anyhow::Result<crate::parser::UtcOffset> {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = prop_value_utc_offset::<Error>(content.as_bytes());
+    match result {
+        Ok((rest, offset)) if rest.len() == 1 => Ok(offset),
+        _ => anyhow::bail!("Not a valid UTC offset"),
     }
 }
 
@@ -1229,6 +1498,38 @@ fn validate_recurrence_rule(
                 }
             }
         }
+    }
+
+    Ok(())
+}
+
+fn validate_time(time: &crate::parser::Time) -> anyhow::Result<()> {
+    if time.hour > 23 {
+        anyhow::bail!("Hour must be between 0 and 23");
+    }
+
+    if time.minute > 59 {
+        anyhow::bail!("Minute must be between 0 and 59");
+    }
+
+    if time.second > 60 {
+        anyhow::bail!("Second must be between 0 and 60");
+    }
+
+    Ok(())
+}
+
+fn validate_utc_offset(offset: &crate::parser::UtcOffset) -> anyhow::Result<()> {
+    if offset.sign < 0
+        && (offset.hours == 0
+            && offset.minutes == 0
+            && (offset.seconds.is_none() || offset.seconds == Some(0)))
+    {
+        anyhow::bail!("UTC offset must have a non-zero value if it is negative");
+    }
+
+    if offset.minutes > 59 {
+        anyhow::bail!("Minutes must be between 0 and 59");
     }
 
     Ok(())
