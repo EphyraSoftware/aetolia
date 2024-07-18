@@ -94,7 +94,7 @@ pub enum WithinComponentLocation {
 
 #[derive(Clone)]
 pub struct CalendarPropertyError {
-    message: String,
+    pub message: String,
     pub location: Option<CalendarPropertyLocation>,
 }
 

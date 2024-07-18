@@ -708,32 +708,28 @@ fn check_encoding_for_binary_values(
 
                 match property {
                     // TODO Valid property types need to be listed
-                    ComponentProperty::XProperty(x_prop) => {
-                        match is_time_valued(&x_prop.value) {
-                            Ok(times) => {
-                                for (index, time) in times.iter().enumerate() {
-                                    if let Err(e) = validate_time(time) {
-                                        errors.push(ComponentPropertyError {
-                                            message: format!(
-                                                "Found an invalid time at index {} - {:?}",
-                                                index, e
-                                            ),
-                                            location: Some(ComponentPropertyLocation {
-                                                index: property_index,
-                                                name: component_property_name(property).to_string(),
-                                                property_location: Some(
-                                                    WithinPropertyLocation::Value,
-                                                ),
-                                            }),
-                                        });
-                                    }
+                    ComponentProperty::XProperty(x_prop) => match is_time_valued(&x_prop.value) {
+                        Ok(times) => {
+                            for (index, time) in times.iter().enumerate() {
+                                if let Err(e) = validate_time(time) {
+                                    errors.push(ComponentPropertyError {
+                                        message: format!(
+                                            "Found an invalid time at index {} - {:?}",
+                                            index, e
+                                        ),
+                                        location: Some(ComponentPropertyLocation {
+                                            index: property_index,
+                                            name: component_property_name(property).to_string(),
+                                            property_location: Some(WithinPropertyLocation::Value),
+                                        }),
+                                    });
                                 }
                             }
-                            Err(_) => {
-                                invalid = true;
-                            }
                         }
-                    }
+                        Err(_) => {
+                            invalid = true;
+                        }
+                    },
                     ComponentProperty::IanaProperty(iana_prop) => {
                         match is_time_valued(&iana_prop.value) {
                             Ok(times) => {
@@ -1618,9 +1614,45 @@ fn validate_calendar_properties(
 ) -> Vec<CalendarPropertyError> {
     let mut errors = Vec::new();
 
+    let mut seen = HashMap::<String, u32>::new();
+    let add_count = |seen: &mut HashMap<String, u32>, key: &str| {
+        *seen
+            .entry(key.to_string())
+            .and_modify(|count| *count += 1)
+            .or_insert(1)
+    };
     for (index, property) in ical_object.properties.iter().enumerate() {
         match property {
+            CalendarProperty::ProductId(_) => {
+                let name = calendar_property_name(property);
+                add_count(&mut seen, name);
+
+                if let Some(message) = check_occurrence(&seen, name, OccurrenceExpectation::Once) {
+                    errors.push(CalendarPropertyError {
+                        message,
+                        location: Some(CalendarPropertyLocation {
+                            index,
+                            name: name.to_string(),
+                            property_location: None,
+                        }),
+                    })
+                }
+            }
             CalendarProperty::Version(version) => {
+                let name = calendar_property_name(property);
+                add_count(&mut seen, name);
+
+                if let Some(message) = check_occurrence(&seen, name, OccurrenceExpectation::Once) {
+                    errors.push(CalendarPropertyError {
+                        message,
+                        location: Some(CalendarPropertyLocation {
+                            index,
+                            name: name.to_string(),
+                            property_location: None,
+                        }),
+                    })
+                }
+
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     PropertyLocation::Calendar,
@@ -1635,13 +1667,81 @@ fn validate_calendar_properties(
                     .as_slice(),
                 );
             }
+            CalendarProperty::CalendarScale(_) => {
+                let name = calendar_property_name(property);
+                add_count(&mut seen, name);
+
+                if let Some(message) =
+                    check_occurrence(&seen, name, OccurrenceExpectation::OptionalOnce)
+                {
+                    errors.push(CalendarPropertyError {
+                        message,
+                        location: Some(CalendarPropertyLocation {
+                            index,
+                            name: name.to_string(),
+                            property_location: None,
+                        }),
+                    })
+                }
+            }
+            CalendarProperty::Method(_) => {
+                let name = calendar_property_name(property);
+                add_count(&mut seen, name);
+
+                if let Some(message) =
+                    check_occurrence(&seen, name, OccurrenceExpectation::OptionalOnce)
+                {
+                    errors.push(CalendarPropertyError {
+                        message,
+                        location: Some(CalendarPropertyLocation {
+                            index,
+                            name: name.to_string(),
+                            property_location: None,
+                        }),
+                    })
+                }
+            }
             _ => {
-                unimplemented!()
+                // Nothing further to validate
             }
         }
     }
 
+    // Check required properties, in case they were missing. If they are specified more than once
+    // then it will produce duplicate errors.
+    if let Some(message) = check_occurrence(&seen, "PRODID", OccurrenceExpectation::Once) {
+        errors.push(CalendarPropertyError {
+            message,
+            location: None,
+        })
+    }
+    if let Some(message) = check_occurrence(&seen, "VERSION", OccurrenceExpectation::Once) {
+        errors.push(CalendarPropertyError {
+            message,
+            location: None,
+        })
+    }
+
     errors
+}
+
+enum OccurrenceExpectation {
+    Once,
+    OptionalOnce,
+}
+
+fn check_occurrence(
+    seen: &HashMap<String, u32>,
+    key: &str,
+    expectation: OccurrenceExpectation,
+) -> Option<String> {
+    match (seen.get(key), expectation) {
+        (None | Some(0), OccurrenceExpectation::Once) => Some(format!("{} is required", key)),
+        (Some(1), OccurrenceExpectation::Once) => None,
+        (_, OccurrenceExpectation::Once) => Some(format!("{} must only appear once", key)),
+        (None | Some(0) | Some(1), OccurrenceExpectation::OptionalOnce) => None,
+        (_, OccurrenceExpectation::OptionalOnce) => Some(format!("{} must only appear once", key)),
+    }
 }
 
 fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamError> {
@@ -2064,7 +2164,11 @@ fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize
 fn calendar_property_name(property: &CalendarProperty) -> &str {
     match property {
         CalendarProperty::Version { .. } => "VERSION",
-        _ => unimplemented!(),
+        CalendarProperty::ProductId(_) => "PRODID",
+        CalendarProperty::CalendarScale(_) => "CALSCALE",
+        CalendarProperty::Method(_) => "METHOD",
+        CalendarProperty::XProperty(x_prop) => &x_prop.name,
+        CalendarProperty::IanaProperty(iana_prop) => &iana_prop.name,
     }
 }
 
@@ -2164,6 +2268,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn common_name_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;CN=hello:2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2173,12 +2278,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Common name (CN) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Common name (CN) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn common_name_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;CN=hello:some text\r\n\
 END:VEVENT\r\n\
@@ -2193,6 +2300,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn cu_type_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;CUTYPE=INDIVIDUAL:2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2202,12 +2310,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Calendar user type (CUTYPE) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Calendar user type (CUTYPE) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn cu_type_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;CUTYPE=INDIVIDUAL:some text\r\n\
 END:VEVENT\r\n\
@@ -2222,6 +2332,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn delegated_from_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;DELEGATED-FROM=\"mailto:hello@test.net\":2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2231,12 +2342,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Delegated from (DELEGATED-FROM) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Delegated from (DELEGATED-FROM) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn delegated_from_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;DELEGATED-FROM=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
@@ -2251,6 +2364,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn delegated_to_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;DELEGATED-TO=\"mailto:hello@test.net\":2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2260,12 +2374,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Delegated to (DELEGATED-TO) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Delegated to (DELEGATED-TO) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn delegated_to_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;DELEGATED-TO=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
@@ -2280,6 +2396,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn dir_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;DIR=\"ldap://example.com:6666/o=ABC\":2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2289,12 +2406,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Directory entry reference (DIR) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Directory entry reference (DIR) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn dir_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;DIR=\"ldap://example.com:6666/o=ABC\":some text\r\n\
 END:VEVENT\r\n\
@@ -2309,6 +2428,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn encoding_not_set_on_binary_value() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;VALUE=BINARY:eA==\r\n\
 END:VEVENT\r\n\
@@ -2323,6 +2444,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn encoding_set_to_8bit_on_binary_value() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;VALUE=BINARY;ENCODING=8BIT:eA==\r\n\
 END:VEVENT\r\n\
@@ -2337,6 +2460,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn member_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;MEMBER=\"mailto:hello@test.net\":2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2346,12 +2470,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn member_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;MEMBER=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
@@ -2366,6 +2492,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn part_stat_wrong_value_in_event() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 ATTENDEE;PARTSTAT=COMPLETED:mailto:hello@test.net\r\n\
 END:VEVENT\r\n\
@@ -2380,6 +2508,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn part_stat_wrong_value_in_journal() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VJOURNAL\r\n\
 ATTENDEE;PARTSTAT=IN-PROCESS:mailto:hello@test.net\r\n\
 END:VJOURNAL\r\n\
@@ -2394,6 +2524,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn part_stat_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;PARTSTAT=NEEDS-ACTION:some text\r\n\
 END:VEVENT\r\n\
@@ -2408,6 +2540,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn related_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;RELATED=END:2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2417,12 +2550,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn related_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;RELATED=START:some text\r\n\
 END:VEVENT\r\n\
@@ -2437,6 +2572,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn role_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;ROLE=CHAIR:2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2446,12 +2582,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn role_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;ROLE=CHAIN:some text\r\n\
 END:VEVENT\r\n\
@@ -2466,6 +2604,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn rsvp_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;RSVP=TRUE:2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2475,12 +2614,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn rsvp_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;RSVP=FALSE:some text\r\n\
 END:VEVENT\r\n\
@@ -2495,6 +2636,7 @@ END:VCALENDAR\r\n";
     #[test]
     fn sent_by_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
 VERSION;SENT-BY=\"mailto:hello@test.net\":2.0\r\n\
 BEGIN:X-NONE\r\n\
 empty:value\r\n\
@@ -2504,12 +2646,14 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 0: Sent by (SENT-BY) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In calendar property \"VERSION\" at index 1: Sent by (SENT-BY) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
     fn sent_by_on_description_property() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DESCRIPTION;SENT-BY=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
@@ -2524,6 +2668,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn sent_by_with_invalid_protocol() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 ORGANIZER;SENT-BY=\"http:hello@test.net\":mailto:world@test.net\r\n\
 END:VEVENT\r\n\
@@ -2538,6 +2684,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn missing_tz_id() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DTSTART;TZID=missing:20240606T220000\r\n\
 END:VEVENT\r\n\
@@ -2552,6 +2700,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn tz_id_specified_on_utc_start() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
 END:VTIMEZONE\r\n\
@@ -2569,6 +2719,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn tz_id_specified_on_date_start() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
 END:VTIMEZONE\r\n\
@@ -2586,6 +2738,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn x_prop_declares_boolean_but_is_not_boolean() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 X-HELLO;VALUE=BOOLEAN:123\r\n\
 END:VEVENT\r\n\
@@ -2600,6 +2754,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn iana_prop_declares_boolean_but_is_not_boolean() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 HELLO;VALUE=BOOLEAN:123\r\n\
 END:VEVENT\r\n\
@@ -2614,6 +2770,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn x_prop_declares_date() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 X-HELLO;VALUE=DATE:19900101\r\n\
 END:VEVENT\r\n\
@@ -2626,6 +2784,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn x_prop_declares_date_and_is_multi() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 X-HELLO;VALUE=DATE:19900101,19920101\r\n\
 END:VEVENT\r\n\
@@ -2638,6 +2798,8 @@ END:VCALENDAR\r\n";
     #[test]
     fn x_prop_declares_date_and_is_not() {
         let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 X-HELLO;VALUE=DATE:TRUE\r\n\
 END:VEVENT\r\n\
