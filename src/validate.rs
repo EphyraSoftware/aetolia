@@ -41,15 +41,22 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
         })
         .collect::<HashSet<_>>();
 
-    let calendar_info = CalendarInfo::new(time_zone_ids);
+    let mut calendar_info = CalendarInfo::new(time_zone_ids);
 
     errors.extend_from_slice(
         ICalendarError::many_from_calendar_property_errors(validate_calendar_properties(
             &ical_object,
-            &calendar_info,
+            &mut calendar_info,
         ))
         .as_slice(),
     );
+
+    if ical_object.components.is_empty() {
+        errors.push(ICalendarError {
+            message: "No components found in calendar object, required at least one".to_string(),
+            location: None,
+        });
+    }
 
     for (index, component) in ical_object.components.iter().enumerate() {
         match component {
@@ -132,6 +139,28 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
     Ok(errors)
 }
 
+macro_rules! check_component_property_occurrence {
+    ($errors:ident, $seen:ident, $property:ident, $index:ident, $occur:expr) => {
+        let name = component_property_name($property);
+        let count = add_to_seen(&mut $seen, name);
+        if let Some(message) = check_occurrence(&$seen, name, $occur.clone()) {
+            $errors.push(ComponentPropertyError {
+                message,
+                location: Some(ComponentPropertyLocation {
+                    index: $index,
+                    name: name.to_string(),
+                    property_location: None,
+                }),
+            });
+        }
+
+        // If the property shouldn't appear then don't validate it further.
+        if $occur == OccurrenceExpectation::Never {
+            continue;
+        }
+    };
+}
+
 fn validate_component_properties(
     calendar_info: &CalendarInfo,
     property_location: PropertyLocation,
@@ -139,53 +168,96 @@ fn validate_component_properties(
 ) -> anyhow::Result<Vec<ComponentPropertyError>> {
     let mut errors = Vec::new();
 
+    if properties.is_empty() {
+        errors.push(ComponentPropertyError {
+            message: "No properties found in component, required at least one".to_string(),
+            location: None,
+        });
+    }
+
+    let dt_stamp_occurrence_expectation = match property_location {
+        PropertyLocation::Event | PropertyLocation::ToDo | PropertyLocation::Journal => {
+            OccurrenceExpectation::Once
+        }
+        PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
+        }
+    };
+
+    let uid_occurrence_expectation = match property_location {
+        PropertyLocation::Event | PropertyLocation::ToDo | PropertyLocation::Journal => {
+            OccurrenceExpectation::Once
+        }
+        PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
+        }
+    };
+
+    let dt_start_expectation = match property_location {
+        PropertyLocation::Event => {
+            if calendar_info.method.is_none() {
+                OccurrenceExpectation::Once
+            } else {
+                OccurrenceExpectation::OptionalOnce
+            }
+        }
+        PropertyLocation::ToDo | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
+        PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
+        }
+    };
+
+    let tz_id_occurrence_expectation = match property_location {
+        PropertyLocation::Event | PropertyLocation::Journal => OccurrenceExpectation::Never,
+        PropertyLocation::TimeZone => OccurrenceExpectation::Once,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
+        }
+    };
+
+    // These two properties are exclusive.
+    let mut has_dt_end = false;
+    let mut has_duration = false;
+
+    let mut seen = HashMap::<String, u32>::new();
     for (index, property) in properties.iter().enumerate() {
         check_encoding_for_binary_values(&mut errors, property, index)?;
 
         match property {
-            ComponentProperty::Description(description) => {
-                let property_info =
-                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&description.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
+            ComponentProperty::DateTimeStamp(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    dt_stamp_occurrence_expectation.clone()
                 );
             }
-            ComponentProperty::Attendee(attendee) => {
-                let property_info = PropertyInfo::new(
-                    calendar_info,
-                    property_location.clone(),
-                    ValueType::CalendarAddress,
-                );
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&attendee.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
-                );
-            }
-            ComponentProperty::Organizer(organizer) => {
-                let property_info = PropertyInfo::new(
-                    calendar_info,
-                    property_location.clone(),
-                    ValueType::CalendarAddress,
-                );
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&organizer.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
+            ComponentProperty::UniqueIdentifier(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    uid_occurrence_expectation.clone()
                 );
             }
             ComponentProperty::DateTimeStart(date_time_start) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    dt_start_expectation.clone()
+                );
+
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
@@ -205,7 +277,334 @@ fn validate_component_properties(
                     .as_slice(),
                 );
             }
+            ComponentProperty::Classification(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event | PropertyLocation::ToDo => {
+                        OccurrenceExpectation::OptionalOnce
+                    }
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::DateTimeCreated(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event | PropertyLocation::ToDo => {
+                        OccurrenceExpectation::OptionalOnce
+                    }
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::Description(description) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event | PropertyLocation::ToDo => {
+                        OccurrenceExpectation::OptionalOnce
+                    }
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+
+                let property_info =
+                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&description.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::GeographicPosition(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event | PropertyLocation::ToDo => {
+                        OccurrenceExpectation::OptionalOnce
+                    }
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::LastModified(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Location(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Organizer(organizer) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    ValueType::CalendarAddress,
+                );
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&organizer.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::Priority(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Sequence(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Status(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Summary(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::TimeTransparency(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::Url(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::RecurrenceId(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+            }
+            ComponentProperty::RecurrenceRule(_) => {
+                // An RRULE can appear more than once, it just SHOULD NOT.
+            }
+            ComponentProperty::DateTimeEnd(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+                has_dt_end = true;
+            }
+            ComponentProperty::Duration(_) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    OccurrenceExpectation::OptionalOnce
+                );
+                has_duration = true;
+            }
+            ComponentProperty::Attach(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::Attendee(attendee) => {
+                // Optional and may occur more than once
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    ValueType::CalendarAddress,
+                );
+                errors.extend_from_slice(
+                    ComponentPropertyError::many_from_param_errors(
+                        validate_params(&attendee.params, property_info),
+                        index,
+                        component_property_name(property).to_string(),
+                    )
+                    .as_slice(),
+                );
+            }
+            ComponentProperty::Categories(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::Comment(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::Contact(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::ExceptionDateTimes(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::RequestStatus(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::RelatedTo(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::Resources(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::RecurrenceDateTimes(_) => {
+                // Optional and may occur more than once
+            }
+            ComponentProperty::DateTimeCompleted(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::ToDo => OccurrenceExpectation::OptionalOnce,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::PercentComplete(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::DateTimeDue(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::FreeBusyTime(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
             ComponentProperty::TimeZoneId(time_zone_id) => {
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    tz_id_occurrence_expectation
+                );
+
                 let property_info =
                     PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
                 errors.extend_from_slice(
@@ -217,16 +616,164 @@ fn validate_component_properties(
                     .as_slice(),
                 );
             }
+            ComponentProperty::TimeZoneUrl(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::TimeZoneOffsetTo(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::TimeZoneOffsetFrom(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::TimeZoneName(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::Action(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::Trigger(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
+            ComponentProperty::Repeat(_) => {
+                let occurrence_expectation = match property_location {
+                    PropertyLocation::Event => OccurrenceExpectation::Never,
+                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+                    _ => {
+                        unimplemented!()
+                    }
+                };
+                check_component_property_occurrence!(
+                    errors,
+                    seen,
+                    property,
+                    index,
+                    occurrence_expectation
+                );
+            }
             ComponentProperty::IanaProperty(_) => {
                 // Nothing to validate
             }
             ComponentProperty::XProperty(_) => {
                 // Nothing to validate
             }
-            _ => {
-                unimplemented!()
+        }
+    }
+
+    if let Some(message) = check_occurrence(&seen, "DTSTAMP", dt_stamp_occurrence_expectation) {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+    if let Some(message) = check_occurrence(&seen, "UID", uid_occurrence_expectation) {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+    if let Some(message) = check_occurrence(&seen, "DTSTART", dt_start_expectation) {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+    if let Some(message) = check_occurrence(&seen, "TZID", tz_id_occurrence_expectation) {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+
+    #[allow(clippy::single_match)]
+    match property_location {
+        PropertyLocation::Event => {
+            if has_dt_end && has_duration {
+                errors.push(ComponentPropertyError {
+                    message: "Both DTEND and DURATION properties are present, only one is allowed"
+                        .to_string(),
+                    location: None,
+                });
             }
         }
+        _ => {}
     }
 
     Ok(errors)
@@ -1533,13 +2080,18 @@ fn validate_utc_offset(offset: &crate::parser::UtcOffset) -> anyhow::Result<()> 
 
 #[derive(Debug)]
 struct CalendarInfo {
-    /// The ids of the time zones that this calendar defines
+    /// The ids of the time zones that this calendar defines.
     time_zone_ids: HashSet<String>,
+    /// The method for this calendar object, if specified.
+    method: Option<String>,
 }
 
 impl CalendarInfo {
     fn new(time_zone_ids: HashSet<String>) -> Self {
-        CalendarInfo { time_zone_ids }
+        CalendarInfo {
+            time_zone_ids,
+            method: None,
+        }
     }
 }
 
@@ -1608,9 +2160,16 @@ enum ValueType {
     DateTime,
 }
 
+fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {
+    *seen
+        .entry(key.to_string())
+        .and_modify(|count| *count += 1)
+        .or_insert(1)
+}
+
 fn validate_calendar_properties(
     ical_object: &ICalObject,
-    calendar_info: &CalendarInfo,
+    calendar_info: &mut CalendarInfo,
 ) -> Vec<CalendarPropertyError> {
     let mut errors = Vec::new();
 
@@ -1684,7 +2243,11 @@ fn validate_calendar_properties(
                     })
                 }
             }
-            CalendarProperty::Method(_) => {
+            CalendarProperty::Method(method) => {
+                if calendar_info.method.is_none() {
+                    calendar_info.method = Some(method.value.clone());
+                }
+
                 let name = calendar_property_name(property);
                 add_count(&mut seen, name);
 
@@ -1725,9 +2288,12 @@ fn validate_calendar_properties(
     errors
 }
 
+#[derive(Debug, Clone, PartialEq)]
 enum OccurrenceExpectation {
     Once,
     OptionalOnce,
+    OptionalMany,
+    Never,
 }
 
 fn check_occurrence(
@@ -1741,6 +2307,9 @@ fn check_occurrence(
         (_, OccurrenceExpectation::Once) => Some(format!("{} must only appear once", key)),
         (None | Some(0) | Some(1), OccurrenceExpectation::OptionalOnce) => None,
         (_, OccurrenceExpectation::OptionalOnce) => Some(format!("{} must only appear once", key)),
+        (_, OccurrenceExpectation::OptionalMany) => None,
+        (None | Some(0), OccurrenceExpectation::Never) => None,
+        (_, OccurrenceExpectation::Never) => Some(format!("{} is not allowed", key)),
     }
 }
 
@@ -2136,7 +2705,6 @@ fn validate_time_zone_id_param(
         });
     }
 
-    println!("{:?}", property_info.value_is_utc);
     if let Some(true) = property_info.value_is_utc {
         errors.push(ParamError {
             index,
@@ -2174,6 +2742,8 @@ fn calendar_property_name(property: &CalendarProperty) -> &str {
 
 fn component_property_name(property: &ComponentProperty) -> &str {
     match property {
+        ComponentProperty::DateTimeStamp(_) => "DTSTAMP",
+        ComponentProperty::UniqueIdentifier(_) => "UID",
         ComponentProperty::Description(_) => "DESCRIPTION",
         ComponentProperty::Attendee(_) => "ATTENDEE",
         ComponentProperty::Organizer(_) => "ORGANIZER",
@@ -2286,7 +2856,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;CN=hello:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2294,7 +2867,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Common name (CN) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Common name (CN) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2318,7 +2891,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;CUTYPE=INDIVIDUAL:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2326,7 +2902,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Calendar user type (CUTYPE) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Calendar user type (CUTYPE) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2350,7 +2926,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;DELEGATED-FROM=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2358,7 +2937,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Delegated from (DELEGATED-FROM) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated from (DELEGATED-FROM) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2382,7 +2961,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;DELEGATED-TO=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2390,7 +2972,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Delegated to (DELEGATED-TO) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated to (DELEGATED-TO) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2414,7 +2996,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;DIR=\"ldap://example.com:6666/o=ABC\":some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2422,7 +3007,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Directory entry reference (DIR) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Directory entry reference (DIR) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2430,7 +3015,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;VALUE=BINARY:eA==\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2438,7 +3026,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Property is declared to have a binary value but no encoding is set, must be set to BASE64", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have a binary value but no encoding is set, must be set to BASE64", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2446,7 +3034,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;VALUE=BINARY;ENCODING=8BIT:eA==\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2454,7 +3045,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2478,7 +3069,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;MEMBER=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2486,7 +3080,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Group or list membership (MEMBER) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2494,7 +3088,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 ATTENDEE;PARTSTAT=COMPLETED:mailto:hello@test.net\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2502,7 +3099,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ATTENDEE\" at index 0: Invalid participation status (PARTSTAT) value [Completed] in a VEVENT component context", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [Completed] in a VEVENT component context", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2511,14 +3108,15 @@ END:VCALENDAR\r\n";
 PRODID:test\r\n\
 VERSION:2.0\r\n\
 BEGIN:VJOURNAL\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 ATTENDEE;PARTSTAT=IN-PROCESS:mailto:hello@test.net\r\n\
 END:VJOURNAL\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VJOURNAL\" at index 0, in component property \"ATTENDEE\" at index 0: Invalid participation status (PARTSTAT) value [InProcess] in a VJOURNAL component context", errors.first().unwrap().to_string());
+        assert_single_error(&errors,"In component \"VJOURNAL\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [InProcess] in a VJOURNAL component context");
     }
 
     #[test]
@@ -2526,7 +3124,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;PARTSTAT=NEEDS-ACTION:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2534,7 +3135,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Participation status (PARTSTAT) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation status (PARTSTAT) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2558,7 +3159,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;RELATED=START:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2566,7 +3170,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Related (RELATED) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2590,7 +3194,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;ROLE=CHAIN:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2598,7 +3205,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation role (ROLE) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2622,7 +3229,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;RSVP=FALSE:some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2630,7 +3240,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2654,15 +3264,17 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DESCRIPTION;SENT-BY=\"mailto:hello@test.net\":some text\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 0: Sent by (SENT-BY) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Sent by (SENT-BY) is not allowed for this property type");
     }
 
     #[test]
@@ -2670,15 +3282,17 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 ORGANIZER;SENT-BY=\"http:hello@test.net\":mailto:world@test.net\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 0: Sent by (SENT-BY) must be a 'mailto:' URI", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 2: Sent by (SENT-BY) must be a 'mailto:' URI");
     }
 
     #[test]
@@ -2687,14 +3301,15 @@ END:VCALENDAR\r\n";
 PRODID:test\r\n\
 VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DTSTART;TZID=missing:20240606T220000\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 0: Required time zone ID [missing] is not defined in the calendar", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: Required time zone ID [missing] is not defined in the calendar");
     }
 
     #[test]
@@ -2702,10 +3317,13 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
 END:VTIMEZONE\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DTSTART;TZID=any:20240606T220000Z\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2713,7 +3331,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 0: Time zone ID (TZID) cannot be specified on a property with a UTC time", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) cannot be specified on a property with a UTC time", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2725,6 +3343,8 @@ BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
 END:VTIMEZONE\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 DTSTART;TZID=any:20240606\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2732,7 +3352,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 0: Time zone ID (TZID) is not allowed for the property value type DATE", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) is not allowed for the property value type DATE", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2740,7 +3360,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 X-HELLO;VALUE=BOOLEAN:123\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2748,7 +3371,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 0: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 2: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2756,7 +3379,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 HELLO;VALUE=BOOLEAN:123\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2764,7 +3390,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"HELLO\" at index 0: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"HELLO\" at index 2: Property is declared to have a boolean value but the value is not a boolean", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -2772,7 +3398,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 X-HELLO;VALUE=DATE:19900101\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2786,7 +3415,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 X-HELLO;VALUE=DATE:19900101,19920101\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2800,7 +3432,10 @@ END:VCALENDAR\r\n";
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
 VERSION:2.0\r\n\
+METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
 X-HELLO;VALUE=DATE:TRUE\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
@@ -2808,7 +3443,7 @@ END:VCALENDAR\r\n";
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 0: Property is declared to have a date value but the value is not a date", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"X-HELLO\" at index 2: Property is declared to have a date value but the value is not a date", errors.first().unwrap().to_string());
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
@@ -2816,5 +3451,16 @@ END:VCALENDAR\r\n";
         check_rem(rem, 0);
 
         validate_model(object.to_model().unwrap()).unwrap()
+    }
+
+    fn assert_single_error(errors: &[ICalendarError], msg: &str) {
+        if errors.len() != 1 {
+            panic!(
+                "Expected a single error, but got: {:?}",
+                errors.iter().map(|e| e.to_string()).collect::<Vec<_>>()
+            );
+        }
+
+        assert_eq!(msg, errors.first().unwrap().to_string());
     }
 }
