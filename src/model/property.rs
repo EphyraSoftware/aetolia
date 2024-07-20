@@ -1966,7 +1966,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneNamePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Action {
     Audio,
     Display,

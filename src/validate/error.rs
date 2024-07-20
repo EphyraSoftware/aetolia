@@ -24,13 +24,31 @@ impl Display for ICalendarError {
                         component.name, component.index
                     )?;
                     if let Some(within) = &component.location {
-                        match within {
+                        match &**within {
                             WithinComponentLocation::Property(cp) => {
                                 write!(
                                     f,
                                     ", in component property \"{}\" at index {}",
                                     cp.name, cp.index
                                 )?;
+                            }
+                            WithinComponentLocation::Component(nested_component_location) => {
+                                write!(
+                                    f,
+                                    ", in nested component \"{}\" at index {}",
+                                    nested_component_location.name, nested_component_location.index
+                                )?;
+
+                                if let Some(nested_within) = &nested_component_location.location {
+                                    if let WithinComponentLocation::Property(cp) = &**nested_within
+                                    {
+                                        write!(
+                                            f,
+                                            ", in nested component property \"{}\" at index {}",
+                                            cp.name, cp.index
+                                        )?;
+                                    }
+                                }
                             }
                         }
                     }
@@ -67,7 +85,38 @@ impl ICalendarError {
                 location: Some(ICalendarLocation::Component(ComponentLocation {
                     index,
                     name: name.clone(),
-                    location: error.location.map(WithinComponentLocation::Property),
+                    location: error
+                        .location
+                        .map(|l| Box::new(WithinComponentLocation::Property(l))),
+                })),
+            })
+            .collect()
+    }
+
+    pub(super) fn many_from_nested_component_property_errors(
+        errors: Vec<ComponentPropertyError>,
+        index: usize,
+        name: String,
+        nested_index: usize,
+        nested_name: String,
+    ) -> Vec<Self> {
+        errors
+            .into_iter()
+            .map(|error| ICalendarError {
+                message: error.message,
+                location: Some(ICalendarLocation::Component(ComponentLocation {
+                    index,
+                    name: name.clone(),
+                    location: Some(
+                        WithinComponentLocation::Component(ComponentLocation {
+                            index: nested_index,
+                            name: nested_name.clone(),
+                            location: error
+                                .location
+                                .map(|l| Box::new(WithinComponentLocation::Property(l))),
+                        })
+                        .into(),
+                    ),
                 })),
             })
             .collect()
@@ -84,12 +133,13 @@ pub enum ICalendarLocation {
 pub struct ComponentLocation {
     pub index: usize,
     pub name: String,
-    pub location: Option<WithinComponentLocation>,
+    pub location: Option<Box<WithinComponentLocation>>,
 }
 
 #[derive(Clone)]
 pub enum WithinComponentLocation {
     Property(ComponentPropertyLocation),
+    Component(ComponentLocation),
 }
 
 #[derive(Clone)]

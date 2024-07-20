@@ -33,6 +33,23 @@ pub enum CalendarComponent {
     XComponent(XComponent),
 }
 
+impl CalendarComponent {
+    pub(crate) fn properties(&self) -> &[ComponentProperty] {
+        match self {
+            CalendarComponent::Event(e) => &e.properties,
+            CalendarComponent::ToDo(t) => &t.properties,
+            CalendarComponent::Journal(j) => &j.properties,
+            CalendarComponent::FreeBusy(f) => &f.properties,
+            CalendarComponent::TimeZone(tz) => &tz.properties,
+            CalendarComponent::Standard(s) => &s.properties,
+            CalendarComponent::Daylight(d) => &d.properties,
+            CalendarComponent::Alarm(a) => &a.properties,
+            CalendarComponent::IanaComponent(i) => &i.properties,
+            CalendarComponent::XComponent(x) => &x.properties,
+        }
+    }
+}
+
 macro_rules! impl_finish_component_build {
     ($ev:expr) => {
         pub fn finish_component(mut self) -> $crate::model::object::ICalObjectBuilder {
@@ -520,4 +537,5 @@ macro_rules! add_alarms {
     };
 }
 
+use crate::model::ComponentProperty;
 pub(crate) use add_alarms;
