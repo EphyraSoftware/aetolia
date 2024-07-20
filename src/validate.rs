@@ -194,7 +194,9 @@ fn validate_component_properties(
         | PropertyLocation::ToDo
         | PropertyLocation::Journal
         | PropertyLocation::FreeBusy => OccurrenceExpectation::Once,
-        PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+            OccurrenceExpectation::Never
+        }
         PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
         PropertyLocation::Calendar => {
             unreachable!()
@@ -206,7 +208,9 @@ fn validate_component_properties(
         | PropertyLocation::ToDo
         | PropertyLocation::Journal
         | PropertyLocation::FreeBusy => OccurrenceExpectation::Once,
-        PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+            OccurrenceExpectation::Never
+        }
         PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
         PropertyLocation::Calendar => {
             unreachable!()
@@ -221,6 +225,7 @@ fn validate_component_properties(
                 OccurrenceExpectation::OptionalOnce
             }
         }
+        PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Once,
         PropertyLocation::ToDo | PropertyLocation::Journal | PropertyLocation::FreeBusy => {
             OccurrenceExpectation::OptionalOnce
         }
@@ -235,11 +240,38 @@ fn validate_component_properties(
         PropertyLocation::Event
         | PropertyLocation::ToDo
         | PropertyLocation::Journal
-        | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+        | PropertyLocation::FreeBusy
+        | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
         PropertyLocation::TimeZone => OccurrenceExpectation::Once,
         PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
         PropertyLocation::Calendar => {
             unreachable!()
+        }
+    };
+
+    let tz_offset_to_occurrence_expectation = match property_location {
+        PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Once,
+        PropertyLocation::Event
+        | PropertyLocation::ToDo
+        | PropertyLocation::Journal
+        | PropertyLocation::FreeBusy
+        | PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
+        }
+    };
+
+    let tz_offset_from_occurrence_expectation = match property_location {
+        PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Once,
+        PropertyLocation::Event
+        | PropertyLocation::ToDo
+        | PropertyLocation::Journal
+        | PropertyLocation::FreeBusy
+        | PropertyLocation::TimeZone => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => {
+            unimplemented!()
         }
     };
 
@@ -306,7 +338,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -325,7 +359,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -344,7 +380,9 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Journal | PropertyLocation::Other => {
                         OccurrenceExpectation::OptionalMany
                     }
@@ -376,9 +414,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::Journal
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -396,8 +435,11 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
-                    | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::Journal
+                    | PropertyLocation::TimeZone => OccurrenceExpectation::OptionalOnce,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -416,9 +458,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::Journal
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -438,6 +481,9 @@ fn validate_component_properties(
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
                     | PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalOnce,
+                    PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -470,9 +516,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::Journal
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -491,7 +538,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -510,7 +559,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -529,7 +580,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -548,7 +601,9 @@ fn validate_component_properties(
                     PropertyLocation::Event => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -568,6 +623,9 @@ fn validate_component_properties(
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
                     | PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalOnce,
+                    PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -586,7 +644,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalOnce,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -605,8 +665,11 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
-                    | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::Journal
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::FreeBusy | PropertyLocation::TimeZone => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -627,9 +690,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::FreeBusy => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::ToDo | PropertyLocation::Journal => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::ToDo
+                    | PropertyLocation::Journal
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -650,9 +714,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalOnce
                     }
-                    PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::Journal
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -671,7 +736,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -691,6 +758,9 @@ fn validate_component_properties(
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
                     | PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -723,7 +793,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -742,7 +814,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalMany,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::TimeZone => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -762,6 +836,7 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::TimeZone => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -780,7 +855,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -800,6 +877,9 @@ fn validate_component_properties(
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
                     | PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::TimeZone | PropertyLocation::TimeZoneComponent => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -818,7 +898,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -837,9 +919,10 @@ fn validate_component_properties(
                     PropertyLocation::Event | PropertyLocation::ToDo => {
                         OccurrenceExpectation::OptionalMany
                     }
-                    PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-                        OccurrenceExpectation::Never
-                    }
+                    PropertyLocation::Journal
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -857,8 +940,11 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
-                    | PropertyLocation::Journal => OccurrenceExpectation::OptionalMany,
-                    PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::Journal
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::OptionalMany,
+                    PropertyLocation::FreeBusy | PropertyLocation::TimeZone => {
+                        OccurrenceExpectation::Never
+                    }
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -876,7 +962,9 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::ToDo => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
@@ -895,7 +983,9 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::ToDo => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
@@ -916,7 +1006,9 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::ToDo => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
@@ -935,7 +1027,9 @@ fn validate_component_properties(
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
-                    | PropertyLocation::Journal => OccurrenceExpectation::Never,
+                    | PropertyLocation::Journal
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalMany,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
@@ -972,10 +1066,12 @@ fn validate_component_properties(
             }
             ComponentProperty::TimeZoneUrl(_) => {
                 let occurrence_expectation = match property_location {
+                    PropertyLocation::TimeZone => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -990,49 +1086,31 @@ fn validate_component_properties(
                 );
             }
             ComponentProperty::TimeZoneOffsetTo(_) => {
-                let occurrence_expectation = match property_location {
-                    PropertyLocation::Event
-                    | PropertyLocation::ToDo
-                    | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
-                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
-                    _ => {
-                        unimplemented!()
-                    }
-                };
                 check_component_property_occurrence!(
                     errors,
                     seen,
                     property,
                     index,
-                    occurrence_expectation
+                    tz_offset_to_occurrence_expectation
                 );
             }
             ComponentProperty::TimeZoneOffsetFrom(_) => {
-                let occurrence_expectation = match property_location {
-                    PropertyLocation::Event
-                    | PropertyLocation::ToDo
-                    | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
-                    PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
-                    _ => {
-                        unimplemented!()
-                    }
-                };
                 check_component_property_occurrence!(
                     errors,
                     seen,
                     property,
                     index,
-                    occurrence_expectation
+                    tz_offset_from_occurrence_expectation
                 );
             }
             ComponentProperty::TimeZoneName(_) => {
                 let occurrence_expectation = match property_location {
+                    PropertyLocation::TimeZoneComponent => OccurrenceExpectation::OptionalMany,
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -1051,7 +1129,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -1070,7 +1150,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -1089,7 +1171,9 @@ fn validate_component_properties(
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
                     | PropertyLocation::Journal
-                    | PropertyLocation::FreeBusy => OccurrenceExpectation::Never,
+                    | PropertyLocation::FreeBusy
+                    | PropertyLocation::TimeZone
+                    | PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
                     _ => {
                         unimplemented!()
@@ -1131,6 +1215,22 @@ fn validate_component_properties(
         });
     }
     if let Some(message) = check_occurrence(&seen, "TZID", tz_id_occurrence_expectation) {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+    if let Some(message) =
+        check_occurrence(&seen, "TZOFFSETTO", tz_offset_to_occurrence_expectation)
+    {
+        errors.push(ComponentPropertyError {
+            message,
+            location: None,
+        });
+    }
+    if let Some(message) =
+        check_occurrence(&seen, "TZOFFSETFROM", tz_offset_from_occurrence_expectation)
+    {
         errors.push(ComponentPropertyError {
             message,
             location: None,
@@ -2512,6 +2612,7 @@ enum PropertyLocation {
     Journal,
     FreeBusy,
     TimeZone,
+    TimeZoneComponent,
     Other,
 }
 
