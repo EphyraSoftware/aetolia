@@ -9,9 +9,9 @@ use crate::model::{
 use crate::parser::recur::recur;
 use crate::parser::uri::param_value_uri;
 use crate::parser::{
-    prop_value_date, prop_value_date_time, prop_value_duration, prop_value_float,
-    prop_value_integer, prop_value_period, prop_value_text, prop_value_time, prop_value_utc_offset,
-    Error,
+    prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
+    prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
+    prop_value_utc_offset, Error,
 };
 use crate::serialize::WriteModel;
 use crate::validate::error::{CalendarPropertyError, ICalendarError, ParamError};
@@ -491,6 +491,19 @@ fn validate_component_properties(
     for (index, property) in properties.iter().enumerate() {
         check_encoding_for_binary_values(&mut errors, property, index)?;
 
+        let do_validate_params = |errors: &mut Vec<ComponentPropertyError>,
+                                  property_info: PropertyInfo,
+                                  params: &[Param]| {
+            errors.extend_from_slice(
+                ComponentPropertyError::many_from_param_errors(
+                    validate_params(params, property_info),
+                    index,
+                    component_property_name(property).to_string(),
+                )
+                .as_slice(),
+            );
+        };
+
         match property {
             ComponentProperty::DateTimeStamp(_) => {
                 check_component_property_occurrence!(
@@ -524,6 +537,7 @@ fn validate_component_properties(
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
+                    PropertyKind::DateTimeStart,
                     if date_time_start.time.is_some() {
                         ValueType::DateTime
                     } else {
@@ -581,8 +595,12 @@ fn validate_component_properties(
                     description_occurrence_expectation
                 );
 
-                let property_info =
-                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Description,
+                    ValueType::Text,
+                );
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&description.params, property_info),
@@ -661,6 +679,7 @@ fn validate_component_properties(
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
+                    PropertyKind::Organizer,
                     ValueType::CalendarAddress,
                 );
                 errors.extend_from_slice(
@@ -830,7 +849,7 @@ fn validate_component_properties(
                     occurrence_expectation
                 );
             }
-            ComponentProperty::Attach(_) => {
+            ComponentProperty::Attach(attach) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -853,6 +872,17 @@ fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                do_validate_params(
+                    &mut errors,
+                    PropertyInfo::new(
+                        calendar_info,
+                        property_location.clone(),
+                        PropertyKind::Attach,
+                        ValueType::Binary,
+                    ),
+                    &attach.params,
+                );
             }
             ComponentProperty::Attendee(attendee) => {
                 check_component_property_occurrence!(
@@ -866,6 +896,7 @@ fn validate_component_properties(
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
+                    PropertyKind::Attendee,
                     ValueType::CalendarAddress,
                 );
                 errors.extend_from_slice(
@@ -1077,8 +1108,12 @@ fn validate_component_properties(
                     tz_id_occurrence_expectation
                 );
 
-                let property_info =
-                    PropertyInfo::new(calendar_info, property_location.clone(), ValueType::Text);
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeZoneId,
+                    ValueType::Text,
+                );
                 errors.extend_from_slice(
                     ComponentPropertyError::many_from_param_errors(
                         validate_params(&time_zone_id.params, property_info),
@@ -1301,10 +1336,10 @@ fn check_encoding_for_binary_values(
     if let Some((value_type, value_type_index)) = declared_value_type {
         match value_type {
             Value::Binary => {
-                let mut encoding_param_found = false;
+                let mut found_encoding = None;
                 for param in property.params() {
                     if let Param::Encoding { encoding } = param {
-                        encoding_param_found = true;
+                        found_encoding = Some(encoding.clone());
 
                         if *encoding != Encoding::Base64 {
                             let mut msg = b"Property is declared to have a binary value but the encoding is set to ".to_vec();
@@ -1324,11 +1359,13 @@ fn check_encoding_for_binary_values(
                                     }),
                                 }),
                             });
+
+                            return Ok(());
                         }
                     }
                 }
 
-                if !encoding_param_found {
+                if found_encoding.is_none() {
                     errors.push(ComponentPropertyError {
                         message: "Property is declared to have a binary value but no encoding is set, must be set to BASE64".to_string(),
                         location: Some(ComponentPropertyLocation {
@@ -1340,6 +1377,47 @@ fn check_encoding_for_binary_values(
                             }),
                         }),
                     });
+                    return Ok(());
+                }
+
+                let require_base64 = |v: &str| match found_encoding.expect("Always present") {
+                    Encoding::Base64 => {
+                        if !is_base64_valued(v) {
+                            errors.push(ComponentPropertyError {
+                                    message: "Property is declared to have a binary value but the value is not base64".to_string(),
+                                    location: Some(ComponentPropertyLocation {
+                                        index: property_index,
+                                        name: component_property_name(property).to_string(),
+                                        property_location: Some(WithinPropertyLocation::Value),
+                                    }),
+                                });
+                        }
+                    }
+                    _ => {
+                        unreachable!("Encoding has already been checked to be Base64")
+                    }
+                };
+
+                match property {
+                    ComponentProperty::Attach(attach) => {
+                        require_base64(&attach.value);
+                    }
+                    ComponentProperty::XProperty(x_prop) => {
+                        require_base64(&x_prop.value);
+                    }
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        require_base64(&iana_prop.value);
+                    }
+                    _ => {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a binary value but that is not valid for this property".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: Some(WithinPropertyLocation::Value),
+                            }),
+                        });
+                    }
                 }
             }
             Value::Boolean => match property {
@@ -1861,15 +1939,29 @@ fn check_encoding_for_binary_values(
                 }
             }
             Value::Uri => {
-                let mut invalid = false;
+                let mut require_uri = |v: &str| {
+                    if !is_uri_valued(v) {
+                        errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a URI value but the value is not a URI".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: Some(WithinPropertyLocation::Value),
+                            }),
+                        });
+                    }
+                };
 
                 match property {
                     // TODO Valid property types need to be listed
+                    ComponentProperty::Attach(attach) => {
+                        require_uri(&attach.value);
+                    }
                     ComponentProperty::XProperty(x_prop) => {
-                        invalid = !is_uri_valued(&x_prop.value);
+                        require_uri(&x_prop.value);
                     }
                     ComponentProperty::IanaProperty(iana_prop) => {
-                        invalid = !is_uri_valued(&iana_prop.value);
+                        require_uri(&iana_prop.value);
                     }
                     _ => {
                         errors.push(ComponentPropertyError {
@@ -1881,19 +1973,6 @@ fn check_encoding_for_binary_values(
                             }),
                         });
                     }
-                }
-
-                if invalid {
-                    errors.push(ComponentPropertyError {
-                        message:
-                            "Property is declared to have a URI value but the value is not a URI"
-                                .to_string(),
-                        location: Some(ComponentPropertyLocation {
-                            index: property_index,
-                            name: component_property_name(property).to_string(),
-                            property_location: Some(WithinPropertyLocation::Value),
-                        }),
-                    });
                 }
             }
             Value::UtcOffset => {
@@ -1971,6 +2050,17 @@ fn check_encoding_for_binary_values(
     }
 
     Ok(())
+}
+
+fn is_base64_valued(property_value: &str) -> bool {
+    let mut content = property_value.as_bytes().to_vec();
+    content.push(b';');
+
+    let result = prop_value_binary::<Error>(content.as_bytes());
+    match result {
+        Ok((rest, _)) => rest.len() == 1,
+        _ => false,
+    }
 }
 
 fn is_boolean_valued(property_value: &str) -> bool {
@@ -2074,7 +2164,7 @@ fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::
     }
 }
 
-fn is_uri_valued(property_value: &String) -> bool {
+fn is_uri_valued(property_value: &str) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
@@ -2631,6 +2721,8 @@ impl CalendarInfo {
 struct PropertyInfo<'a> {
     /// The location that this property has been used in
     property_location: PropertyLocation,
+    /// The property kind that is the context for validating a property value or param
+    property_kind: PropertyKind,
     /// The required value type for this property
     value_type: ValueType,
     /// If the property has a VALUE parameter, regardless of whether that is valid on this
@@ -2643,6 +2735,18 @@ struct PropertyInfo<'a> {
     is_other: bool,
     /// Information about the calendar that contains this property
     calendar_info: &'a CalendarInfo,
+}
+
+#[derive(Debug)]
+enum PropertyKind {
+    Attach,
+    Version,
+    Other,
+    DateTimeStart,
+    Description,
+    Organizer,
+    TimeZoneId,
+    Attendee,
 }
 
 #[derive(Debug, Clone)]
@@ -2662,10 +2766,12 @@ impl<'a> PropertyInfo<'a> {
     fn new(
         calendar_info: &'a CalendarInfo,
         property_location: PropertyLocation,
+        property_kind: PropertyKind,
         value_type: ValueType,
     ) -> Self {
         PropertyInfo {
             property_location,
+            property_kind,
             value_type,
             declared_value_type: None,
             value_is_utc: None,
@@ -2693,6 +2799,7 @@ enum ValueType {
     Duration,
     Date,
     DateTime,
+    Binary,
 }
 
 fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {
@@ -2750,6 +2857,7 @@ fn validate_calendar_properties(
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     PropertyLocation::Calendar,
+                    PropertyKind::Version,
                     ValueType::VersionValue,
                 );
                 errors.extend_from_slice(
@@ -2851,9 +2959,24 @@ fn check_occurrence(
     }
 }
 
+macro_rules! check_property_param_occurrence {
+    ($errors:ident, $seen:ident, $param:ident, $index:ident, $occur:expr) => {
+        let name = param_name($param);
+        let count = add_to_seen($seen, name);
+        if let Some(message) = check_occurrence(&$seen, name, $occur.clone()) {
+            $errors.push(ParamError {
+                index: $index,
+                name: name.to_string(),
+                message,
+            });
+        }
+    };
+}
+
 fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamError> {
     let mut errors = Vec::new();
 
+    let mut seen = HashMap::<String, u32>::new();
     for (index, param) in params.iter().enumerate() {
         match param {
             Param::CommonName { name } => {
@@ -2887,13 +3010,27 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
                 validate_dir_param(&mut errors, param, index, &property_info);
             }
             Param::ValueType { .. } => {
-                // Nothing to validate yet
+                validate_value_type_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            Param::Other { name, .. } if name == "VALUE" => {
+                validate_value_type_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Encoding { .. } => {
                 // Nothing further to validate
             }
             Param::FormatType { .. } => {
-                // Format type is not validated by this program
+                validate_fmt_type_param(&mut errors, &mut seen, param, index, &property_info);
+                // Format type is not further validated by this program
+            }
+            Param::Other { name, .. } if name == "FMTTYPE" => {
+                validate_fmt_type_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            Param::Others { name, .. } if name == "FMTTYPE" => {
+                errors.push(ParamError {
+                    index,
+                    name: param_name(param).to_string(),
+                    message: "FMTTYPE may not have multiple values".to_string(),
+                });
             }
             Param::FreeBusyTimeType { .. } => {
                 // Nothing further to validate
@@ -2968,6 +3105,36 @@ fn validate_params(params: &[Param], property_info: PropertyInfo) -> Vec<ParamEr
     }
 
     errors
+}
+
+fn validate_value_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+fn validate_fmt_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.2
@@ -3566,14 +3733,14 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
-DESCRIPTION;VALUE=BINARY:eA==\r\n\
+ATTACH;VALUE=BINARY:eA==\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have a binary value but no encoding is set, must be set to BASE64", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but no encoding is set, must be set to BASE64", errors.first().unwrap().to_string());
     }
 
     #[test]
@@ -3585,14 +3752,14 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
-DESCRIPTION;VALUE=BINARY;ENCODING=8BIT:eA==\r\n\
+ATTACH;VALUE=BINARY;ENCODING=8BIT:eA==\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
         assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64", errors.first().unwrap().to_string());
+        assert_eq!("In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64", errors.first().unwrap().to_string());
     }
 
     #[test]

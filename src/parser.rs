@@ -68,6 +68,7 @@ pub enum InnerError {
     MismatchedComponentEnd(Vec<u8>, Vec<u8>),
     UnknownParamName(String),
     InvalidValueParam,
+    InvalidBinaryValueSpec,
 }
 
 impl<'a> Error<'a> {

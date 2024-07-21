@@ -61,7 +61,9 @@ where
         )
     });
 
-    if is_base_64 && is_binary {
+    // Use OR here rather than AND. It's not valid to set one of these and not the other so assume the
+    // value is more likely to be binary if one is set and let the error happen later if so.
+    if is_base_64 || is_binary {
         let (input, (v, _)) = tuple((cut(prop_value_binary), tag("\r\n")))(input)?;
 
         Ok((
