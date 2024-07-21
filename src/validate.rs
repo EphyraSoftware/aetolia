@@ -163,6 +163,71 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                     )
                     .as_slice(),
                 );
+
+                if time_zone.components.is_empty() {
+                    errors.push(ICalendarError {
+                        message: "No standard or daylight components found in time zone, required at least one"
+                            .to_string(),
+                        location: Some(ICalendarLocation::Component(ComponentLocation {
+                            index,
+                            name: component_name(component).to_string(),
+                            location: None,
+                        })),
+                    });
+                }
+
+                for (tz_component_index, tz_component) in time_zone.components.iter().enumerate() {
+                    match tz_component {
+                        CalendarComponent::Standard(standard) => {
+                            errors.extend_from_slice(
+                                ICalendarError::many_from_nested_component_property_errors(
+                                    validate_component_properties(
+                                        &calendar_info,
+                                        PropertyLocation::TimeZoneComponent,
+                                        &standard.properties,
+                                    )?,
+                                    index,
+                                    component_name(component).to_string(),
+                                    tz_component_index,
+                                    component_name(tz_component).to_string(),
+                                )
+                                .as_slice(),
+                            );
+                        }
+                        CalendarComponent::Daylight(daylight) => {
+                            errors.extend_from_slice(
+                                ICalendarError::many_from_nested_component_property_errors(
+                                    validate_component_properties(
+                                        &calendar_info,
+                                        PropertyLocation::TimeZoneComponent,
+                                        &daylight.properties,
+                                    )?,
+                                    index,
+                                    component_name(component).to_string(),
+                                    tz_component_index,
+                                    component_name(tz_component).to_string(),
+                                )
+                                .as_slice(),
+                            );
+                        }
+                        _ => {
+                            errors.push(ICalendarError {
+                                message: "Component is not allowed in time zone".to_string(),
+                                location: Some(ICalendarLocation::Component(ComponentLocation {
+                                    index,
+                                    name: component_name(component).to_string(),
+                                    location: Some(Box::new(WithinComponentLocation::Component(
+                                        ComponentLocation {
+                                            index: tz_component_index,
+                                            name: component_name(tz_component).to_string(),
+                                            location: None,
+                                        },
+                                    ))),
+                                })),
+                            });
+                        }
+                    }
+                }
             }
             CalendarComponent::IanaComponent(iana_component) => {
                 errors.extend_from_slice(
@@ -3225,9 +3290,11 @@ fn component_property_name(property: &ComponentProperty) -> &str {
         ComponentProperty::Attach(_) => "ATTACH",
         ComponentProperty::Action(_) => "ACTION",
         ComponentProperty::Trigger(_) => "TRIGGER",
+        ComponentProperty::TimeZoneOffsetFrom(_) => "TZOFFSETFROM",
+        ComponentProperty::TimeZoneOffsetTo(_) => "TZOFFSETTO",
         ComponentProperty::XProperty(x_prop) => &x_prop.name,
         ComponentProperty::IanaProperty(iana_prop) => &iana_prop.name,
-        _ => unimplemented!(),
+        _ => unimplemented!("prop: {:?}", property),
     }
 }
 
@@ -3800,6 +3867,11 @@ VERSION:2.0\r\n\
 METHOD:send\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19671029T020000\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+END:STANDARD\r\n\
 END:VTIMEZONE\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
@@ -3821,6 +3893,11 @@ PRODID:test\r\n\
 VERSION:2.0\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:any\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19671029T020000\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+END:STANDARD\r\n\
 END:VTIMEZONE\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
@@ -3831,8 +3908,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) is not allowed for the property value type DATE", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) is not allowed for the property value type DATE")
     }
 
     #[test]

@@ -83,11 +83,14 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
+    println!("Checking standard");
     let (input, (_, properties, _)) = tuple((
         tag("BEGIN:STANDARD\r\n"),
         cut(tz_props),
         tag("END:STANDARD\r\n"),
     ))(input)?;
+
+    println!("Found standard");
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
