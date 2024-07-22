@@ -149,6 +149,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                     &property_info,
                 );
             }
+            Param::AltRep { .. } => {}
             _ => {
                 unimplemented!()
             }
@@ -182,6 +183,31 @@ fn validate_fmt_type_param(
 ) {
     let occurrence_expectation = match property_info.property_kind {
         PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+// RFC 5545, Section 3.2.1
+fn validate_alt_rep_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::Text {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Alternate text representation (ALTREP) is not allowed for this property type"
+                .to_string(),
+        });
+    }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Comment => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -280,7 +306,7 @@ fn validate_language_param(
     property_info: &PropertyInfo,
 ) {
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Categories => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Categories | PropertyKind::Comment => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };

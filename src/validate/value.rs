@@ -522,7 +522,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    ComponentProperty::Categories(_) => {
+                    ComponentProperty::Categories(_)
+                    | ComponentProperty::Classification(_)
+                    | ComponentProperty::Comment(_) => {
                         // Valid
                     }
                     ComponentProperty::XProperty(x_prop) => {

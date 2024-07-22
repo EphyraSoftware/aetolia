@@ -657,7 +657,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &categories.params);
             }
-            ComponentProperty::Comment(_) => {
+            ComponentProperty::Comment(comment) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -674,6 +674,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Comment,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &comment.params);
             }
             ComponentProperty::Contact(_) => {
                 let occurrence_expectation = match property_location {

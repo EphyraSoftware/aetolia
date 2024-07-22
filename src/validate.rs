@@ -364,6 +364,7 @@ enum PropertyKind {
     TimeZoneId,
     Attendee,
     Categories,
+    Comment,
 }
 
 #[derive(Debug, Clone)]
