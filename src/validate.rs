@@ -363,6 +363,7 @@ enum PropertyKind {
     Organizer,
     TimeZoneId,
     Attendee,
+    Categories,
 }
 
 #[derive(Debug, Clone)]

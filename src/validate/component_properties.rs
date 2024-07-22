@@ -631,16 +631,9 @@ pub(super) fn validate_component_properties(
                     PropertyKind::Attendee,
                     ValueType::CalendarAddress,
                 );
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&attendee.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
-                );
+                do_validate_params(&mut errors, property_info, &attendee.params);
             }
-            ComponentProperty::Categories(_) => {
+            ComponentProperty::Categories(categories) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -655,6 +648,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Categories,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &categories.params);
             }
             ComponentProperty::Comment(_) => {
                 let occurrence_expectation = match property_location {

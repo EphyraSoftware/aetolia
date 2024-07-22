@@ -522,7 +522,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::Categories(_) => {
+                        // Valid
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_text_valued(&x_prop.value);
                     }

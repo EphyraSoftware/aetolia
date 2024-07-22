@@ -83,7 +83,11 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 // Nothing further to validate
             }
             Param::Language { .. } => {
-                // Nothing further to validate
+                validate_language_param(&mut errors, &mut seen, param, index, &property_info);
+                // Language is not further validated by this program
+            }
+            Param::Other { name, .. } if name == "LANGUAGE" => {
+                validate_language_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Members { .. } => {
                 validate_member_param(&mut errors, param, index, &property_info);
@@ -266,6 +270,21 @@ fn validate_dir_param(
                 .to_string(),
         });
     }
+}
+
+fn validate_language_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Categories => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.11
