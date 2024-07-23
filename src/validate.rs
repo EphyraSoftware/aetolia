@@ -365,6 +365,15 @@ enum PropertyKind {
     Attendee,
     Categories,
     Comment,
+    GeographicPosition,
+    Location,
+    PercentComplete,
+    Priority,
+    Resources,
+    Status,
+    Summary,
+    DateTimeCompleted,
+    DateTimeEnd,
 }
 
 #[derive(Debug, Clone)]
@@ -418,6 +427,8 @@ enum ValueType {
     Date,
     DateTime,
     Binary,
+    Float,
+    Integer,
 }
 
 fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {
@@ -1084,8 +1095,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) cannot be specified on a property with a UTC time", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) cannot be specified on a property with a UTC time");
     }
 
     #[test]

@@ -132,6 +132,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::TimeZoneId { tz_id, unique } => {
                 validate_time_zone_id_param(
                     &mut errors,
+                    &mut seen,
                     param,
                     tz_id,
                     *unique,
@@ -142,6 +143,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, value } if name == "TZID" => {
                 validate_time_zone_id_param(
                     &mut errors,
+                    &mut seen,
                     param,
                     value,
                     false,
@@ -167,7 +169,9 @@ fn validate_value_type_param(
     property_info: &PropertyInfo,
 ) {
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Attach | PropertyKind::DateTimeStart | PropertyKind::DateTimeEnd => {
+            OccurrenceExpectation::OptionalOnce
+        }
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -207,7 +211,11 @@ fn validate_alt_rep_param(
     }
 
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Comment => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Comment
+        | PropertyKind::Description
+        | PropertyKind::Location
+        | PropertyKind::Resources
+        | PropertyKind::Summary => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -306,7 +314,12 @@ fn validate_language_param(
     property_info: &PropertyInfo,
 ) {
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Categories | PropertyKind::Comment => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Categories
+        | PropertyKind::Comment
+        | PropertyKind::Description
+        | PropertyKind::Location
+        | PropertyKind::Resources
+        | PropertyKind::Summary => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -478,6 +491,7 @@ fn validate_sent_by_param(
 // RFC 5545, Section 3.2.19
 fn validate_time_zone_id_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     tz_id: &String,
     unique: bool,
@@ -510,4 +524,13 @@ fn validate_time_zone_id_param(
                 .to_string(),
         });
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::DateTimeStart | PropertyKind::DateTimeEnd => {
+            OccurrenceExpectation::OptionalOnce
+        }
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }

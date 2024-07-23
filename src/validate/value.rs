@@ -27,6 +27,21 @@ pub(super) fn check_declared_value(
 ) -> anyhow::Result<()> {
     let declared_value_type = get_declared_value_type(property);
 
+    let push_redundant_error_msg =
+        |errors: &mut Vec<ComponentPropertyError>,
+         property_index: usize,
+         property: &ComponentProperty| {
+            errors.push(ComponentPropertyError {
+                message: "Redundant value specification which matches the default value"
+                    .to_string(),
+                location: Some(ComponentPropertyLocation {
+                    index: property_index,
+                    name: component_property_name(property).to_string(),
+                    property_location: None,
+                }),
+            });
+        };
+
     if let Some((value_type, value_type_index)) = declared_value_type {
         match value_type {
             Value::Binary => {
@@ -145,16 +160,7 @@ pub(super) fn check_declared_value(
                 let mut not_mailto = false;
                 match property {
                     ComponentProperty::Attendee(_) | ComponentProperty::Organizer(_) => {
-                        errors.push(ComponentPropertyError {
-                            message:
-                                "Redundant value specification which matches the default value"
-                                    .to_string(),
-                            location: Some(ComponentPropertyLocation {
-                                index: property_index,
-                                name: component_property_name(property).to_string(),
-                                property_location: None,
-                            }),
-                        });
+                        push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::XProperty(x_prop) if x_prop.value.starts_with("mailto:") => {
                         not_mailto = true;
@@ -190,7 +196,30 @@ pub(super) fn check_declared_value(
             Value::Date => {
                 let mut invalid = false;
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::DateTimeStart(dtstart) => {
+                        if dtstart.time.is_some() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date value but the value is a date-time".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
+                    ComponentProperty::DateTimeEnd(dtend) => {
+                        if dtend.time.is_some() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date value but the value is a date-time".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_date_valued(&x_prop.value);
                     }
@@ -229,16 +258,31 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_) => {
-                        errors.push(ComponentPropertyError {
-                            message:
-                                "Redundant value specification which matches the default value"
-                                    .to_string(),
-                            location: Some(ComponentPropertyLocation {
-                                index: property_index,
-                                name: component_property_name(property).to_string(),
-                                property_location: None,
-                            }),
-                        });
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
+                    ComponentProperty::DateTimeStart(dtstart) => {
+                        if dtstart.time.is_none() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date-time value but the value is a date".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
+                    ComponentProperty::DateTimeEnd(dtend) => {
+                        if dtend.time.is_none() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date-time value but the value is a date".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
                     }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_date_time_valued(&x_prop.value);
@@ -331,7 +375,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::GeographicPosition(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_float_valued(&x_prop.value);
                     }
@@ -367,7 +413,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::PercentComplete(_) | ComponentProperty::Priority(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_integer_valued(&x_prop.value);
                     }
@@ -524,7 +572,12 @@ pub(super) fn check_declared_value(
                 match property {
                     ComponentProperty::Categories(_)
                     | ComponentProperty::Classification(_)
-                    | ComponentProperty::Comment(_) => {
+                    | ComponentProperty::Comment(_)
+                    | ComponentProperty::Description(_)
+                    | ComponentProperty::Location(_)
+                    | ComponentProperty::Resources(_)
+                    | ComponentProperty::Status(_)
+                    | ComponentProperty::Summary(_) => {
                         // Valid
                     }
                     ComponentProperty::XProperty(x_prop) => {
