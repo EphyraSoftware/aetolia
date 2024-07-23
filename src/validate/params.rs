@@ -526,9 +526,11 @@ fn validate_time_zone_id_param(
     }
 
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::DateTimeStart | PropertyKind::DateTimeEnd => {
-            OccurrenceExpectation::OptionalOnce
-        }
+        PropertyKind::DateTimeStart => match property_info.property_location {
+            PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
+            _ => OccurrenceExpectation::OptionalOnce,
+        },
+        PropertyKind::DateTimeEnd => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };

@@ -1,5 +1,5 @@
 use crate::common::Status;
-use crate::model::{Action, ComponentProperty, Param, StatusProperty};
+use crate::model::{Action, ComponentProperty, DateTimeStartProperty, Param, StatusProperty};
 use crate::validate::value::check_declared_value;
 use crate::validate::{
     check_occurrence, component_property_name, validate_params, CalendarInfo,
@@ -267,6 +267,13 @@ pub(super) fn validate_component_properties(
                     dt_start_expectation.clone()
                 );
 
+                validate_date_time_start(
+                    &mut errors,
+                    date_time_start,
+                    index,
+                    property_location.clone(),
+                );
+
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
@@ -278,14 +285,7 @@ pub(super) fn validate_component_properties(
                     },
                 )
                 .utc(date_time_start.is_utc);
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&date_time_start.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
-                );
+                do_validate_params(&mut errors, property_info, &date_time_start.params);
             }
             ComponentProperty::Classification(_) => {
                 let occurrence_expectation = match property_location {
@@ -581,7 +581,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
             }
-            ComponentProperty::DateTimeEnd(_) => {
+            ComponentProperty::DateTimeEnd(date_time_end) => {
                 has_dt_end = true;
 
                 let occurrence_expectation = match property_location {
@@ -598,6 +598,18 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::DateTimeEnd,
+                    if date_time_end.time.is_some() {
+                        ValueType::DateTime
+                    } else {
+                        ValueType::Date
+                    },
+                );
+                do_validate_params(&mut errors, property_info, &date_time_end.params);
             }
             ComponentProperty::Duration(_) => {
                 has_duration = true;
@@ -1125,6 +1137,62 @@ pub(super) fn validate_component_properties(
     }
 
     Ok(errors)
+}
+
+fn validate_date_time_start(
+    errors: &mut Vec<ComponentPropertyError>,
+    date_time_start_property: &DateTimeStartProperty,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    if !date_time_start_property
+        .params
+        .iter()
+        .any(|p| matches!(p, Param::ValueType { .. }))
+        && date_time_start_property.time.is_none()
+    {
+        errors.push(ComponentPropertyError {
+            message: "DTSTART defaults to date-time but only has a date value".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "DTSTART".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
+
+    match property_location {
+        PropertyLocation::Event => {
+            // Nothing further to check, valid
+        }
+        PropertyLocation::FreeBusy => {
+            if date_time_start_property.time.is_none() || !date_time_start_property.is_utc {
+                errors.push(ComponentPropertyError {
+                    message: "DTSTART for FREEBUSY must be a UTC date-time".to_string(),
+                    location: Some(ComponentPropertyLocation {
+                        index,
+                        name: "DTSTART".to_string(),
+                        property_location: Some(WithinPropertyLocation::Value),
+                    }),
+                });
+            }
+        }
+        PropertyLocation::TimeZoneComponent => {
+            if date_time_start_property.time.is_none() || date_time_start_property.is_utc {
+                errors.push(ComponentPropertyError {
+                    message: "DTSTART must be a local time".to_string(),
+                    location: Some(ComponentPropertyLocation {
+                        index,
+                        name: "DTSTART".to_string(),
+                        property_location: Some(WithinPropertyLocation::Value),
+                    }),
+                });
+            }
+        }
+        _ => {
+            unreachable!()
+        }
+    }
 }
 
 fn validate_status(
