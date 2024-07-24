@@ -376,7 +376,7 @@ enum PropertyKind {
     DateTimeEnd,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum PropertyLocation {
     Calendar,
     Event,

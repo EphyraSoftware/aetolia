@@ -522,7 +522,7 @@ where
 
 impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DateTimeStartProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,
@@ -1098,7 +1098,7 @@ where
 
 impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DateTimeEndProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,

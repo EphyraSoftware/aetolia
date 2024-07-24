@@ -1,11 +1,15 @@
-use crate::common::Status;
-use crate::model::{Action, ComponentProperty, DateTimeStartProperty, Param, StatusProperty};
+use crate::common::{Status, Value};
+use crate::model::{
+    Action, ComponentProperty, DateTimeCompletedProperty, DateTimeEndProperty,
+    DateTimeStartProperty, Param, StatusProperty,
+};
 use crate::validate::value::check_declared_value;
 use crate::validate::{
-    check_occurrence, component_property_name, validate_params, CalendarInfo,
-    ComponentPropertyError, ComponentPropertyLocation, OccurrenceExpectation, PropertyInfo,
-    PropertyKind, PropertyLocation, ValueType, WithinPropertyLocation,
+    check_occurrence, component_property_name, get_declared_value_type, validate_params,
+    CalendarInfo, ComponentPropertyError, ComponentPropertyLocation, OccurrenceExpectation,
+    PropertyInfo, PropertyKind, PropertyLocation, ValueType, WithinPropertyLocation,
 };
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
 macro_rules! check_component_property_occurrence {
@@ -599,6 +603,19 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
+                let maybe_dt_start = properties.iter().find_map(|p| match p {
+                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
+                    _ => None,
+                });
+
+                validate_date_time_end(
+                    &mut errors,
+                    date_time_end,
+                    maybe_dt_start,
+                    index,
+                    property_location.clone(),
+                );
+
                 let property_info = PropertyInfo::new(
                     calendar_info,
                     property_location.clone(),
@@ -850,6 +867,13 @@ pub(super) fn validate_component_properties(
                     property,
                     index,
                     occurrence_expectation
+                );
+
+                validate_date_time_completed(
+                    &mut errors,
+                    date_time_completed,
+                    index,
+                    property_location.clone(),
                 );
 
                 let property_info = PropertyInfo::new(
@@ -1137,6 +1161,149 @@ pub(super) fn validate_component_properties(
     }
 
     Ok(errors)
+}
+
+/// RFC 5545, 3.8.2.1
+fn validate_date_time_completed(
+    errors: &mut Vec<ComponentPropertyError>,
+    date_time_completed_property: &DateTimeCompletedProperty,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    if !date_time_completed_property.is_utc {
+        errors.push(ComponentPropertyError {
+            message: "DTEND must be a UTC date-time".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "DTEND".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
+}
+
+/// RFC 5545, 3.8.2.2
+fn validate_date_time_end(
+    errors: &mut Vec<ComponentPropertyError>,
+    date_time_end_property: &DateTimeEndProperty,
+    maybe_dt_start: Option<&DateTimeStartProperty>,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    // For a VEVENT, the date/date-time types must match at the start and end
+    if property_location == PropertyLocation::Event {
+        if let Some(dt_start) = maybe_dt_start {
+            let dt_start_type =
+                get_declared_value_type(&ComponentProperty::DateTimeStart(dt_start.clone()));
+            let dt_end_type = get_declared_value_type(&ComponentProperty::DateTimeEnd(
+                date_time_end_property.clone(),
+            ));
+
+            match (dt_start_type, dt_end_type) {
+                (None, None) => {
+                    // Fine, both default
+                }
+                (Some((Value::Date, _)), Some((Value::Date, _))) => {
+                    // Fine, both date
+                }
+                (Some((Value::DateTime, _)), Some((Value::DateTime, _))) => {
+                    // Fine, both date-time
+                }
+                (Some((Value::DateTime, _)), None) | (None, Some((Value::DateTime, _))) => {
+                    // Fine, one specified and other at default
+                }
+                (Some((Value::DateTime, _)) | None, Some((Value::Date, _))) => {
+                    errors.push(ComponentPropertyError {
+                        message: "DTSTART is date-time but DTEND is date".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index,
+                            name: "DTEND".to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+                (Some((Value::Date, _)), Some((Value::DateTime, _)) | None) => {
+                    errors.push(ComponentPropertyError {
+                        message: "DTSTART is date but DTEND is date-time".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index,
+                            name: "DTEND".to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+                _ => {
+                    // This is reachable, but any such combination should be rejected later by value type checking
+                }
+            }
+        }
+    }
+
+    if let Some(dt_start) = maybe_dt_start {
+        match property_location {
+            PropertyLocation::Event => {
+                if dt_start.is_utc != date_time_end_property.is_utc {
+                    errors.push(ComponentPropertyError {
+                        message: "DTEND must have the same time type as DTSTART, both UTC or both not UTC".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index,
+                            name: "DTEND".to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            PropertyLocation::FreeBusy => {
+                if !dt_start.is_utc || !date_time_end_property.is_utc {
+                    errors.push(ComponentPropertyError {
+                        message: "DTSTART and DTEND for FREEBUSY must be UTC date-times"
+                            .to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index,
+                            name: "DTEND".to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
+            }
+            _ => {
+                // Not expected to be specified elsewhere, and not restricted on Other
+            }
+        }
+
+        match date_time_end_property.date.cmp(&dt_start.date) {
+            Ordering::Less => {
+                errors.push(ComponentPropertyError {
+                    message: "DTEND is before DTSTART".to_string(),
+                    location: Some(ComponentPropertyLocation {
+                        index,
+                        name: "DTEND".to_string(),
+                        property_location: Some(WithinPropertyLocation::Value),
+                    }),
+                });
+            }
+            Ordering::Equal => {
+                // Because the types must match above, not need to check for other combinations here
+                if let (Some(dt_end_time), Some(dt_start_time)) =
+                    (date_time_end_property.time, dt_start.time)
+                {
+                    if dt_end_time < dt_start_time {
+                        errors.push(ComponentPropertyError {
+                            message: "DTEND is before DTSTART".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index,
+                                name: "DTEND".to_string(),
+                                property_location: Some(WithinPropertyLocation::Value),
+                            }),
+                        });
+                    }
+                }
+            }
+            Ordering::Greater => {
+                // Valid
+            }
+        }
+    }
 }
 
 fn validate_date_time_start(
