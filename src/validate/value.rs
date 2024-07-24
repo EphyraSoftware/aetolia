@@ -220,6 +220,18 @@ pub(super) fn check_declared_value(
                             });
                         }
                     }
+                    ComponentProperty::DateTimeDue(due) => {
+                        if due.time.is_some() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date value but the value is a date-time".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_date_valued(&x_prop.value);
                     }
@@ -257,7 +269,8 @@ pub(super) fn check_declared_value(
                     ComponentProperty::DateTimeCompleted(_)
                     | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
-                    | ComponentProperty::LastModified(_) => {
+                    | ComponentProperty::LastModified(_)
+                    | ComponentProperty::DateTimeDue(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {

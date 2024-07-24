@@ -1703,7 +1703,7 @@ where
 
 impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DateTimeDueProperty {
     pub(crate) date: time::Date,
     pub(crate) time: Option<time::Time>,

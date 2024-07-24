@@ -374,6 +374,7 @@ enum PropertyKind {
     Summary,
     DateTimeCompleted,
     DateTimeEnd,
+    DateTimeDue,
 }
 
 #[derive(Debug, Clone, PartialEq)]

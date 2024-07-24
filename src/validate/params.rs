@@ -169,9 +169,10 @@ fn validate_value_type_param(
     property_info: &PropertyInfo,
 ) {
     let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Attach | PropertyKind::DateTimeStart | PropertyKind::DateTimeEnd => {
-            OccurrenceExpectation::OptionalOnce
-        }
+        PropertyKind::Attach
+        | PropertyKind::DateTimeStart
+        | PropertyKind::DateTimeEnd
+        | PropertyKind::DateTimeDue => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -530,7 +531,9 @@ fn validate_time_zone_id_param(
             PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
             _ => OccurrenceExpectation::OptionalOnce,
         },
-        PropertyKind::DateTimeEnd => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::DateTimeEnd | PropertyKind::DateTimeDue => {
+            OccurrenceExpectation::OptionalOnce
+        }
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
