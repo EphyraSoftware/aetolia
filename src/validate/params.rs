@@ -80,7 +80,13 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 });
             }
             Param::FreeBusyTimeType { .. } => {
-                // Nothing further to validate
+                validate_free_busy_time_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
             }
             Param::Language { .. } => {
                 validate_language_param(&mut errors, &mut seen, param, index, &property_info);
@@ -159,39 +165,6 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
     }
 
     errors
-}
-
-fn validate_value_type_param(
-    errors: &mut Vec<ParamError>,
-    seen: &mut HashMap<String, u32>,
-    param: &Param,
-    index: usize,
-    property_info: &PropertyInfo,
-) {
-    let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Attach
-        | PropertyKind::DateTimeStart
-        | PropertyKind::DateTimeEnd
-        | PropertyKind::DateTimeDue => OccurrenceExpectation::OptionalOnce,
-        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
-        _ => OccurrenceExpectation::Never,
-    };
-    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
-}
-
-fn validate_fmt_type_param(
-    errors: &mut Vec<ParamError>,
-    seen: &mut HashMap<String, u32>,
-    param: &Param,
-    index: usize,
-    property_info: &PropertyInfo,
-) {
-    let occurrence_expectation = match property_info.property_kind {
-        PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
-        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
-        _ => OccurrenceExpectation::Never,
-    };
-    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.1
@@ -307,6 +280,39 @@ fn validate_dir_param(
     }
 }
 
+// RFC 5545, Section 3.2.8
+fn validate_fmt_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attach => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+// RFC 5545, Section 3.2.9
+fn validate_free_busy_time_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::FreeBusyTime => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+// RFC 5545, Section 3.2.10
 fn validate_language_param(
     errors: &mut Vec<ParamError>,
     seen: &mut HashMap<String, u32>,
@@ -534,6 +540,25 @@ fn validate_time_zone_id_param(
         PropertyKind::DateTimeEnd | PropertyKind::DateTimeDue => {
             OccurrenceExpectation::OptionalOnce
         }
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+// RFC 5545, Section 3.2.20
+fn validate_value_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attach
+        | PropertyKind::DateTimeStart
+        | PropertyKind::DateTimeEnd
+        | PropertyKind::DateTimeDue => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };

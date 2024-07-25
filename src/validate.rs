@@ -375,6 +375,8 @@ enum PropertyKind {
     DateTimeCompleted,
     DateTimeEnd,
     DateTimeDue,
+    Duration,
+    FreeBusyTime,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -430,6 +432,7 @@ enum ValueType {
     Binary,
     Float,
     Integer,
+    Period,
 }
 
 fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {

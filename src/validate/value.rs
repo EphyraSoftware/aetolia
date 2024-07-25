@@ -332,7 +332,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::Duration(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::Trigger(trigger) => {
                         match trigger {
                             Trigger::Relative(_) => {
@@ -464,7 +466,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::FreeBusyTime(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_period_valued(&x_prop.value);
                     }

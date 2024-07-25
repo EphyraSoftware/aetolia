@@ -1,7 +1,8 @@
 use crate::common::{Status, Value};
 use crate::model::{
     Action, ComponentProperty, DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty,
-    DateTimeStartProperty, Param, StatusProperty,
+    DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty, Param, PeriodEnd,
+    StatusProperty,
 };
 use crate::validate::value::check_declared_value;
 use crate::validate::{
@@ -628,7 +629,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &date_time_end.params);
             }
-            ComponentProperty::Duration(_) => {
+            ComponentProperty::Duration(duration) => {
                 has_duration = true;
 
                 let occurrence_expectation = match property_location {
@@ -645,6 +646,26 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let maybe_dt_start = properties.iter().find_map(|p| match p {
+                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
+                    _ => None,
+                });
+                validate_duration_property(
+                    &mut errors,
+                    duration,
+                    maybe_dt_start,
+                    index,
+                    property_location.clone(),
+                );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Duration,
+                    ValueType::Duration,
+                );
+                do_validate_params(&mut errors, property_info, &duration.params);
             }
             ComponentProperty::Attach(attach) => {
                 let occurrence_expectation = match property_location {
@@ -947,7 +968,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &date_time_due.params);
             }
-            ComponentProperty::FreeBusyTime(_) => {
+            ComponentProperty::FreeBusyTime(free_busy_time) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalMany,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
@@ -960,6 +981,21 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                validate_free_busy_time(
+                    &mut errors,
+                    free_busy_time,
+                    index,
+                    property_location.clone(),
+                );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::FreeBusyTime,
+                    ValueType::Period,
+                );
+                do_validate_params(&mut errors, property_info, &free_busy_time.params);
             }
             ComponentProperty::TimeZoneId(time_zone_id) => {
                 check_component_property_occurrence!(
@@ -1186,6 +1222,37 @@ pub(super) fn validate_component_properties(
     }
 
     Ok(errors)
+}
+
+fn validate_duration_property(
+    errors: &mut Vec<ComponentPropertyError>,
+    duration_property: &DurationProperty,
+    maybe_dt_start: Option<&DateTimeStartProperty>,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    match property_location {
+        PropertyLocation::Event | PropertyLocation::ToDo => {
+            if let Some(dt_start) = maybe_dt_start {
+                if dt_start.time.is_none()
+                    && duration_property.duration.weeks.is_none()
+                    && duration_property.duration.days.is_none()
+                {
+                    errors.push(ComponentPropertyError {
+                            message: "DURATION must have at least one of weeks or days when DTSTART is a date".to_string(),
+                            location: Some(ComponentPropertyLocation {
+                                index,
+                                name: "DURATION".to_string(),
+                                property_location: Some(WithinPropertyLocation::Value),
+                            }),
+                        });
+                }
+            }
+        }
+        _ => {
+            // Check is not relevant here
+        }
+    }
 }
 
 /// RFC 5545, 3.8.2.1
@@ -1541,4 +1608,31 @@ fn validate_status(
             unreachable!()
         }
     }
+}
+
+/// RFC 5545, 3.8.2.6
+fn validate_free_busy_time(
+    errors: &mut Vec<ComponentPropertyError>,
+    free_busy_time_property: &FreeBusyTimeProperty,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    if !free_busy_time_property.value.iter().all(|p| {
+        p.start.2
+            && match p.end {
+                PeriodEnd::DateTime((_, _, is_utc)) => is_utc,
+                PeriodEnd::Duration(_) => true,
+            }
+    }) {
+        errors.push(ComponentPropertyError {
+            message: "FREEBUSY periods must be UTC".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "FREEBUSY".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
+
+    // TODO check ordering
 }
