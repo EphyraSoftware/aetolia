@@ -1,3 +1,7 @@
+use crate::model::Duration;
+use std::cmp::Ordering;
+use std::ops::{Add, Sub};
+
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum CalendarUserType {
     #[default]
@@ -171,5 +175,338 @@ impl OffsetWeekday {
             weekday,
             offset_weeks,
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct CalendarDateTime {
+    date: time::Date,
+    time: time::Time,
+    utc: bool,
+}
+
+impl From<(time::Date, time::Time, bool)> for CalendarDateTime {
+    fn from((date, time, utc): (time::Date, time::Time, bool)) -> Self {
+        CalendarDateTime { date, time, utc }
+    }
+}
+
+impl CalendarDateTime {
+    pub fn add(&self, duration: &Duration) -> Self {
+        // TODO otherwise you have to account for daylight changes. Not yet supported
+        assert!(self.utc);
+
+        if let Some(weeks) = duration.weeks {
+            let new_date = if duration.sign > 0 {
+                self.date
+                    .add(std::time::Duration::from_secs(weeks * 7 * 24 * 60 * 60))
+            } else {
+                self.date
+                    .sub(std::time::Duration::from_secs(weeks * 7 * 24 * 60 * 60))
+            };
+            CalendarDateTime {
+                date: new_date,
+                time: self.time,
+                utc: self.utc,
+            }
+        } else {
+            let mut new_date = self.date;
+            let mut new_time = self.time;
+
+            if duration.sign > 0 {
+                let mut add_days = 0;
+
+                if let Some(days) = duration.days {
+                    add_days += days;
+                }
+
+                let mut add_seconds = duration.hours.unwrap_or(0) * 60 * 60
+                    + duration.minutes.unwrap_or(0) * 60
+                    + duration.seconds.unwrap_or(0);
+
+                const ONE_DAY: u64 = 24 * 60 * 60;
+                let part_day = new_time.hour() as u64 * 60 * 60
+                    + new_time.minute() as u64 * 60
+                    + new_time.second() as u64;
+                let gap = ONE_DAY - part_day;
+
+                if add_seconds > gap {
+                    add_days += 1;
+                    add_seconds -= gap;
+                    new_time = new_time.add(std::time::Duration::from_secs(gap));
+                }
+
+                add_days += add_seconds / ONE_DAY;
+                add_seconds %= ONE_DAY;
+
+                new_date = new_date.add(std::time::Duration::from_secs(add_days * ONE_DAY));
+                new_time = new_time.add(std::time::Duration::from_secs(add_seconds));
+
+                CalendarDateTime {
+                    date: new_date,
+                    time: new_time,
+                    utc: self.utc,
+                }
+            } else {
+                let mut sub_days = 0;
+
+                if let Some(days) = duration.days {
+                    sub_days += days;
+                }
+
+                let mut sub_seconds = duration.hours.unwrap_or(0) * 60 * 60
+                    + duration.minutes.unwrap_or(0) * 60
+                    + duration.seconds.unwrap_or(0);
+
+                const ONE_DAY: u64 = 24 * 60 * 60;
+                let part_day = new_time.hour() as u64 * 60 * 60
+                    + new_time.minute() as u64 * 60
+                    + new_time.second() as u64;
+
+                if sub_seconds > part_day {
+                    sub_days += 1;
+                    sub_seconds -= part_day;
+                    new_time = new_time.sub(std::time::Duration::from_secs(part_day));
+                }
+
+                sub_days += sub_seconds / ONE_DAY;
+                sub_seconds %= ONE_DAY;
+
+                new_date = new_date.sub(std::time::Duration::from_secs(sub_days * ONE_DAY));
+                new_time = new_time.sub(std::time::Duration::from_secs(sub_seconds));
+
+                CalendarDateTime {
+                    date: new_date,
+                    time: new_time,
+                    utc: self.utc,
+                }
+            }
+        }
+    }
+}
+
+impl PartialOrd for CalendarDateTime {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CalendarDateTime {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let date_cmp = self.date.cmp(&other.date);
+        if date_cmp != Ordering::Equal {
+            return date_cmp;
+        }
+
+        let time_cmp = self.time.cmp(&other.time);
+        if time_cmp != Ordering::Equal {
+            return time_cmp;
+        }
+
+        self.utc.cmp(&other.utc)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_duration_week() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 0, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            weeks: Some(1),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_duration_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 30, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            days: Some(1),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_duration_time_same_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 30, 10).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            hours: Some(1),
+            minutes: Some(30),
+            seconds: Some(30),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_duration_time_next_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(23, 30, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            hours: Some(10),
+            minutes: Some(30),
+            seconds: Some(0),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_negative_duration_week() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 0, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            sign: -1,
+            weeks: Some(5),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_negative_duration_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 30, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            sign: -1,
+            days: Some(3),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_negative_duration_time_same_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(14, 30, 10).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            sign: -1,
+            hours: Some(1),
+            minutes: Some(30),
+            seconds: Some(30),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    #[test]
+    fn add_negative_duration_time_previous_day() {
+        let cdt: CalendarDateTime = (
+            time::Date::from_calendar_date(1992, time::Month::April, 12).unwrap(),
+            time::Time::from_hms(3, 30, 0).unwrap(),
+            true,
+        )
+            .into();
+
+        let duration = Duration {
+            sign: -1,
+            hours: Some(10),
+            minutes: Some(30),
+            seconds: Some(0),
+            ..Default::default()
+        };
+        let new = cdt.add(&duration);
+
+        check_duration_invariant(cdt, new, duration);
+    }
+
+    fn check_duration_invariant(
+        original: CalendarDateTime,
+        new: CalendarDateTime,
+        duration: Duration,
+    ) {
+        let original = chrono::NaiveDateTime::new(
+            chrono::NaiveDate::from_ymd_opt(
+                original.date.year(),
+                original.date.month() as u32,
+                original.date.day() as u32,
+            )
+            .unwrap(),
+            chrono::NaiveTime::from_hms_opt(
+                original.time.hour() as u32,
+                original.time.minute() as u32,
+                original.time.second() as u32,
+            )
+            .unwrap(),
+        );
+        let new = chrono::NaiveDateTime::new(
+            chrono::NaiveDate::from_ymd_opt(
+                new.date.year(),
+                new.date.month() as u32,
+                new.date.day() as u32,
+            )
+            .unwrap(),
+            chrono::NaiveTime::from_hms_opt(
+                new.time.hour() as u32,
+                new.time.minute() as u32,
+                new.time.second() as u32,
+            )
+            .unwrap(),
+        );
+
+        println!("Original: {}", original);
+        println!("New: {}", new);
+
+        let dur = new.signed_duration_since(original);
+
+        let (sign, duration) = duration.to_std();
+        assert_eq!(sign as i64 * duration.as_secs() as i64, dur.num_seconds());
     }
 }

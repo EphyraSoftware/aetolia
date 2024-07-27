@@ -8,6 +8,19 @@ pub struct Duration {
     pub(crate) seconds: Option<u64>,
 }
 
+impl Default for Duration {
+    fn default() -> Self {
+        Duration {
+            sign: 1,
+            weeks: None,
+            days: None,
+            hours: None,
+            minutes: None,
+            seconds: None,
+        }
+    }
+}
+
 impl Duration {
     pub fn weeks(sign: i8, weeks: u64) -> Self {
         Duration {
@@ -79,6 +92,19 @@ impl Duration {
             minutes: None,
             seconds: Some(seconds),
         }
+    }
+
+    pub fn to_std(self) -> (i8, std::time::Duration) {
+        let secs = self
+            .weeks
+            .map(|weeks| weeks * 7 * 24 * 60 * 60)
+            .unwrap_or(0)
+            + self.days.map(|days| days * 24 * 60 * 60).unwrap_or(0)
+            + self.hours.map(|hours| hours * 60 * 60).unwrap_or(0)
+            + self.minutes.map(|minutes| minutes * 60).unwrap_or(0)
+            + self.seconds.unwrap_or(0);
+
+        (self.sign, std::time::Duration::from_secs(secs))
     }
 }
 

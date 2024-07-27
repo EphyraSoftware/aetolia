@@ -13,8 +13,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 
 use crate::common::{
-    CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, Related,
-    RelationshipType, Role, Status, TimeTransparency, Value,
+    CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
+    Range, Related, RelationshipType, Role, Status, TimeTransparency, Value,
 };
 pub use duration::*;
 pub use recur::*;
@@ -1572,6 +1572,23 @@ impl Period {
         Period {
             start: (start_date, start_time, is_utc),
             end: PeriodEnd::Duration(duration),
+        }
+    }
+
+    pub fn expand(&self) -> Option<(CalendarDateTime, CalendarDateTime)> {
+        if self.start.2 {
+            Some((
+                self.start.into(),
+                match &self.end {
+                    PeriodEnd::DateTime(end) => (*end).into(),
+                    PeriodEnd::Duration(duration) => {
+                        let cdt: CalendarDateTime = self.start.into();
+                        cdt.add(duration)
+                    }
+                },
+            ))
+        } else {
+            None
         }
     }
 }

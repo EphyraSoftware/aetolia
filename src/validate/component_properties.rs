@@ -1635,4 +1635,33 @@ fn validate_free_busy_time(
     }
 
     // TODO check ordering
+
+    let date_times = free_busy_time_property
+        .value
+        .iter()
+        .map(|p| p.expand().unwrap())
+        .collect::<Vec<_>>();
+    let all_ordered = date_times.windows(2).all(|w| {
+        let (s1, e1) = &w[0];
+        let (s2, e2) = &w[1];
+
+        match s1.cmp(s2) {
+            Ordering::Less => true,
+            Ordering::Equal => {
+                matches!(e1.cmp(e2), Ordering::Less)
+            }
+            _ => false,
+        }
+    });
+
+    if !all_ordered {
+        errors.push(ComponentPropertyError {
+            message: "FREEBUSY periods should be ordered".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "FREEBUSY".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
 }
