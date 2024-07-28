@@ -1,6 +1,9 @@
 use crate::common::{Encoding, Value};
 use crate::convert::ToModel;
-use crate::model::{AttendeeProperty, ComponentProperty, OrganizerProperty, Param};
+use crate::model::{
+    AttendeeProperty, ComponentProperty, DateTimeDueProperty, DateTimeEndProperty,
+    DateTimeStartProperty, OrganizerProperty, Param, RecurrenceIdProperty,
+};
 use crate::parser::recur::recur;
 use crate::parser::uri::param_value_uri;
 use crate::parser::{
@@ -201,32 +204,11 @@ pub(super) fn check_declared_value(
             Value::Date => {
                 let mut invalid = false;
                 match property {
-                    ComponentProperty::DateTimeStart(dtstart) => {
-                        if dtstart.time.is_some() {
-                            errors.push(ComponentPropertyError {
-                                message: "Property is declared to have a date value but the value is a date-time".to_string(),
-                                location: Some(ComponentPropertyLocation {
-                                    index: property_index,
-                                    name: component_property_name(property).to_string(),
-                                    property_location: Some(WithinPropertyLocation::Value),
-                                }),
-                            });
-                        }
-                    }
-                    ComponentProperty::DateTimeEnd(dtend) => {
-                        if dtend.time.is_some() {
-                            errors.push(ComponentPropertyError {
-                                message: "Property is declared to have a date value but the value is a date-time".to_string(),
-                                location: Some(ComponentPropertyLocation {
-                                    index: property_index,
-                                    name: component_property_name(property).to_string(),
-                                    property_location: Some(WithinPropertyLocation::Value),
-                                }),
-                            });
-                        }
-                    }
-                    ComponentProperty::DateTimeDue(due) => {
-                        if due.time.is_some() {
+                    ComponentProperty::DateTimeStart(DateTimeStartProperty { time, .. })
+                    | ComponentProperty::DateTimeEnd(DateTimeEndProperty { time, .. })
+                    | ComponentProperty::DateTimeDue(DateTimeDueProperty { time, .. })
+                    | ComponentProperty::RecurrenceId(RecurrenceIdProperty { time, .. }) => {
+                        if time.is_some() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date value but the value is a date-time".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -275,7 +257,8 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_)
-                    | ComponentProperty::DateTimeDue(_) => {
+                    | ComponentProperty::DateTimeDue(_)
+                    | ComponentProperty::RecurrenceId(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {
@@ -603,7 +586,8 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::TimeTransparency(_)
                     | ComponentProperty::TimeZoneId(_)
                     | ComponentProperty::TimeZoneName(_)
-                    | ComponentProperty::Contact(_) => {
+                    | ComponentProperty::Contact(_)
+                    | ComponentProperty::UniqueIdentifier(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::XProperty(x_prop) => {

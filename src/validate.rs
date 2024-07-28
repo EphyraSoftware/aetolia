@@ -383,6 +383,8 @@ enum PropertyKind {
     TimeZoneOffsetFrom,
     TimeZoneUrl,
     Contact,
+    RecurrenceId,
+    Related,
 }
 
 #[derive(Debug, Clone, PartialEq)]

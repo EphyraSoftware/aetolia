@@ -125,13 +125,18 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             }
             Param::Range { .. } => {
                 // The parser should reject wrong values for this param and the builder won't let you
-                // specify a wrong value, so not useful to validate in this context.
+                // specify a wrong value, so not useful to validate the value in this context.
+
+                validate_range_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            Param::Other { name, .. } if name == "RANGE" => {
+                validate_range_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Related { .. } => {
-                validate_related_param(&mut errors, param, index, &property_info);
+                validate_related_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "RELATED" => {
-                validate_related_param(&mut errors, param, index, &property_info);
+                validate_related_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::RelationshipType { .. } => {
                 // Nothing further to validate
@@ -519,9 +524,26 @@ fn validate_part_stat_param(
     check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
+// RFC 5545, Section 3.2.13
+fn validate_range_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::RecurrenceId => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
 // RFC 5545, Section 3.2.14
 fn validate_related_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -532,7 +554,15 @@ fn validate_related_param(
             name: param_name(param).to_string(),
             message: "Related (RELATED) is not allowed for this property type".to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Related => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.16
@@ -662,7 +692,7 @@ fn validate_time_zone_id_param(
             PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
             _ => OccurrenceExpectation::OptionalOnce,
         },
-        PropertyKind::DateTimeEnd | PropertyKind::DateTimeDue => {
+        PropertyKind::DateTimeEnd | PropertyKind::DateTimeDue | PropertyKind::RecurrenceId => {
             OccurrenceExpectation::OptionalOnce
         }
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
@@ -683,7 +713,8 @@ fn validate_value_type_param(
         PropertyKind::Attach
         | PropertyKind::DateTimeStart
         | PropertyKind::DateTimeEnd
-        | PropertyKind::DateTimeDue => OccurrenceExpectation::OptionalOnce,
+        | PropertyKind::DateTimeDue
+        | PropertyKind::RecurrenceId => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };

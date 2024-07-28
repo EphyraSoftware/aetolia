@@ -560,7 +560,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
             }
-            ComponentProperty::RecurrenceId(_) => {
+            ComponentProperty::RecurrenceId(recurrence_id) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -575,6 +575,30 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let maybe_dt_start = properties.iter().find_map(|p| match p {
+                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
+                    _ => None,
+                });
+
+                let dt_start_type = maybe_dt_start
+                    .and_then(|dt_start| {
+                        get_declared_value_type(&ComponentProperty::DateTimeStart(dt_start.clone()))
+                    })
+                    .map(|v| v.0)
+                    .unwrap_or(Value::DateTime);
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::RecurrenceId,
+                    if dt_start_type == Value::Date {
+                        ValueType::Date
+                    } else {
+                        ValueType::DateTime
+                    },
+                );
+                do_validate_params(&mut errors, property_info, &recurrence_id.params);
             }
             ComponentProperty::RecurrenceRule(_) => {
                 // An RRULE can appear more than once, it just SHOULD NOT.
@@ -835,7 +859,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
             }
-            ComponentProperty::RelatedTo(_) => {
+            ComponentProperty::RelatedTo(related_to) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -850,6 +874,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Related,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &related_to.params);
             }
             ComponentProperty::Resources(resources) => {
                 let occurrence_expectation = match property_location {
