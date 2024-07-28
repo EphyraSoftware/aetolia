@@ -1,6 +1,6 @@
 use crate::common::{Encoding, Value};
 use crate::convert::ToModel;
-use crate::model::{ComponentProperty, Param};
+use crate::model::{AttendeeProperty, ComponentProperty, OrganizerProperty, Param};
 use crate::parser::recur::recur;
 use crate::parser::uri::param_value_uri;
 use crate::parser::{
@@ -159,8 +159,13 @@ pub(super) fn check_declared_value(
             Value::CalendarAddress => {
                 let mut not_mailto = false;
                 match property {
-                    ComponentProperty::Attendee(_) | ComponentProperty::Organizer(_) => {
+                    ComponentProperty::Attendee(AttendeeProperty { value, .. })
+                    | ComponentProperty::Organizer(OrganizerProperty { value, .. }) => {
                         push_redundant_error_msg(errors, property_index, property);
+
+                        if value.starts_with("mailto:") {
+                            not_mailto = true;
+                        }
                     }
                     ComponentProperty::XProperty(x_prop) if x_prop.value.starts_with("mailto:") => {
                         not_mailto = true;
@@ -594,8 +599,12 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::Location(_)
                     | ComponentProperty::Resources(_)
                     | ComponentProperty::Status(_)
-                    | ComponentProperty::Summary(_) => {
-                        // Valid
+                    | ComponentProperty::Summary(_)
+                    | ComponentProperty::TimeTransparency(_)
+                    | ComponentProperty::TimeZoneId(_)
+                    | ComponentProperty::TimeZoneName(_)
+                    | ComponentProperty::Contact(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_text_valued(&x_prop.value);
@@ -707,7 +716,7 @@ pub(super) fn check_declared_value(
                 }
             }
             Value::Uri => {
-                let mut require_uri = |v: &str| {
+                let mut require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
                     if !is_uri_valued(v) {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a URI value but the value is not a URI".to_string(),
@@ -721,15 +730,18 @@ pub(super) fn check_declared_value(
                 };
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::Url(url) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                        require_uri(errors, &url.value);
+                    }
                     ComponentProperty::Attach(attach) => {
-                        require_uri(&attach.value);
+                        require_uri(errors, &attach.value);
                     }
                     ComponentProperty::XProperty(x_prop) => {
-                        require_uri(&x_prop.value);
+                        require_uri(errors, &x_prop.value);
                     }
                     ComponentProperty::IanaProperty(iana_prop) => {
-                        require_uri(&iana_prop.value);
+                        require_uri(errors, &iana_prop.value);
                     }
                     _ => {
                         errors.push(ComponentPropertyError {
@@ -747,7 +759,10 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::TimeZoneOffsetFrom(_)
+                    | ComponentProperty::TimeZoneOffsetTo(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         match is_utc_offset_valued(&x_prop.value) {
                             Ok(offset) => {

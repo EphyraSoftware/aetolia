@@ -377,6 +377,12 @@ enum PropertyKind {
     DateTimeDue,
     Duration,
     FreeBusyTime,
+    TimeTransparency,
+    TimeZoneName,
+    TimeZoneOffsetTo,
+    TimeZoneOffsetFrom,
+    TimeZoneUrl,
+    Contact,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -433,6 +439,8 @@ enum ValueType {
     Float,
     Integer,
     Period,
+    UtcOffset,
+    Uri,
 }
 
 fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {
@@ -984,8 +992,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 1);
-        assert_eq!("In calendar property \"VERSION\" at index 1: RSVP expectation (RSVP) is not allowed for this property type", errors.first().unwrap().to_string());
+        assert_single_error(&errors, "In calendar property \"VERSION\" at index 1: RSVP expectation (RSVP) is not allowed for this property type");
     }
 
     #[test]

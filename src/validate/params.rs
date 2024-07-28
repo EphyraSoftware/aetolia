@@ -27,34 +27,46 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
     for (index, param) in params.iter().enumerate() {
         match param {
             Param::CommonName { name } => {
-                validate_cn_param(&mut errors, param, index, &property_info);
+                validate_common_name_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "CN" => {
-                validate_cn_param(&mut errors, param, index, &property_info);
+                validate_common_name_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::CalendarUserType { .. } => {
-                validate_cu_type_param(&mut errors, param, index, &property_info);
+                validate_calendar_user_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "CUTYPE" => {
-                validate_cu_type_param(&mut errors, param, index, &property_info);
+                validate_calendar_user_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
             }
             Param::DelegatedFrom { .. } => {
-                validate_delegated_from_param(&mut errors, param, index, &property_info);
+                validate_delegated_from_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "DELEGATED-FROM" => {
-                validate_delegated_from_param(&mut errors, param, index, &property_info);
+                validate_delegated_from_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::DelegatedTo { .. } => {
-                validate_delegated_to_param(&mut errors, param, index, &property_info);
+                validate_delegated_to_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "DELEGATED-TO" => {
-                validate_delegated_to_param(&mut errors, param, index, &property_info);
+                validate_delegated_to_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::DirectoryEntryReference { .. } => {
-                validate_dir_param(&mut errors, param, index, &property_info);
+                validate_dir_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "DIR" => {
-                validate_dir_param(&mut errors, param, index, &property_info);
+                validate_dir_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::ValueType { .. } => {
                 validate_value_type_param(&mut errors, &mut seen, param, index, &property_info);
@@ -96,13 +108,20 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 validate_language_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Members { .. } => {
-                validate_member_param(&mut errors, param, index, &property_info);
+                validate_member_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "MEMBER" => {
-                validate_member_param(&mut errors, param, index, &property_info);
+                validate_member_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::ParticipationStatus { status } => {
-                validate_part_stat_param(&mut errors, param, status, index, &property_info);
+                validate_part_stat_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    status,
+                    index,
+                    &property_info,
+                );
             }
             Param::Range { .. } => {
                 // The parser should reject wrong values for this param and the builder won't let you
@@ -118,22 +137,29 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 // Nothing further to validate
             }
             Param::Role { .. } => {
-                validate_role_param(&mut errors, param, index, &property_info);
+                validate_role_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } if name == "ROLE" => {
-                validate_role_param(&mut errors, param, index, &property_info);
+                validate_role_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Rsvp { .. } => {
-                validate_rsvp_param(&mut errors, param, index, &property_info);
+                validate_rsvp_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } if name == "RSVP" => {
-                validate_rsvp_param(&mut errors, param, index, &property_info);
+                validate_rsvp_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::SentBy { address } => {
-                validate_sent_by_param(&mut errors, param, address, index, &property_info);
+                validate_sent_by_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    address,
+                    index,
+                    &property_info,
+                );
             }
             Param::Other { name, value } if name == "SENT-BY" => {
-                validate_sent_by_param(&mut errors, param, value, index, &property_info);
+                validate_sent_by_param(&mut errors, &mut seen, param, value, index, &property_info);
             }
             Param::TimeZoneId { tz_id, unique } => {
                 validate_time_zone_id_param(
@@ -182,6 +208,7 @@ fn validate_alt_rep_param(
             message: "Alternate text representation (ALTREP) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
 
     let occurrence_expectation = match property_info.property_kind {
@@ -189,7 +216,8 @@ fn validate_alt_rep_param(
         | PropertyKind::Description
         | PropertyKind::Location
         | PropertyKind::Resources
-        | PropertyKind::Summary => OccurrenceExpectation::OptionalOnce,
+        | PropertyKind::Summary
+        | PropertyKind::Contact => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -197,8 +225,9 @@ fn validate_alt_rep_param(
 }
 
 // RFC 5545, Section 3.2.2
-fn validate_cn_param(
+fn validate_common_name_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -209,12 +238,22 @@ fn validate_cn_param(
             name: param_name(param).to_string(),
             message: "Common name (CN) is not allowed for this property type".to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Organizer => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.3
-fn validate_cu_type_param(
+fn validate_calendar_user_type_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -226,12 +265,21 @@ fn validate_cu_type_param(
             message: "Calendar user type (CUTYPE) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.4
 fn validate_delegated_from_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -243,12 +291,21 @@ fn validate_delegated_from_param(
             message: "Delegated from (DELEGATED-FROM) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.5
 fn validate_delegated_to_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -260,12 +317,21 @@ fn validate_delegated_to_param(
             message: "Delegated to (DELEGATED-TO) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.6
 fn validate_dir_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -277,7 +343,16 @@ fn validate_dir_param(
             message: "Directory entry reference (DIR) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Organizer => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.8
@@ -326,7 +401,11 @@ fn validate_language_param(
         | PropertyKind::Description
         | PropertyKind::Location
         | PropertyKind::Resources
-        | PropertyKind::Summary => OccurrenceExpectation::OptionalOnce,
+        | PropertyKind::Summary
+        | PropertyKind::TimeZoneName
+        | PropertyKind::Attendee
+        | PropertyKind::Contact
+        | PropertyKind::Organizer => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -336,6 +415,7 @@ fn validate_language_param(
 // RFC 5545, Section 3.2.11
 fn validate_member_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -347,12 +427,21 @@ fn validate_member_param(
             message: "Group or list membership (MEMBER) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.12
 fn validate_part_stat_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     status: &ParticipationStatusUnknown,
     index: usize,
@@ -419,7 +508,15 @@ fn validate_part_stat_param(
             message: "Participation status (PARTSTAT) is not allowed for this property type"
                 .to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.14
@@ -441,6 +538,7 @@ fn validate_related_param(
 // RFC 5545, Section 3.2.16
 fn validate_role_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -451,12 +549,21 @@ fn validate_role_param(
             name: param_name(param).to_string(),
             message: "Participation role (ROLE) is not allowed for this property type".to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.17
 fn validate_rsvp_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     index: usize,
     property_info: &PropertyInfo,
@@ -467,12 +574,21 @@ fn validate_rsvp_param(
             name: param_name(param).to_string(),
             message: "RSVP expectation (RSVP) is not allowed for this property type".to_string(),
         });
+        return;
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.18
 fn validate_sent_by_param(
     errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
     param: &Param,
     address: &str,
     index: usize,
@@ -484,6 +600,7 @@ fn validate_sent_by_param(
             name: param_name(param).to_string(),
             message: "Sent by (SENT-BY) is not allowed for this property type".to_string(),
         });
+        return;
     }
 
     if !address.starts_with("mailto:") {
@@ -493,6 +610,14 @@ fn validate_sent_by_param(
             message: "Sent by (SENT-BY) must be a 'mailto:' URI".to_string(),
         });
     }
+
+    let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Attendee => attendee_common_expectation(property_info),
+        PropertyKind::Organizer => OccurrenceExpectation::OptionalOnce,
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
 }
 
 // RFC 5545, Section 3.2.19
@@ -563,4 +688,15 @@ fn validate_value_type_param(
         _ => OccurrenceExpectation::Never,
     };
     check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+fn attendee_common_expectation(property_info: &PropertyInfo) -> OccurrenceExpectation {
+    match property_info.property_location {
+        PropertyLocation::Event | PropertyLocation::ToDo | PropertyLocation::Journal => {
+            OccurrenceExpectation::OptionalOnce
+        }
+        PropertyLocation::FreeBusy | PropertyLocation::Alarm => OccurrenceExpectation::Never,
+        PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    }
 }

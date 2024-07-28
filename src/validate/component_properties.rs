@@ -521,7 +521,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &summary.params);
             }
-            ComponentProperty::TimeTransparency(_) => {
+            ComponentProperty::TimeTransparency(time_transparency) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
@@ -534,6 +534,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeTransparency,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &time_transparency.params);
             }
             ComponentProperty::Url(_) => {
                 let occurrence_expectation = match property_location {
@@ -769,7 +777,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &comment.params);
             }
-            ComponentProperty::Contact(_) => {
+            ComponentProperty::Contact(contact) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Event
@@ -785,6 +793,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Contact,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &contact.params);
             }
             ComponentProperty::ExceptionDateTimes(_) => {
                 let occurrence_expectation = match property_location {
@@ -1012,16 +1028,9 @@ pub(super) fn validate_component_properties(
                     PropertyKind::TimeZoneId,
                     ValueType::Text,
                 );
-                errors.extend_from_slice(
-                    ComponentPropertyError::many_from_param_errors(
-                        validate_params(&time_zone_id.params, property_info),
-                        index,
-                        component_property_name(property).to_string(),
-                    )
-                    .as_slice(),
-                );
+                do_validate_params(&mut errors, property_info, &time_zone_id.params);
             }
-            ComponentProperty::TimeZoneUrl(_) => {
+            ComponentProperty::TimeZoneUrl(time_zone_url) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::TimeZone => OccurrenceExpectation::OptionalOnce,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
@@ -1034,8 +1043,16 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeZoneUrl,
+                    ValueType::Uri,
+                );
+                do_validate_params(&mut errors, property_info, &time_zone_url.params);
             }
-            ComponentProperty::TimeZoneOffsetTo(_) => {
+            ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to) => {
                 check_component_property_occurrence!(
                     errors,
                     seen,
@@ -1043,8 +1060,16 @@ pub(super) fn validate_component_properties(
                     index,
                     tz_offset_to_occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeZoneOffsetTo,
+                    ValueType::UtcOffset,
+                );
+                do_validate_params(&mut errors, property_info, &time_zone_offset_to.params);
             }
-            ComponentProperty::TimeZoneOffsetFrom(_) => {
+            ComponentProperty::TimeZoneOffsetFrom(time_zone_offset_from) => {
                 check_component_property_occurrence!(
                     errors,
                     seen,
@@ -1052,8 +1077,16 @@ pub(super) fn validate_component_properties(
                     index,
                     tz_offset_from_occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeZoneOffsetFrom,
+                    ValueType::UtcOffset,
+                );
+                do_validate_params(&mut errors, property_info, &time_zone_offset_from.params);
             }
-            ComponentProperty::TimeZoneName(_) => {
+            ComponentProperty::TimeZoneName(time_zone_name) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::TimeZoneComponent => OccurrenceExpectation::OptionalMany,
                     PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
@@ -1066,6 +1099,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::TimeZoneName,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &time_zone_name.params);
             }
             ComponentProperty::Action(_) => {
                 check_component_property_occurrence!(
@@ -1633,8 +1674,6 @@ fn validate_free_busy_time(
             }),
         });
     }
-
-    // TODO check ordering
 
     let date_times = free_busy_time_property
         .value
