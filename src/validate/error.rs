@@ -54,9 +54,11 @@ impl Display for ICalendarError {
                     }
                 }
             }
-        }
 
-        write!(f, ": {}", self.message)
+            write!(f, ": {}", self.message)
+        } else {
+            write!(f, "{}", self.message)
+        }
     }
 }
 

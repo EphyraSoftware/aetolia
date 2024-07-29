@@ -519,21 +519,50 @@ fn calendar_property_name(property: &CalendarProperty) -> &str {
 
 fn component_property_name(property: &ComponentProperty) -> &str {
     match property {
-        ComponentProperty::DateTimeStamp(_) => "DTSTAMP",
-        ComponentProperty::UniqueIdentifier(_) => "UID",
-        ComponentProperty::Description(_) => "DESCRIPTION",
-        ComponentProperty::Attendee(_) => "ATTENDEE",
-        ComponentProperty::Organizer(_) => "ORGANIZER",
-        ComponentProperty::TimeZoneId(_) => "TZID",
-        ComponentProperty::DateTimeStart(_) => "DTSTART",
         ComponentProperty::Attach(_) => "ATTACH",
-        ComponentProperty::Action(_) => "ACTION",
-        ComponentProperty::Trigger(_) => "TRIGGER",
+        ComponentProperty::Categories(_) => "CATEGORIES",
+        ComponentProperty::Classification(_) => "CLASS",
+        ComponentProperty::Comment(_) => "COMMENT",
+        ComponentProperty::Description(_) => "DESCRIPTION",
+        ComponentProperty::GeographicPosition(_) => "GEO",
+        ComponentProperty::Location(_) => "LOCATION",
+        ComponentProperty::PercentComplete(_) => "PERCENT-COMPLETE",
+        ComponentProperty::Priority(_) => "PRIORITY",
+        ComponentProperty::Resources(_) => "RESOURCES",
+        ComponentProperty::Status(_) => "STATUS",
+        ComponentProperty::Summary(_) => "SUMMARY",
+        ComponentProperty::DateTimeCompleted(_) => "COMPLETED",
+        ComponentProperty::DateTimeEnd(_) => "DTEND",
+        ComponentProperty::DateTimeDue(_) => "DUE",
+        ComponentProperty::DateTimeStart(_) => "DTSTART",
+        ComponentProperty::Duration(_) => "DURATION",
+        ComponentProperty::FreeBusyTime(_) => "FREEBUSY",
+        ComponentProperty::TimeTransparency(_) => "TRANSP",
+        ComponentProperty::TimeZoneId(_) => "TZID",
+        ComponentProperty::TimeZoneName(_) => "TZNAME",
         ComponentProperty::TimeZoneOffsetFrom(_) => "TZOFFSETFROM",
         ComponentProperty::TimeZoneOffsetTo(_) => "TZOFFSETTO",
-        ComponentProperty::XProperty(x_prop) => &x_prop.name,
+        ComponentProperty::TimeZoneUrl(_) => "TZURL",
+        ComponentProperty::Attendee(_) => "ATTENDEE",
+        ComponentProperty::Contact(_) => "CONTACT",
+        ComponentProperty::Organizer(_) => "ORGANIZER",
+        ComponentProperty::RecurrenceId(_) => "RECURRENCE-ID",
+        ComponentProperty::RelatedTo(_) => "RELATED-TO",
+        ComponentProperty::Url(_) => "URL",
+        ComponentProperty::UniqueIdentifier(_) => "UID",
+        ComponentProperty::ExceptionDateTimes(_) => "EXDATE",
+        ComponentProperty::RecurrenceDateTimes(_) => "RDATE",
+        ComponentProperty::RecurrenceRule(_) => "RRULE",
+        ComponentProperty::Action(_) => "ACTION",
+        ComponentProperty::Repeat(_) => "REPEAT",
+        ComponentProperty::Trigger(_) => "TRIGGER",
+        ComponentProperty::DateTimeCreated(_) => "CREATED",
+        ComponentProperty::DateTimeStamp(_) => "DTSTAMP",
+        ComponentProperty::LastModified(_) => "LAST-MODIFIED",
+        ComponentProperty::Sequence(_) => "SEQUENCE",
         ComponentProperty::IanaProperty(iana_prop) => &iana_prop.name,
-        _ => unimplemented!("prop: {:?}", property),
+        ComponentProperty::XProperty(x_prop) => &x_prop.name,
+        ComponentProperty::RequestStatus(_) => "REQUEST-STATUS",
     }
 }
 
@@ -585,10 +614,11 @@ mod tests {
     use crate::parser::Error;
     use crate::test_utils::check_rem;
 
-    #[ignore = "Not enough structure implemented for this test yet"]
     #[test]
     fn sample_passes_validation() {
         let content = "BEGIN:VCALENDAR\r\n\
+VERSION:2.0\r\n\
+PRODID:-//hacksw/handcal//NONSGML v1.0//EN\r\n\
 BEGIN:VTIMEZONE\r\n\
 TZID:Fictitious\r\n\
 LAST-MODIFIED:19870101T000000Z\r\n\
@@ -618,7 +648,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 0);
+        assert_no_errors(&errors);
     }
 
     #[test]
@@ -1288,6 +1318,15 @@ END:VCALENDAR\r\n";
         check_rem(rem, 0);
 
         validate_model(object.to_model().unwrap()).unwrap()
+    }
+
+    fn assert_no_errors(errors: &[ICalendarError]) {
+        if !errors.is_empty() {
+            panic!(
+                "Expected no errors, but got: {:?}",
+                errors.iter().map(|e| e.to_string()).collect::<Vec<_>>()
+            );
+        }
     }
 
     fn assert_single_error(errors: &[ICalendarError], msg: &str) {
