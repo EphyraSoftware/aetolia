@@ -340,6 +340,15 @@ pub enum Trigger {
     Absolute(AbsoluteTriggerProperty),
 }
 
+impl Trigger {
+    pub fn params(&self) -> &[Param] {
+        match self {
+            Trigger::Relative(p) => &p.params,
+            Trigger::Absolute(p) => &p.params,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct XProperty {
     pub(crate) name: String,

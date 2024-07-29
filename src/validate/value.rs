@@ -2,14 +2,15 @@ use crate::common::{Encoding, Value};
 use crate::convert::ToModel;
 use crate::model::{
     AttendeeProperty, ComponentProperty, DateTimeDueProperty, DateTimeEndProperty,
-    DateTimeStartProperty, OrganizerProperty, Param, RecurrenceIdProperty,
+    DateTimeStartProperty, ExceptionDateTimesProperty, OrganizerProperty, Param,
+    RecurrenceDateTimesProperty, RecurrenceIdProperty,
 };
 use crate::parser::recur::recur;
 use crate::parser::uri::param_value_uri;
 use crate::parser::{
     prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
-    prop_value_utc_offset, Error,
+    prop_value_utc_offset, DurationOrDateTime, Error, TriggerProperty,
 };
 use crate::prelude::Trigger;
 use crate::serialize::WriteModel;
@@ -219,6 +220,48 @@ pub(super) fn check_declared_value(
                             });
                         }
                     }
+                    ComponentProperty::ExceptionDateTimes(ExceptionDateTimesProperty {
+                        date_times,
+                        ..
+                    }) => {
+                        if date_times.iter().any(|dt| dt.1.is_some()) {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have date values but one of values is a date-time".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
+                    ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
+                        date_times,
+                        periods,
+                        ..
+                    }) => {
+                        if date_times.iter().any(|dt| dt.1.is_some()) {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have date values but one of values is a date-time".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+
+                        if !periods.is_empty() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date-time value contains periods".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_date_valued(&x_prop.value);
                     }
@@ -258,8 +301,30 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_)
                     | ComponentProperty::DateTimeDue(_)
-                    | ComponentProperty::RecurrenceId(_) => {
+                    | ComponentProperty::RecurrenceId(_)
+                    | ComponentProperty::ExceptionDateTimes(_)
+                    | ComponentProperty::RecurrenceDateTimes(_)
+                    | ComponentProperty::DateTimeCreated(_)
+                    | ComponentProperty::DateTimeStamp(_)
+                    | ComponentProperty::LastModified(_) => {
                         push_redundant_error_msg(errors, property_index, property);
+                    }
+                    ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
+                        date_times,
+                        periods,
+                        ..
+                    }) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                        if !periods.is_empty() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a date-time value contains periods".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {
                         if dtstart.time.is_none() {
@@ -283,6 +348,26 @@ pub(super) fn check_declared_value(
                                     property_location: Some(WithinPropertyLocation::Value),
                                 }),
                             });
+                        }
+                    }
+                    ComponentProperty::Trigger(trigger) => {
+                        match trigger {
+                            Trigger::Relative(_) => {
+                                // Valid
+                            }
+                            Trigger::Absolute(dur_trigger) => {
+                                errors.push(ComponentPropertyError {
+                                    message: "Property is declared to have a date-time value but has an absolute trigger".to_string(),
+                                    location: Some(ComponentPropertyLocation {
+                                        index: property_index,
+                                        name: component_property_name(property).to_string(),
+                                        property_location: Some(WithinPropertyLocation::Param {
+                                            index: value_type_index,
+                                            name: "VALUE".to_string(),
+                                        }),
+                                    }),
+                                });
+                            }
                         }
                     }
                     ComponentProperty::XProperty(x_prop) => {
@@ -416,7 +501,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    ComponentProperty::PercentComplete(_) | ComponentProperty::Priority(_) => {
+                    ComponentProperty::PercentComplete(_)
+                    | ComponentProperty::Priority(_)
+                    | ComponentProperty::Repeat(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::XProperty(x_prop) => {
@@ -456,6 +543,22 @@ pub(super) fn check_declared_value(
                 match property {
                     ComponentProperty::FreeBusyTime(_) => {
                         push_redundant_error_msg(errors, property_index, property);
+                    }
+                    ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
+                        date_times,
+                        periods,
+                        ..
+                    }) => {
+                        if !date_times.is_empty() {
+                            errors.push(ComponentPropertyError {
+                                message: "Property is declared to have a period value contains date-times".to_string(),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
                     }
                     ComponentProperty::XProperty(x_prop) => {
                         invalid = !is_period_valued(&x_prop.value);
@@ -587,7 +690,9 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::TimeZoneId(_)
                     | ComponentProperty::TimeZoneName(_)
                     | ComponentProperty::Contact(_)
-                    | ComponentProperty::UniqueIdentifier(_) => {
+                    | ComponentProperty::UniqueIdentifier(_)
+                    | ComponentProperty::Action(_)
+                    | ComponentProperty::RequestStatus(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::XProperty(x_prop) => {

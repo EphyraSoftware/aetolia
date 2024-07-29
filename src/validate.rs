@@ -385,6 +385,17 @@ enum PropertyKind {
     Contact,
     RecurrenceId,
     Related,
+    ExceptionDateTimes,
+    RecurrenceDateTimes,
+    RecurrenceRule,
+    Action,
+    Repeat,
+    Trigger,
+    DateTimeCreated,
+    DateTimeStamp,
+    LastModified,
+    Sequence,
+    RequestStatus,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -443,6 +454,7 @@ enum ValueType {
     Period,
     UtcOffset,
     Uri,
+    Recurrence,
 }
 
 fn add_to_seen(seen: &mut HashMap<String, u32>, key: &str) -> u32 {

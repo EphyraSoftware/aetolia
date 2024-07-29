@@ -1,8 +1,8 @@
 use crate::common::{Status, Value};
 use crate::model::{
     Action, ComponentProperty, DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty,
-    DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty, Param, PeriodEnd,
-    StatusProperty,
+    DateTimeStampProperty, DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty,
+    LastModifiedProperty, Param, PeriodEnd, StatusProperty,
 };
 use crate::validate::value::check_declared_value;
 use crate::validate::{
@@ -243,7 +243,7 @@ pub(super) fn validate_component_properties(
         };
 
         match property {
-            ComponentProperty::DateTimeStamp(_) => {
+            ComponentProperty::DateTimeStamp(date_time_stamp) => {
                 check_component_property_occurrence!(
                     errors,
                     seen,
@@ -251,6 +251,21 @@ pub(super) fn validate_component_properties(
                     index,
                     dt_stamp_occurrence_expectation.clone()
                 );
+
+                validate_date_time_stamp(
+                    &mut errors,
+                    date_time_stamp,
+                    index,
+                    property_location.clone(),
+                );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::DateTimeStamp,
+                    ValueType::DateTime,
+                );
+                do_validate_params(&mut errors, property_info, &date_time_stamp.params);
             }
             ComponentProperty::UniqueIdentifier(_) => {
                 check_component_property_occurrence!(
@@ -308,7 +323,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
             }
-            ComponentProperty::DateTimeCreated(_) => {
+            ComponentProperty::DateTimeCreated(date_time_created) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -323,6 +338,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::DateTimeCreated,
+                    ValueType::DateTime,
+                );
+                do_validate_params(&mut errors, property_info, &date_time_created.params);
             }
             ComponentProperty::Description(description) => {
                 check_component_property_occurrence!(
@@ -365,7 +388,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &geographic_position.params);
             }
-            ComponentProperty::LastModified(_) => {
+            ComponentProperty::LastModified(last_modified) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -381,6 +404,21 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                validate_last_modified(
+                    &mut errors,
+                    last_modified,
+                    index,
+                    property_location.clone(),
+                );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::LastModified,
+                    ValueType::DateTime,
+                );
+                do_validate_params(&mut errors, property_info, &last_modified.params);
             }
             ComponentProperty::Location(location) => {
                 let occurrence_expectation = match property_location {
@@ -462,7 +500,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &priority.params);
             }
-            ComponentProperty::Sequence(_) => {
+            ComponentProperty::Sequence(sequence) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -477,6 +515,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Sequence,
+                    ValueType::Integer,
+                );
+                do_validate_params(&mut errors, property_info, &sequence.params);
             }
             ComponentProperty::Status(status) => {
                 let occurrence_expectation = match property_location {
@@ -600,7 +646,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &recurrence_id.params);
             }
-            ComponentProperty::RecurrenceRule(_) => {
+            ComponentProperty::RecurrenceRule(recurrence_rule) => {
                 // An RRULE can appear more than once, it just SHOULD NOT.
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
@@ -617,6 +663,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::RecurrenceRule,
+                    ValueType::Recurrence,
+                );
+                do_validate_params(&mut errors, property_info, &recurrence_rule.params);
             }
             ComponentProperty::DateTimeEnd(date_time_end) => {
                 has_dt_end = true;
@@ -826,7 +880,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &contact.params);
             }
-            ComponentProperty::ExceptionDateTimes(_) => {
+            ComponentProperty::ExceptionDateTimes(exception_date_times) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -841,8 +895,16 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::ExceptionDateTimes,
+                    ValueType::DateTime,
+                );
+                do_validate_params(&mut errors, property_info, &exception_date_times.params);
             }
-            ComponentProperty::RequestStatus(_) => {
+            ComponentProperty::RequestStatus(request_status) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -858,6 +920,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::RequestStatus,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &request_status.params);
             }
             ComponentProperty::RelatedTo(related_to) => {
                 let occurrence_expectation = match property_location {
@@ -907,7 +977,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &resources.params);
             }
-            ComponentProperty::RecurrenceDateTimes(_) => {
+            p @ ComponentProperty::RecurrenceDateTimes(recurrence_date_times) => {
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
                     | PropertyLocation::ToDo
@@ -923,6 +993,23 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let value_type = get_declared_value_type(p)
+                    .map(|v| v.0)
+                    .unwrap_or(Value::DateTime);
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::RecurrenceDateTimes,
+                    match value_type {
+                        Value::Date => ValueType::Date,
+                        Value::Period => ValueType::Period,
+                        // Either a DATE-TIME or something invalid, which will get checked separately.
+                        _ => ValueType::DateTime,
+                    },
+                );
+                do_validate_params(&mut errors, property_info, &recurrence_date_times.params);
             }
             ComponentProperty::DateTimeCompleted(date_time_completed) => {
                 let occurrence_expectation = match property_location {
@@ -1140,7 +1227,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &time_zone_name.params);
             }
-            ComponentProperty::Action(_) => {
+            ComponentProperty::Action(action) => {
                 check_component_property_occurrence!(
                     errors,
                     seen,
@@ -1148,8 +1235,16 @@ pub(super) fn validate_component_properties(
                     index,
                     action_occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Action,
+                    ValueType::Text,
+                );
+                do_validate_params(&mut errors, property_info, &action.params);
             }
-            ComponentProperty::Trigger(_) => {
+            ComponentProperty::Trigger(trigger) => {
                 check_component_property_occurrence!(
                     errors,
                     seen,
@@ -1157,8 +1252,24 @@ pub(super) fn validate_component_properties(
                     index,
                     trigger_occurrence_expectation
                 );
+
+                let value_type = get_declared_value_type(property)
+                    .map(|v| v.0)
+                    .unwrap_or(Value::Duration);
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Trigger,
+                    match value_type {
+                        Value::DateTime => ValueType::DateTime,
+                        // Either a duration, or invalid which will be caught separately.
+                        _ => ValueType::Duration,
+                    },
+                );
+                do_validate_params(&mut errors, property_info, trigger.params());
             }
-            ComponentProperty::Repeat(_) => {
+            ComponentProperty::Repeat(repeat) => {
                 has_repeat = true;
 
                 let occurrence_expectation = match property_location {
@@ -1173,6 +1284,14 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                let property_info = PropertyInfo::new(
+                    calendar_info,
+                    property_location.clone(),
+                    PropertyKind::Repeat,
+                    ValueType::Integer,
+                );
+                do_validate_params(&mut errors, property_info, &repeat.params);
             }
             ComponentProperty::IanaProperty(_) => {
                 // Nothing to validate
@@ -1296,7 +1415,6 @@ pub(super) fn validate_component_properties(
 
     Ok(errors)
 }
-
 fn validate_duration_property(
     errors: &mut Vec<ComponentPropertyError>,
     duration_property: &DurationProperty,
@@ -1731,6 +1849,44 @@ fn validate_free_busy_time(
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "FREEBUSY".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
+}
+
+// RFC 5545, 3.8.7.2
+fn validate_date_time_stamp(
+    errors: &mut Vec<ComponentPropertyError>,
+    date_time_stamp_property: &DateTimeStampProperty,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    if !date_time_stamp_property.is_utc {
+        errors.push(ComponentPropertyError {
+            message: "DTSTAMP must be a UTC date-time".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "DTSTAMP".to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+    }
+}
+
+// RFC 5545, 3.8.7.3
+fn validate_last_modified(
+    errors: &mut Vec<ComponentPropertyError>,
+    last_modified_property: &LastModifiedProperty,
+    index: usize,
+    property_location: PropertyLocation,
+) {
+    if !last_modified_property.is_utc {
+        errors.push(ComponentPropertyError {
+            message: "LAST-MODIFIED must be a UTC date-time".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index,
+                name: "LAST-MODIFIED".to_string(),
                 property_location: Some(WithinPropertyLocation::Value),
             }),
         });

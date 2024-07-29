@@ -139,7 +139,22 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 validate_related_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::RelationshipType { .. } => {
-                // Nothing further to validate
+                validate_relationship_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
+            }
+            Param::Other { name, .. } if name == "RELTYPE" => {
+                validate_relationship_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
             }
             Param::Role { .. } => {
                 validate_role_param(&mut errors, &mut seen, param, index, &property_info);
@@ -410,7 +425,8 @@ fn validate_language_param(
         | PropertyKind::TimeZoneName
         | PropertyKind::Attendee
         | PropertyKind::Contact
-        | PropertyKind::Organizer => OccurrenceExpectation::OptionalOnce,
+        | PropertyKind::Organizer
+        | PropertyKind::RequestStatus => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -558,6 +574,38 @@ fn validate_related_param(
     }
 
     let occurrence_expectation = match property_info.property_kind {
+        PropertyKind::Trigger => {
+            if property_info.value_type == ValueType::Duration {
+                OccurrenceExpectation::OptionalOnce
+            } else {
+                OccurrenceExpectation::Never
+            }
+        }
+        PropertyKind::Other => OccurrenceExpectation::OptionalMany,
+        _ => OccurrenceExpectation::Never,
+    };
+    check_property_param_occurrence!(errors, seen, param, index, occurrence_expectation);
+}
+
+// RFC 5545, Section 3.2.15
+fn validate_relationship_type_param(
+    errors: &mut Vec<ParamError>,
+    seen: &mut HashMap<String, u32>,
+    param: &Param,
+    index: usize,
+    property_info: &PropertyInfo,
+) {
+    if !property_info.is_other && property_info.value_type != ValueType::Duration {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Relationship type (RELTYPE) is not allowed for this property type"
+                .to_string(),
+        });
+        return;
+    }
+
+    let occurrence_expectation = match property_info.property_kind {
         PropertyKind::Related => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
@@ -692,9 +740,11 @@ fn validate_time_zone_id_param(
             PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Never,
             _ => OccurrenceExpectation::OptionalOnce,
         },
-        PropertyKind::DateTimeEnd | PropertyKind::DateTimeDue | PropertyKind::RecurrenceId => {
-            OccurrenceExpectation::OptionalOnce
-        }
+        PropertyKind::DateTimeEnd
+        | PropertyKind::DateTimeDue
+        | PropertyKind::RecurrenceId
+        | PropertyKind::ExceptionDateTimes
+        | PropertyKind::RecurrenceDateTimes => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
@@ -714,7 +764,10 @@ fn validate_value_type_param(
         | PropertyKind::DateTimeStart
         | PropertyKind::DateTimeEnd
         | PropertyKind::DateTimeDue
-        | PropertyKind::RecurrenceId => OccurrenceExpectation::OptionalOnce,
+        | PropertyKind::RecurrenceId
+        | PropertyKind::ExceptionDateTimes
+        | PropertyKind::RecurrenceDateTimes
+        | PropertyKind::Trigger => OccurrenceExpectation::OptionalOnce,
         PropertyKind::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
     };
