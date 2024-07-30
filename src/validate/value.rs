@@ -299,11 +299,9 @@ pub(super) fn check_declared_value(
                     ComponentProperty::DateTimeCompleted(_)
                     | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
-                    | ComponentProperty::LastModified(_)
                     | ComponentProperty::DateTimeDue(_)
                     | ComponentProperty::RecurrenceId(_)
                     | ComponentProperty::ExceptionDateTimes(_)
-                    | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }

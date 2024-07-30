@@ -385,7 +385,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use crate::test_utils::check_rem;
     use base64::Engine;
 

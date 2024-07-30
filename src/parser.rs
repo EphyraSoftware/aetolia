@@ -22,6 +22,7 @@ mod property;
 pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
 pub use object::{ical_object, ical_stream};
 pub use param::ParamValue;
+pub use pre::content_line_first_pass;
 pub use property::component::{Action, AttachValue, DurationOrDateTime};
 pub use property::recur::RecurRulePart;
 pub use property::types::{
@@ -168,11 +169,7 @@ fn quoted_string<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, content, _)) = tuple((
-        char('"'),
-        cut(take_while(|c| c != b'\"' && !is_control(c))),
-        char('"'),
-    ))(input)?;
+    let (input, (_, content, _)) = tuple((char('"'), cut(safe_char), char('"')))(input)?;
 
     Ok((input, content))
 }

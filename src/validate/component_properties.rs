@@ -252,12 +252,7 @@ pub(super) fn validate_component_properties(
                     dt_stamp_occurrence_expectation.clone()
                 );
 
-                validate_date_time_stamp(
-                    &mut errors,
-                    date_time_stamp,
-                    index,
-                    property_location.clone(),
-                );
+                validate_date_time_stamp(&mut errors, date_time_stamp, index);
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -405,12 +400,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                validate_last_modified(
-                    &mut errors,
-                    last_modified,
-                    index,
-                    property_location.clone(),
-                );
+                validate_last_modified(&mut errors, last_modified, index);
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -1025,12 +1015,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                validate_date_time_completed(
-                    &mut errors,
-                    date_time_completed,
-                    index,
-                    property_location.clone(),
-                );
+                validate_date_time_completed(&mut errors, date_time_completed, index);
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -1117,12 +1102,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                validate_free_busy_time(
-                    &mut errors,
-                    free_busy_time,
-                    index,
-                    property_location.clone(),
-                );
+                validate_free_busy_time(&mut errors, free_busy_time, index);
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -1451,7 +1431,6 @@ fn validate_date_time_completed(
     errors: &mut Vec<ComponentPropertyError>,
     date_time_completed_property: &DateTimeCompletedProperty,
     index: usize,
-    property_location: PropertyLocation,
 ) {
     if !date_time_completed_property.is_utc {
         errors.push(ComponentPropertyError {
@@ -1806,7 +1785,6 @@ fn validate_free_busy_time(
     errors: &mut Vec<ComponentPropertyError>,
     free_busy_time_property: &FreeBusyTimeProperty,
     index: usize,
-    property_location: PropertyLocation,
 ) {
     if !free_busy_time_property.value.iter().all(|p| {
         p.start.2
@@ -1860,7 +1838,6 @@ fn validate_date_time_stamp(
     errors: &mut Vec<ComponentPropertyError>,
     date_time_stamp_property: &DateTimeStampProperty,
     index: usize,
-    property_location: PropertyLocation,
 ) {
     if !date_time_stamp_property.is_utc {
         errors.push(ComponentPropertyError {
@@ -1879,7 +1856,6 @@ fn validate_last_modified(
     errors: &mut Vec<ComponentPropertyError>,
     last_modified_property: &LastModifiedProperty,
     index: usize,
-    property_location: PropertyLocation,
 ) {
     if !last_modified_property.is_utc {
         errors.push(ComponentPropertyError {

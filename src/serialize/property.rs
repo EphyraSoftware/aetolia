@@ -256,6 +256,9 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"TZID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
+                if property.unique_registry_id {
+                    writer.write_all(b"/")?;
+                }
                 writer.write_all(property.value.as_bytes())?;
             }
             ComponentProperty::TimeZoneUrl(property) => {

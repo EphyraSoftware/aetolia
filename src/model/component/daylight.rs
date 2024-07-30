@@ -1,8 +1,9 @@
 use crate::model::component::time_zone::TimeZoneComponentBuilder;
 use crate::model::{
-    add_comment, add_date_time_start, add_recurrence_date, add_recurrence_rule, impl_other_component_properties, AddComponentProperty,
-    CalendarComponent, ComponentProperty, IanaComponentPropertyBuilder,
-    TimeZoneNamePropertyBuilder, TimeZoneOffset, TimeZoneOffsetFromPropertyBuilder, TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
+    add_comment, add_date_time_start, add_recurrence_date, add_recurrence_rule,
+    impl_other_component_properties, AddComponentProperty, CalendarComponent, ComponentProperty,
+    IanaComponentPropertyBuilder, TimeZoneNamePropertyBuilder, TimeZoneOffset,
+    TimeZoneOffsetFromPropertyBuilder, TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
 };
 
 #[derive(Debug)]

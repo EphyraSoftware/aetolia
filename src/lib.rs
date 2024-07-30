@@ -11,6 +11,7 @@ mod convert;
 mod model;
 mod parser;
 
+mod ops;
 mod serialize;
 #[cfg(test)]
 mod test_utils;
@@ -18,7 +19,8 @@ mod validate;
 
 pub mod prelude {
     pub use crate::model::*;
-    pub use crate::parser::{ical_object, ical_stream};
+    pub use crate::ops::load_ical;
+    pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};
     pub use crate::validate::validate_model;
 }
 

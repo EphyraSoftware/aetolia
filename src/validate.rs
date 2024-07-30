@@ -324,9 +324,6 @@ struct PropertyInfo<'a> {
     property_kind: PropertyKind,
     /// The required value type for this property
     value_type: ValueType,
-    /// If the property has a VALUE parameter, regardless of whether that is valid on this
-    /// property, then it will be populated here.
-    declared_value_type: Option<crate::common::Value>,
     /// If the property value contains a time, then this field will be set. If that time is UTC,
     /// then this field will be set to true.
     value_is_utc: Option<bool>,
@@ -378,6 +375,8 @@ enum PropertyKind {
     LastModified,
     Sequence,
     RequestStatus,
+    #[allow(dead_code)]
+    Other,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -404,7 +403,6 @@ impl<'a> PropertyInfo<'a> {
             property_location,
             property_kind,
             value_type,
-            declared_value_type: None,
             value_is_utc: None,
             is_other: false,
             calendar_info,
@@ -413,11 +411,6 @@ impl<'a> PropertyInfo<'a> {
 
     fn utc(mut self, is_utc: bool) -> Self {
         self.value_is_utc = Some(is_utc);
-        self
-    }
-
-    fn other(mut self) -> Self {
-        self.is_other = true;
         self
     }
 }
@@ -592,7 +585,7 @@ fn param_name(param: &Param) -> &str {
 mod tests {
     use super::*;
     use crate::convert::ToModel;
-    
+
     use crate::parser::Error;
     use crate::test_utils::check_rem;
 

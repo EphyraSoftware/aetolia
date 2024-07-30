@@ -369,7 +369,7 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
             }
-            RecurRulePart::ByMonth(month_list) => {
+            RecurRulePart::ByMonth(_) => {
                 let count = add_count(&mut seen_count, "BYMONTH");
                 if count > 1 {
                     errors.push(ComponentPropertyError {
@@ -403,7 +403,7 @@ pub(super) fn validate_recurrence_rule(
                             .parts
                             .iter()
                             .any(|part| matches!(part, RecurRulePart::ByDay(_)));
-                        if has_non_default_interval {
+                        if has_non_default_interval && by_day_specified {
                             is_redundant = false;
                         }
                     }

@@ -13,8 +13,8 @@ use nom::combinator::{cut, eof, verify};
 use nom::error::ParseError;
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
-use nom::Parser;
 use nom::IResult;
+use nom::Parser;
 
 pub mod types;
 
@@ -175,9 +175,9 @@ impl ReprStr for &[u8] {
 // Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
 #[cfg(test)]
 fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> String {
-    use std::fmt::Write;
-    use nom::Offset;
     use nom::error::VerboseErrorKind;
+    use nom::Offset;
+    use std::fmt::Write;
 
     let mut result = String::new();
 
@@ -293,6 +293,7 @@ fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> St
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::clear_errors;
     use crate::parser::pre::content_line_first_pass;
     use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
@@ -340,5 +341,7 @@ mod tests {
                 panic!("unexpected result: {:?}", e)
             }
         }
+
+        unsafe { clear_errors() };
     }
 }

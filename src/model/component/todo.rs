@@ -6,9 +6,8 @@ use crate::model::{
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, impl_finish_component_build, impl_other_component_properties,
     AddComponentProperty, AlarmComponent, AttendeePropertyBuilder, CalendarComponent,
-    CompletedPropertyBuilder, ComponentProperty, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusToDo,
-    PercentCompletePropertyBuilder, StatusPropertyBuilder, StatusToDo,
+    CompletedPropertyBuilder, ComponentProperty, ICalObjectBuilder, IanaComponentPropertyBuilder,
+    ParticipationStatusToDo, PercentCompletePropertyBuilder, StatusPropertyBuilder, StatusToDo,
     XComponentPropertyBuilder,
 };
 use crate::prelude::alarm::AddAlarmComponent;
