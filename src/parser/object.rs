@@ -160,10 +160,12 @@ where
     Ok((input, CalendarComponent::XComp { name, lines }))
 }
 
+#[cfg(test)]
 trait ReprStr {
     fn repr_str(&self) -> &str;
 }
 
+#[cfg(test)]
 impl ReprStr for &[u8] {
     fn repr_str(&self) -> &str {
         unsafe { std::str::from_utf8_unchecked(self) }
@@ -171,6 +173,7 @@ impl ReprStr for &[u8] {
 }
 
 // Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
+#[cfg(test)]
 fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
     use std::fmt::Write;
 

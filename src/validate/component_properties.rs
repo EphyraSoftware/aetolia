@@ -16,7 +16,7 @@ use std::collections::HashMap;
 macro_rules! check_component_property_occurrence {
     ($errors:ident, $seen:ident, $property:ident, $index:ident, $occur:expr) => {
         let name = $crate::validate::component_property_name($property);
-        let count = $crate::validate::add_to_seen(&mut $seen, name);
+        $crate::validate::add_to_seen(&mut $seen, name);
         if let Some(message) = $crate::validate::check_occurrence(&$seen, name, $occur.clone()) {
             $errors.push(ComponentPropertyError {
                 message,

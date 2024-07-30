@@ -20,6 +20,8 @@ mod validate;
 
 pub mod prelude {
     pub use crate::model::*;
+    pub use crate::parser::{ical_object, ical_stream};
+    pub use crate::validate::validate_model;
 }
 
 /// Streaming, single character matching the predicate

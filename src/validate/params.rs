@@ -9,7 +9,7 @@ use std::collections::HashMap;
 macro_rules! check_property_param_occurrence {
     ($errors:ident, $seen:ident, $param:ident, $index:ident, $occur:expr) => {
         let name = $crate::validate::param_name($param);
-        let count = $crate::validate::add_to_seen($seen, name);
+        $crate::validate::add_to_seen($seen, name);
         if let Some(message) = $crate::validate::check_occurrence(&$seen, name, $occur.clone()) {
             $errors.push($crate::validate::ParamError {
                 index: $index,
@@ -26,7 +26,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
     let mut seen = HashMap::<String, u32>::new();
     for (index, param) in params.iter().enumerate() {
         match param {
-            Param::CommonName { name } => {
+            Param::CommonName { .. } => {
                 validate_common_name_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "CN" => {
@@ -92,6 +92,15 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 });
             }
             Param::FreeBusyTimeType { .. } => {
+                validate_free_busy_time_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
+            }
+            Param::Other { name, .. } if name == "FBTYPE" => {
                 validate_free_busy_time_type_param(
                     &mut errors,
                     &mut seen,
@@ -203,9 +212,14 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                     &property_info,
                 );
             }
-            Param::AltRep { .. } => {}
-            _ => {
-                unimplemented!()
+            Param::AltRep { .. } => {
+                validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            Param::Other { name, .. } | Param::Others { name, .. } if name == "ALTREP" => {
+                validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            e => {
+                panic!("Param not yet implemented: {:?}", e);
             }
         }
     }

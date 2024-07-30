@@ -469,14 +469,14 @@ where
 impl Display for Uri<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", String::from_utf8_lossy(self.scheme))?;
-        f.write_char(':');
+        f.write_char(':')?;
 
         if let Some(authority) = &self.authority {
             f.write_char('/')?;
             f.write_char('/')?;
 
             if let Some(user_info) = &authority.user_info {
-                write!(f, "{}", String::from_utf8_lossy(user_info));
+                write!(f, "{}", String::from_utf8_lossy(user_info))?;
                 f.write_char('@')?;
             }
 

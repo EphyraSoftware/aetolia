@@ -303,14 +303,11 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::DateTimeDue(_)
                     | ComponentProperty::RecurrenceId(_)
                     | ComponentProperty::ExceptionDateTimes(_)
-                    | ComponentProperty::RecurrenceDateTimes(_)
-                    | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
-                        date_times,
                         periods,
                         ..
                     }) => {
@@ -355,7 +352,7 @@ pub(super) fn check_declared_value(
                             Trigger::Relative(_) => {
                                 // Valid
                             }
-                            Trigger::Absolute(dur_trigger) => {
+                            Trigger::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a date-time value but has an absolute trigger".to_string(),
                                     location: Some(ComponentPropertyLocation {
@@ -413,7 +410,7 @@ pub(super) fn check_declared_value(
                             Trigger::Relative(_) => {
                                 // Valid
                             }
-                            Trigger::Absolute(dur_trigger) => {
+                            Trigger::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a duration value but has an absolute trigger".to_string(),
                                     location: Some(ComponentPropertyLocation {
@@ -546,7 +543,6 @@ pub(super) fn check_declared_value(
                     }
                     ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
                         date_times,
-                        periods,
                         ..
                     }) => {
                         if !date_times.is_empty() {
@@ -805,7 +801,7 @@ pub(super) fn check_declared_value(
                 }
             }
             Value::Uri => {
-                let mut require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
+                let require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
                     if !is_uri_valued(v) {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a URI value but the value is not a URI".to_string(),
@@ -945,7 +941,7 @@ fn is_date_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_date::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -956,7 +952,7 @@ fn is_date_time_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_date_time::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -967,7 +963,7 @@ fn is_duration_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_duration::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -978,7 +974,7 @@ fn is_float_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_float::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -997,7 +993,7 @@ fn is_period_valued(property_value: &String) -> bool {
 
     let result = prop_value_period::<Error>(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }

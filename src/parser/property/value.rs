@@ -35,18 +35,6 @@ where
     Ok((input, content))
 }
 
-pub fn prop_value_boolean<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], bool, E>
-where
-    E: ParseError<&'a [u8]> + From<Error<'a>>,
-{
-    let (input, value) = alt((
-        tag_no_case("TRUE").map(|_| true),
-        tag_no_case("FALSE").map(|_| false),
-    ))(input)?;
-
-    Ok((input, value))
-}
-
 pub fn prop_value_calendar_user_address<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
 where
     E: ParseError<&'a [u8]>
@@ -372,17 +360,6 @@ where
     Ok((input, r))
 }
 
-fn prop_value_uri<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
-where
-    E: ParseError<&'a [u8]>
-        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
-        + From<Error<'a>>,
-{
-    let (input, (_, uri, _)) = tuple((char('"'), param_value_uri, char('"')))(input)?;
-
-    Ok((input, uri))
-}
-
 pub fn prop_value_utc_offset<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], UtcOffset, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
@@ -419,20 +396,6 @@ mod tests {
         check_rem(rem, 1);
         let r = base64::prelude::BASE64_STANDARD.decode(value).unwrap();
         assert_eq!(b"This is a base64 encoding text", r.as_slice());
-    }
-
-    #[test]
-    fn boolean() {
-        let (rem, value) = prop_value_boolean::<Error>(b"TRUE;").unwrap();
-        check_rem(rem, 1);
-        assert!(value);
-    }
-
-    #[test]
-    fn boolean_lower() {
-        let (rem, value) = prop_value_boolean::<Error>(b"true;").unwrap();
-        check_rem(rem, 1);
-        assert!(value);
     }
 
     #[test]
@@ -670,19 +633,6 @@ Come Prepared."#,
         println!("{:?}", String::from_utf8(value.clone()).unwrap());
         check_rem(rem, 1);
         assert_eq!(br#"Hello, "World""#, value.as_slice());
-    }
-
-    #[test]
-    fn uri() {
-        let (rem, value) =
-            prop_value_uri::<Error>(b"\"http://example.com/my-report.txt\";").unwrap();
-        check_rem(rem, 1);
-        assert_eq!(value.scheme, b"http");
-        assert_eq!(
-            value.authority.unwrap().host,
-            Host::RegName(b"example.com".to_vec())
-        );
-        assert_eq!(value.path, b"/my-report.txt");
     }
 
     #[test]

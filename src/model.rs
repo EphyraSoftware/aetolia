@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 mod component;
 mod object;
 mod param;

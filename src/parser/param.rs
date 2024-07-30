@@ -102,13 +102,24 @@ where
     let (input, (_, _, delegators)) = tuple((
         tag_no_case("DELEGATED-FROM"),
         char('='),
-        cut(separated_list1(
-            char(','),
-            delimited(char('"'), recognize(param_value_uri), char('"')),
-        )),
+        cut(param_value_delegated_from),
     ))(input)?;
 
     Ok((input, ParamValue::DelegatedFrom { delegators }))
+}
+
+pub(crate) fn param_value_delegated_from<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], Vec<&'a [u8]>, E>
+where
+    E: ParseError<&'a [u8]>
+        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
+        + From<Error<'a>>,
+{
+    separated_list1(
+        char(','),
+        delimited(char('"'), recognize(param_value_uri), char('"')),
+    )(input)
 }
 
 /// Parse a DELEGATED-TO param

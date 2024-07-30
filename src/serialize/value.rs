@@ -646,9 +646,9 @@ impl WriteModel for crate::model::Duration {
             write!(writer, "{}W", weeks)?;
         } else if let Some(days) = &self.days {
             write!(writer, "{}D", days)?;
-            write_time(writer, self);
+            write_time(writer, self)?;
         } else {
-            write_time(writer, self);
+            write_time(writer, self)?;
         }
 
         Ok(())
