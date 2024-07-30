@@ -25,6 +25,7 @@ impl WriteModel for crate::model::Param {
             }
             Param::Language { language } => {
                 writer.write_all(b"LANGUAGE=")?;
+                language.write_model(writer)?;
             }
             Param::DirectoryEntryReference { uri } => {
                 write!(writer, "DIR=\"{}\"", uri)?;

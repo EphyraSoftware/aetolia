@@ -6,17 +6,12 @@ mod recur;
 mod value;
 
 use crate::common::Value;
-use crate::convert::ToModel;
 use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
-use crate::parser::Error;
-use crate::serialize::WriteModel;
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
 use crate::validate::error::ICalendarError;
 use crate::validate::params::validate_params;
-use anyhow::Context;
 pub use error::*;
-use nom::{AsBytes, Parser};
 use std::collections::{HashMap, HashSet};
 
 pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
@@ -345,7 +340,6 @@ struct PropertyInfo<'a> {
 enum PropertyKind {
     Attach,
     Version,
-    Other,
     DateTimeStart,
     Description,
     Organizer,
@@ -598,7 +592,7 @@ fn param_name(param: &Param) -> &str {
 mod tests {
     use super::*;
     use crate::convert::ToModel;
-    use crate::model::ICalObjectBuilder;
+    
     use crate::parser::Error;
     use crate::test_utils::check_rem;
 

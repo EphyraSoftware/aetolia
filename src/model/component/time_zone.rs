@@ -1,6 +1,5 @@
 use crate::model::component::daylight::DaylightComponentBuilder;
 use crate::model::component::standard::StandardComponentBuilder;
-use crate::model::event::{EventComponent, EventComponentBuilder};
 use crate::model::{
     add_last_modified, impl_finish_component_build, impl_other_component_properties,
     AddComponentProperty, CalendarComponent, ComponentProperty, ICalObjectBuilder,

@@ -1,7 +1,7 @@
 use crate::convert::{convert_string, ToModel};
 use crate::model::event::EventComponent;
 use crate::model::{
-    AlarmComponent, ComponentProperty, DaylightComponent, FreeBusyComponent, ICalObjectBuilder,
+    AlarmComponent, ComponentProperty, DaylightComponent, FreeBusyComponent,
     JournalComponent, StandardComponent, TimeZoneComponent, ToDoComponent,
 };
 use crate::parser::ContentLine;

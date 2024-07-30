@@ -10,7 +10,7 @@ use crate::parser::uri::param_value_uri;
 use crate::parser::{
     prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
-    prop_value_utc_offset, DurationOrDateTime, Error, TriggerProperty,
+    prop_value_utc_offset, Error,
 };
 use crate::prelude::Trigger;
 use crate::serialize::WriteModel;

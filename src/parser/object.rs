@@ -10,11 +10,11 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::crlf;
 use nom::combinator::{cut, eof, verify};
-use nom::error::{ParseError, VerboseError, VerboseErrorKind};
+use nom::error::ParseError;
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::Parser;
-use nom::{IResult, Offset};
+use nom::IResult;
 
 pub mod types;
 
@@ -174,8 +174,10 @@ impl ReprStr for &[u8] {
 
 // Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
 #[cfg(test)]
-fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
+fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> String {
     use std::fmt::Write;
+    use nom::Offset;
+    use nom::error::VerboseErrorKind;
 
     let mut result = String::new();
 

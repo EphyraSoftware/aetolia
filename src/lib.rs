@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::combinator::recognize;

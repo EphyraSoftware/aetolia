@@ -548,7 +548,7 @@ impl<T: Add<Output = T> + std::fmt::Display> WriteModel for Vec<T> {
 
 impl WriteModel for crate::common::OffsetWeekday {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::common::OffsetWeekday;
+        
 
         if let Some(offset_weeks) = &self.offset_weeks {
             write!(writer, "{}", offset_weeks)?;

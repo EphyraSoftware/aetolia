@@ -10,7 +10,6 @@ use crate::model::{
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
-use std::ops::Deref;
 
 use crate::common::{
     CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,

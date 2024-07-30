@@ -1,6 +1,4 @@
 use crate::common::{OffsetWeekday, RecurFreq, Weekday};
-use crate::parser::DateOrDateTime;
-use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum RecurRulePart {

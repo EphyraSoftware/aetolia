@@ -1,4 +1,3 @@
-use crate::model::event::EventComponentBuilder;
 use crate::model::{
     add_alarms, add_attach, add_categories, add_class, add_comment, add_contact, add_created,
     add_date_time_stamp, add_date_time_start, add_description, add_duration,
@@ -7,9 +6,9 @@ use crate::model::{
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, impl_finish_component_build, impl_other_component_properties,
     AddComponentProperty, AlarmComponent, AttendeePropertyBuilder, CalendarComponent,
-    CompletedPropertyBuilder, ComponentProperty, DateTimeStampPropertyBuilder, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusEvent, ParticipationStatusToDo,
-    PercentCompletePropertyBuilder, StatusEvent, StatusPropertyBuilder, StatusToDo,
+    CompletedPropertyBuilder, ComponentProperty, ICalObjectBuilder,
+    IanaComponentPropertyBuilder, ParticipationStatusToDo,
+    PercentCompletePropertyBuilder, StatusPropertyBuilder, StatusToDo,
     XComponentPropertyBuilder,
 };
 use crate::prelude::alarm::AddAlarmComponent;

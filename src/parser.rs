@@ -22,7 +22,6 @@ mod property;
 pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
 pub use object::{ical_object, ical_stream};
 pub use param::ParamValue;
-pub(crate) use param::*;
 pub use property::component::{Action, AttachValue, DurationOrDateTime};
 pub use property::recur::RecurRulePart;
 pub use property::types::{
