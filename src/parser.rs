@@ -15,7 +15,7 @@ use std::sync::Mutex;
 mod component;
 mod language_tag;
 mod object;
-mod param;
+pub(crate) mod param;
 mod pre;
 mod property;
 

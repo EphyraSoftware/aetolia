@@ -86,7 +86,7 @@ where
     Ok((input, fb_type))
 }
 
-pub fn param_value_particpation_status<'a, E>(
+pub fn param_value_participation_status<'a, E>(
     input: &'a [u8],
 ) -> IResult<&'a [u8], ParticipationStatusUnknown, E>
 where

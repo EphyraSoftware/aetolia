@@ -1,5 +1,7 @@
 use crate::common::ParticipationStatusUnknown;
 use crate::model::Param;
+use crate::parser::param::param_value_participation_status;
+use crate::parser::Error;
 use crate::validate::error::ParamError;
 use crate::validate::{
     param_name, OccurrenceExpectation, PropertyInfo, PropertyKind, PropertyLocation, ValueType,
@@ -132,6 +134,29 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                     &property_info,
                 );
             }
+            Param::Other { name, value } if name == "PARTSTAT" => {
+                let mut v = value.as_bytes().to_vec();
+                v.push(b';');
+                match param_value_participation_status::<Error>(&v) {
+                    Ok((_, status)) => {
+                        validate_part_stat_param(
+                            &mut errors,
+                            &mut seen,
+                            param,
+                            &status,
+                            index,
+                            &property_info,
+                        );
+                    }
+                    Err(_) => {
+                        errors.push(ParamError {
+                            index,
+                            name: param_name(param).to_string(),
+                            message: "Invalid participation status (PARTSTAT) value".to_string(),
+                        });
+                    }
+                }
+            }
             Param::Range { .. } => {
                 // The parser should reject wrong values for this param and the builder won't let you
                 // specify a wrong value, so not useful to validate the value in this context.
@@ -202,12 +227,17 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 );
             }
             Param::Other { name, value } if name == "TZID" => {
+                let (value, unique) = match value.chars().next() {
+                    Some('/') => (value.splitn(2, '/').last().unwrap().to_string(), true),
+                    _ => (value.clone(), false),
+                };
+
                 validate_time_zone_id_param(
                     &mut errors,
                     &mut seen,
                     param,
-                    value,
-                    false,
+                    &value,
+                    unique,
                     index,
                     &property_info,
                 );
@@ -482,6 +512,16 @@ fn validate_part_stat_param(
     index: usize,
     property_info: &PropertyInfo,
 ) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Participation status (PARTSTAT) is not allowed for this property type"
+                .to_string(),
+        });
+        return;
+    }
+
     match &property_info.property_location {
         PropertyLocation::Event => {
             match status {
@@ -531,19 +571,9 @@ fn validate_part_stat_param(
             errors.push(ParamError {
                 index,
                 name: param_name(param).to_string(),
-                message: format!("Participation status (PARTSTAT) property is not expected in a [{location:?}] component context"),
+                message: format!("Participation status (PARTSTAT) parameter is not expected in a [{location:?}] component context"),
             });
         }
-    }
-
-    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
-        errors.push(ParamError {
-            index,
-            name: param_name(param).to_string(),
-            message: "Participation status (PARTSTAT) is not allowed for this property type"
-                .to_string(),
-        });
-        return;
     }
 
     let occurrence_expectation = match property_info.property_kind {

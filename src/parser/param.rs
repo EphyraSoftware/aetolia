@@ -273,7 +273,7 @@ where
     let (input, (_, _, status)) = tuple((
         tag_no_case("PARTSTAT"),
         char('='),
-        cut(param_value_particpation_status),
+        cut(param_value_participation_status),
     ))(input)?;
 
     Ok((input, ParamValue::ParticipationStatus { status }))
