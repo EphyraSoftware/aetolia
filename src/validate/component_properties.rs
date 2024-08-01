@@ -47,6 +47,8 @@ pub(super) fn validate_component_properties(
             message: "No properties found in component, required at least one".to_string(),
             location: None,
         });
+        // If there are no properties we are going to get other errors, but is that really useful?
+        return Ok(errors);
     }
 
     let dt_stamp_occurrence_expectation = match property_location {
@@ -1282,77 +1284,100 @@ pub(super) fn validate_component_properties(
         }
     }
 
-    if let Some(message) = check_occurrence(&seen, "DTSTAMP", dt_stamp_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if dt_stamp_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "DTSTAMP", dt_stamp_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "UID", uid_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if uid_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "UID", uid_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "DTSTART", dt_start_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if dt_start_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "DTSTART", dt_start_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "TZID", tz_id_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if tz_id_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "TZID", tz_id_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) =
-        check_occurrence(&seen, "TZOFFSETTO", tz_offset_to_occurrence_expectation)
-    {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if tz_offset_to_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) =
+            check_occurrence(&seen, "TZOFFSETTO", tz_offset_to_occurrence_expectation)
+        {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) =
-        check_occurrence(&seen, "TZOFFSETFROM", tz_offset_from_occurrence_expectation)
-    {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if tz_offset_from_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) =
+            check_occurrence(&seen, "TZOFFSETFROM", tz_offset_from_occurrence_expectation)
+        {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "ACTION", action_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if action_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "ACTION", action_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "TRIGGER", trigger_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if trigger_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "TRIGGER", trigger_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) =
-        check_occurrence(&seen, "DESCRIPTION", description_occurrence_expectation)
-    {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if description_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) =
+            check_occurrence(&seen, "DESCRIPTION", description_occurrence_expectation)
+        {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "SUMMARY", summary_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if summary_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "SUMMARY", summary_occurrence_expectation) {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
-    if let Some(message) = check_occurrence(&seen, "ATTENDEE", attendee_occurrence_expectation) {
-        errors.push(ComponentPropertyError {
-            message,
-            location: None,
-        });
+    if attendee_occurrence_expectation == OccurrenceExpectation::Once {
+        if let Some(message) = check_occurrence(&seen, "ATTENDEE", attendee_occurrence_expectation)
+        {
+            errors.push(ComponentPropertyError {
+                message,
+                location: None,
+            });
+        }
     }
 
     match property_location {

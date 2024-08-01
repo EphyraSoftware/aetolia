@@ -1,3 +1,6 @@
+cargo clean
+cargo build
+
 $env:RUSTFLAGS="-Cinstrument-coverage"
 $env:LLVM_PROFILE_FILE="aetolia-%p-%m.profraw"
 

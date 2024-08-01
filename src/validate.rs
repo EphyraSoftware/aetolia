@@ -605,15 +605,16 @@ mod tests {
         };
     }
 
-    macro_rules! assert_single_error {
-        ($errors:expr, $msg:expr) => {
-            if $errors.is_empty() {
-                panic!("Expected a single error, but validation passed");
-            }
+    macro_rules! assert_errors {
+        ($errors:expr, $msg:literal $(,$others:literal)* $(,)?) => {
+            assert_errors!($errors, &[$msg, $($others,)*]);
+        };
 
-            if $errors.len() != 1 {
+        ($errors:expr, $messages:expr) => {
+            if $errors.len() != $messages.len() {
                 panic!(
-                    "Expected a single error, but got: {:?}",
+                    "Expected {} errors, but got: {:?}",
+                    $messages.len(),
                     $errors
                         .iter()
                         .map(|e| e.to_string())
@@ -621,7 +622,9 @@ mod tests {
                 );
             }
 
-            assert_eq!($msg, $errors.first().unwrap().to_string());
+            for (index, msg) in $messages.iter().enumerate() {
+                assert_eq!(msg, &$errors[index].to_string());
+            }
         };
     }
 
@@ -674,7 +677,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Common name (CN) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Common name (CN) is not allowed for this property type");
     }
 
     #[test]
@@ -692,7 +695,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Common name (CN) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Common name (CN) is not allowed for this property type");
     }
 
     #[test]
@@ -707,7 +710,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Calendar user type (CUTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Calendar user type (CUTYPE) is not allowed for this property type");
     }
 
     #[test]
@@ -725,7 +728,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Calendar user type (CUTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Calendar user type (CUTYPE) is not allowed for this property type");
     }
 
     #[test]
@@ -740,7 +743,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Delegated from (DELEGATED-FROM) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Delegated from (DELEGATED-FROM) is not allowed for this property type");
     }
 
     #[test]
@@ -758,7 +761,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated from (DELEGATED-FROM) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated from (DELEGATED-FROM) is not allowed for this property type");
     }
 
     #[test]
@@ -773,7 +776,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Delegated to (DELEGATED-TO) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Delegated to (DELEGATED-TO) is not allowed for this property type");
     }
 
     #[test]
@@ -791,7 +794,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated to (DELEGATED-TO) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Delegated to (DELEGATED-TO) is not allowed for this property type");
     }
 
     #[test]
@@ -806,7 +809,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Directory entry reference (DIR) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Directory entry reference (DIR) is not allowed for this property type");
     }
 
     #[test]
@@ -824,7 +827,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Directory entry reference (DIR) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Directory entry reference (DIR) is not allowed for this property type");
     }
 
     #[test]
@@ -842,7 +845,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but no encoding is set, must be set to BASE64");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but no encoding is set, must be set to BASE64");
     }
 
     #[test]
@@ -860,7 +863,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64");
     }
 
     #[test]
@@ -875,7 +878,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: FMTTYPE is not allowed"
         );
@@ -896,7 +899,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: FMTTYPE is not allowed");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: FMTTYPE is not allowed");
     }
 
     #[test]
@@ -911,7 +914,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: FBTYPE is not allowed"
         );
@@ -932,7 +935,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: FBTYPE is not allowed");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: FBTYPE is not allowed");
     }
 
     #[test]
@@ -947,7 +950,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: LANGUAGE is not allowed"
         );
@@ -968,7 +971,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: LANGUAGE is not allowed");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: LANGUAGE is not allowed");
     }
 
     #[test]
@@ -983,7 +986,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: Group or list membership (MEMBER) is not allowed for this property type"
         );
@@ -1004,7 +1007,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Group or list membership (MEMBER) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Group or list membership (MEMBER) is not allowed for this property type");
     }
 
     #[test]
@@ -1022,7 +1025,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [Completed] in a VEVENT component context");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [Completed] in a VEVENT component context");
     }
 
     #[test]
@@ -1039,7 +1042,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors,"In component \"VJOURNAL\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [InProcess] in a VJOURNAL component context");
+        assert_errors!(&errors,"In component \"VJOURNAL\" at index 0, in component property \"ATTENDEE\" at index 2: Invalid participation status (PARTSTAT) value [InProcess] in a VJOURNAL component context");
     }
 
     #[test]
@@ -1054,7 +1057,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Participation status (PARTSTAT) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Participation status (PARTSTAT) is not allowed for this property type");
     }
 
     #[test]
@@ -1072,7 +1075,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation status (PARTSTAT) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation status (PARTSTAT) is not allowed for this property type");
     }
 
     #[test]
@@ -1087,7 +1090,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: RANGE is not allowed"
         );
@@ -1108,7 +1111,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: RANGE is not allowed");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: RANGE is not allowed");
     }
 
     #[test]
@@ -1123,7 +1126,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Related (RELATED) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Related (RELATED) is not allowed for this property type");
     }
 
     #[test]
@@ -1141,7 +1144,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Related (RELATED) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Related (RELATED) is not allowed for this property type");
     }
 
     #[test]
@@ -1156,7 +1159,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Relationship type (RELTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Relationship type (RELTYPE) is not allowed for this property type");
     }
 
     #[test]
@@ -1174,7 +1177,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
     }
 
     #[test]
@@ -1189,7 +1192,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In calendar property \"VERSION\" at index 1: Participation role (ROLE) is not allowed for this property type");
+        assert_errors!(&errors, "In calendar property \"VERSION\" at index 1: Participation role (ROLE) is not allowed for this property type");
     }
 
     #[test]
@@ -1207,7 +1210,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation role (ROLE) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Participation role (ROLE) is not allowed for this property type");
     }
 
     #[test]
@@ -1222,7 +1225,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In calendar property \"VERSION\" at index 1: RSVP expectation (RSVP) is not allowed for this property type");
+        assert_errors!(&errors, "In calendar property \"VERSION\" at index 1: RSVP expectation (RSVP) is not allowed for this property type");
     }
 
     #[test]
@@ -1240,7 +1243,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: RSVP expectation (RSVP) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: RSVP expectation (RSVP) is not allowed for this property type");
     }
 
     #[test]
@@ -1255,7 +1258,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(errors, "In calendar property \"VERSION\" at index 1: Sent by (SENT-BY) is not allowed for this property type");
+        assert_errors!(errors, "In calendar property \"VERSION\" at index 1: Sent by (SENT-BY) is not allowed for this property type");
     }
 
     #[test]
@@ -1273,7 +1276,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Sent by (SENT-BY) is not allowed for this property type");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Sent by (SENT-BY) is not allowed for this property type");
     }
 
     #[test]
@@ -1291,7 +1294,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 2: Sent by (SENT-BY) must be a 'mailto:' URI");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 2: Sent by (SENT-BY) must be a 'mailto:' URI");
     }
 
     #[test]
@@ -1308,7 +1311,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: Required time zone ID [missing] is not defined in the calendar");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: Required time zone ID [missing] is not defined in the calendar");
     }
 
     #[test]
@@ -1334,7 +1337,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) cannot be specified on a property with a UTC time");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) cannot be specified on a property with a UTC time");
     }
 
     #[test]
@@ -1359,7 +1362,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) is not allowed for the property value type DATE");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 1, in component property \"DTSTART\" at index 2: Time zone ID (TZID) is not allowed for the property value type DATE");
     }
 
     #[test]
@@ -1374,7 +1377,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: TZID is not allowed"
         );
@@ -1395,7 +1398,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: TZID is not allowed");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: TZID is not allowed");
     }
 
     #[test]
@@ -1410,7 +1413,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(
+        assert_errors!(
             errors,
             "In calendar property \"VERSION\" at index 1: VALUE is not allowed"
         );
@@ -1431,9 +1434,163 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_eq!(errors.len(), 2);
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have an integer value but that is not valid for this property", errors[0].to_string());
-        assert_eq!("In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: VALUE is not allowed", errors[1].to_string());
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Property is declared to have an integer value but that is not valid for this property",
+            "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: VALUE is not allowed"
+        );
+    }
+
+    #[test]
+    fn event_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VEVENT\r\n\
+X-ANY:test\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0: DTSTAMP is required",
+            "In component \"VEVENT\" at index 0: UID is required",
+            "In component \"VEVENT\" at index 0: DTSTART is required",
+        );
+    }
+
+    #[test]
+    fn event_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DTSTART:19900101T000000Z\r\n\
+DTSTART:19900101T000000Z\r\n\
+CLASS:PUBLIC\r\n\
+CLASS:PUBLIC\r\n\
+CREATED:19900101T000000Z\r\n\
+CREATED:19900101T000000Z\r\n\
+DESCRIPTION:some text\r\n\
+DESCRIPTION:some text\r\n\
+GEO:1.1;2.2\r\n\
+GEO:1.1;2.2\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+LOCATION:some location\r\n\
+LOCATION:some location\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+PRIORITY:5\r\n\
+PRIORITY:5\r\n\
+SEQUENCE:0\r\n\
+SEQUENCE:0\r\n\
+STATUS:CONFIRMED\r\n\
+STATUS:CONFIRMED\r\n\
+SUMMARY:some summary\r\n\
+SUMMARY:some summary\r\n\
+TRANSP:OPAQUE\r\n\
+TRANSP:OPAQUE\r\n\
+URL:http://example.com\r\n\
+URL:http://example.com\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+RRULE:FREQ=DAILY;COUNT=10\r\n\
+RRULE:FREQ=DAILY;COUNT=10\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 3: DTSTART must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"CLASS\" at index 5: CLASS must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"CREATED\" at index 7: CREATED must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 9: DESCRIPTION must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"GEO\" at index 11: GEO must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"LAST-MODIFIED\" at index 13: LAST-MODIFIED must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"LOCATION\" at index 15: LOCATION must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"ORGANIZER\" at index 17: ORGANIZER must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"PRIORITY\" at index 19: PRIORITY must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"SEQUENCE\" at index 21: SEQUENCE must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"STATUS\" at index 23: STATUS must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"SUMMARY\" at index 25: SUMMARY must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"TRANSP\" at index 27: TRANSP must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"URL\" at index 29: URL must only appear once",
+            "In component \"VEVENT\" at index 0, in component property \"RECURRENCE-ID\" at index 31: RECURRENCE-ID must only appear once",
+        );
+    }
+
+    #[test]
+    fn event_duplicate_date_time_end() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DTEND:19900101T000000Z\r\n\
+DTEND:19900101T000000Z\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"DTEND\" at index 3: DTEND must only appear once",
+        );
+    }
+
+    #[test]
+    fn event_duplicate_duration() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DURATION:PT1H\r\n\
+DURATION:PT1H\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"DURATION\" at index 3: DURATION must only appear once",
+        );
+    }
+
+    #[test]
+    fn event_both_date_time_end_and_duration() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DTEND:19900101T000000Z\r\n\
+DURATION:PT1H\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0: Both DTEND and DURATION properties are present, only one is allowed",
+        );
     }
 
     #[test]
@@ -1568,7 +1725,7 @@ END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_single_error!(&errors, "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"ATTACH\" at index 3: ATTACH must only appear once");
+        assert_errors!(&errors, "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"ATTACH\" at index 3: ATTACH must only appear once");
     }
 
     fn validate_content(content: &str) -> Vec<ICalendarError> {
