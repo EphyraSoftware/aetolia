@@ -666,6 +666,39 @@ END:VCALENDAR\r\n";
     }
 
     #[test]
+    fn calendar_with_no_components() {
+        let object = ICalObject::builder()
+            .add_product_id("-//hacksw/handcal//NONSGML v1.0//EN")
+            .finish_property()
+            .add_max_version("2.0")
+            .finish_property()
+            .build();
+
+        let errors = validate_model(object).unwrap();
+
+        assert_errors!(
+            errors,
+            "No components found in calendar object, required at least one"
+        );
+    }
+
+    #[test]
+    fn component_with_no_properties() {
+        let object = ICalObject::builder()
+            .add_product_id("-//hacksw/handcal//NONSGML v1.0//EN")
+            .finish_property()
+            .add_max_version("2.0")
+            .finish_property()
+            .add_journal_component()
+            .finish_component()
+            .build();
+
+        let errors = validate_model(object).unwrap();
+
+        assert_errors!(errors, "In component \"VJOURNAL\" at index 0: No properties found in component, required at least one");
+    }
+
+    #[test]
     fn common_name_on_version_property() {
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
@@ -1824,6 +1857,127 @@ END:VCALENDAR\r\n";
             "In component \"VJOURNAL\" at index 0, in component property \"STATUS\" at index 17: STATUS must only appear once",
             "In component \"VJOURNAL\" at index 0, in component property \"SUMMARY\" at index 19: SUMMARY must only appear once",
             "In component \"VJOURNAL\" at index 0, in component property \"URL\" at index 21: URL must only appear once"
+        );
+    }
+
+    #[test]
+    fn free_busy_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VFREEBUSY\r\n\
+X-ANY:test\r\n\
+END:VFREEBUSY\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VFREEBUSY\" at index 0: DTSTAMP is required",
+            "In component \"VFREEBUSY\" at index 0: UID is required",
+        );
+    }
+
+    #[test]
+    fn free_busy_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VFREEBUSY\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+CONTACT:mailto:hello@test.net\r\n\
+CONTACT:mailto:hello@test.net\r\n\
+DTSTART:19900101T000000Z\r\n\
+DTSTART:19900101T000000Z\r\n\
+DTEND:19900101T000000Z\r\n\
+DTEND:19900101T000000Z\r\n\
+ORGANIZER:mailto:admin@test.net\r\n\
+ORGANIZER:mailto:admin@test.net\r\n\
+URL:http://example.com\r\n\
+URL:http://example.com\r\n\
+END:VFREEBUSY\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VFREEBUSY\" at index 0, in component property \"CONTACT\" at index 3: CONTACT must only appear once",
+            "In component \"VFREEBUSY\" at index 0, in component property \"DTSTART\" at index 5: DTSTART must only appear once",
+            "In component \"VFREEBUSY\" at index 0, in component property \"DTEND\" at index 7: DTEND must only appear once",
+            "In component \"VFREEBUSY\" at index 0, in component property \"ORGANIZER\" at index 9: ORGANIZER must only appear once",
+            "In component \"VFREEBUSY\" at index 0, in component property \"URL\" at index 11: URL must only appear once",
+        );
+    }
+
+    #[test]
+    fn time_zone_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTIMEZONE\r\n\
+X-ANY:test\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19900101T000000\r\n\
+TZOFFSETTO:+0000\r\n\
+TZOFFSETFROM:+0000\r\n\
+END:STANDARD\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTIMEZONE\" at index 0: TZID is required",
+        );
+    }
+
+    #[test]
+    fn time_zone_missing_required_nested_components() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTIMEZONE\" at index 0: No standard or daylight components found in time zone, required at least one",
+        );
+    }
+
+    #[test]
+    fn time_zone_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+TZURL:http://example.com\r\n\
+TZURL:http://example.com\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19900101T000000\r\n\
+TZOFFSETTO:+0000\r\n\
+TZOFFSETFROM:+0000\r\n\
+END:STANDARD\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTIMEZONE\" at index 0, in component property \"LAST-MODIFIED\" at index 2: LAST-MODIFIED must only appear once",
+            "In component \"VTIMEZONE\" at index 0, in component property \"TZURL\" at index 4: TZURL must only appear once",
         );
     }
 
