@@ -1731,9 +1731,7 @@ fn validate_date_time_start(
                 });
             }
         }
-        _ => {
-            unreachable!()
-        }
+        _ => {}
     }
 }
 

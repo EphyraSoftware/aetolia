@@ -1500,8 +1500,6 @@ URL:http://example.com\r\n\
 URL:http://example.com\r\n\
 RECURRENCE-ID:19900101T000000Z\r\n\
 RECURRENCE-ID:19900101T000000Z\r\n\
-RRULE:FREQ=DAILY;COUNT=10\r\n\
-RRULE:FREQ=DAILY;COUNT=10\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
@@ -1590,6 +1588,242 @@ END:VCALENDAR\r\n";
         assert_errors!(
             errors,
             "In component \"VEVENT\" at index 0: Both DTEND and DURATION properties are present, only one is allowed",
+        );
+    }
+
+    #[test]
+    fn todo_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+X-ANY:test\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0: DTSTAMP is required",
+            "In component \"VTODO\" at index 0: UID is required",
+        );
+    }
+
+    #[test]
+    fn todo_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+CLASS:PUBLIC\r\n\
+CLASS:PUBLIC\r\n\
+COMPLETE:19900101T000000Z\r\n\
+COMPLETE:19900101T000000Z\r\n\
+CREATED:19900101T000000Z\r\n\
+CREATED:19900101T000000Z\r\n\
+DESCRIPTION:some text\r\n\
+DESCRIPTION:some text\r\n\
+DTSTART:19900101T000000Z\r\n\
+DTSTART:19900101T000000Z\r\n\
+GEO:1.1;2.2\r\n\
+GEO:1.1;2.2\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+LOCATION:some location\r\n\
+LOCATION:some location\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+PERCENT-COMPLETE:50\r\n\
+PERCENT-COMPLETE:50\r\n\
+PRIORITY:5\r\n\
+PRIORITY:5\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+SEQUENCE:0\r\n\
+SEQUENCE:0\r\n\
+STATUS:COMPLETED\r\n\
+STATUS:COMPLETED\r\n\
+SUMMARY:some summary\r\n\
+SUMMARY:some summary\r\n\
+URL:http://example.com\r\n\
+URL:http://example.com\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0, in component property \"CLASS\" at index 3: CLASS must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"CREATED\" at index 7: CREATED must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"DESCRIPTION\" at index 9: DESCRIPTION must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"DTSTART\" at index 11: DTSTART must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"GEO\" at index 13: GEO must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"LAST-MODIFIED\" at index 15: LAST-MODIFIED must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"LOCATION\" at index 17: LOCATION must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"ORGANIZER\" at index 19: ORGANIZER must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"PERCENT-COMPLETE\" at index 21: PERCENT-COMPLETE must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"PRIORITY\" at index 23: PRIORITY must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"RECURRENCE-ID\" at index 25: RECURRENCE-ID must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"SEQUENCE\" at index 27: SEQUENCE must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"STATUS\" at index 29: STATUS must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"SUMMARY\" at index 31: SUMMARY must only appear once",
+            "In component \"VTODO\" at index 0, in component property \"URL\" at index 33: URL must only appear once",
+        );
+    }
+
+    #[test]
+    fn todo_duplicate_due() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DUE:19900101T000000Z\r\n\
+DUE:19900101T000000Z\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0, in component property \"DUE\" at index 3: DUE must only appear once",
+        );
+    }
+
+    #[test]
+    fn todo_duplicate_duration() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DTSTART:19900101T000000Z\r\n\
+DURATION:PT1H\r\n\
+DURATION:PT1H\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0, in component property \"DURATION\" at index 4: DURATION must only appear once",
+        );
+    }
+
+    #[test]
+    fn todo_duration_without_date_time_start() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DURATION:PT1H\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0: DURATION property is present but no DTSTART property is present",
+        );
+    }
+
+    #[test]
+    fn todo_both_due_and_duration() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DTSTART:19900101T000000Z\r\n\
+DUE:19900101T000000Z\r\n\
+DURATION:PT1H\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTODO\" at index 0: Both DUE and DURATION properties are present, only one is allowed",
+        );
+    }
+
+    #[test]
+    fn journal_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VJOURNAL\r\n\
+X-ANY:test\r\n\
+END:VJOURNAL\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VJOURNAL\" at index 0: DTSTAMP is required",
+            "In component \"VJOURNAL\" at index 0: UID is required",
+        );
+    }
+
+    #[test]
+    fn journal_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VJOURNAL\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+CLASS:PUBLIC\r\n\
+CLASS:PUBLIC\r\n\
+CREATED:19900101T000000Z\r\n\
+CREATED:19900101T000000Z\r\n\
+DTSTART:19900101T000000Z\r\n\
+DTSTART:19900101T000000Z\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+LAST-MODIFIED:19900101T000000Z\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+ORGANIZER:mailto:hello@test.net\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+RECURRENCE-ID:19900101T000000Z\r\n\
+SEQUENCE:0\r\n\
+SEQUENCE:0\r\n\
+STATUS:FINAL\r\n\
+STATUS:FINAL\r\n\
+SUMMARY:some summary\r\n\
+SUMMARY:some summary\r\n\
+URL:http://example.com\r\n\
+URL:http://example.com\r\n\
+END:VJOURNAL\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VJOURNAL\" at index 0, in component property \"CLASS\" at index 3: CLASS must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"CREATED\" at index 5: CREATED must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"DTSTART\" at index 7: DTSTART must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"LAST-MODIFIED\" at index 9: LAST-MODIFIED must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"ORGANIZER\" at index 11: ORGANIZER must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"RECURRENCE-ID\" at index 13: RECURRENCE-ID must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"SEQUENCE\" at index 15: SEQUENCE must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"STATUS\" at index 17: STATUS must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"SUMMARY\" at index 19: SUMMARY must only appear once",
+            "In component \"VJOURNAL\" at index 0, in component property \"URL\" at index 21: URL must only appear once"
         );
     }
 
