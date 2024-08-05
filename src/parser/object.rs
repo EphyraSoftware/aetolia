@@ -114,7 +114,9 @@ where
         tag("BEGIN:"),
         iana_token,
         crlf,
-        cut(many1(content_line)),
+        cut(many1(verify(content_line, |line| {
+            line.property_name != "END".as_bytes()
+        }))),
         tag("END:"),
         iana_token,
         tag("\r\n"),

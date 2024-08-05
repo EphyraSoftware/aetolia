@@ -50,6 +50,31 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
         });
     }
 
+    let validate_alarms = |errors: &mut Vec<ICalendarError>,
+                           alarms: &[CalendarComponent],
+                           index: usize,
+                           name: &str|
+     -> anyhow::Result<()> {
+        for (alarm_index, alarm) in alarms.iter().enumerate() {
+            errors.extend_from_slice(
+                ICalendarError::many_from_nested_component_property_errors(
+                    validate_component_properties(
+                        &calendar_info,
+                        PropertyLocation::Alarm,
+                        alarm.properties(),
+                    )?,
+                    index,
+                    name.to_string(),
+                    alarm_index,
+                    component_name(alarm).to_string(),
+                )
+                .as_slice(),
+            );
+        }
+
+        Ok(())
+    };
+
     for (index, component) in ical_object.components.iter().enumerate() {
         match component {
             CalendarComponent::Event(event) => {
@@ -66,22 +91,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                     .as_slice(),
                 );
 
-                for (alarm_index, alarm) in event.alarms.iter().enumerate() {
-                    errors.extend_from_slice(
-                        ICalendarError::many_from_nested_component_property_errors(
-                            validate_component_properties(
-                                &calendar_info,
-                                PropertyLocation::Alarm,
-                                alarm.properties(),
-                            )?,
-                            index,
-                            component_name(component).to_string(),
-                            alarm_index,
-                            component_name(alarm).to_string(),
-                        )
-                        .as_slice(),
-                    );
-                }
+                validate_alarms(&mut errors, &event.alarms, index, component_name(component))?;
             }
             CalendarComponent::ToDo(to_do) => {
                 errors.extend_from_slice(
@@ -97,22 +107,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                     .as_slice(),
                 );
 
-                for (alarm_index, alarm) in to_do.alarms.iter().enumerate() {
-                    errors.extend_from_slice(
-                        ICalendarError::many_from_nested_component_property_errors(
-                            validate_component_properties(
-                                &calendar_info,
-                                PropertyLocation::Alarm,
-                                alarm.properties(),
-                            )?,
-                            index,
-                            component_name(component).to_string(),
-                            alarm_index,
-                            component_name(alarm).to_string(),
-                        )
-                        .as_slice(),
-                    );
-                }
+                validate_alarms(&mut errors, &to_do.alarms, index, component_name(component))?;
             }
             CalendarComponent::Journal(journal) => {
                 errors.extend_from_slice(
@@ -203,20 +198,9 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                             );
                         }
                         _ => {
-                            errors.push(ICalendarError {
-                                message: "Component is not allowed in time zone".to_string(),
-                                location: Some(ICalendarLocation::Component(ComponentLocation {
-                                    index,
-                                    name: component_name(component).to_string(),
-                                    location: Some(Box::new(WithinComponentLocation::Component(
-                                        ComponentLocation {
-                                            index: tz_component_index,
-                                            name: component_name(tz_component).to_string(),
-                                            location: None,
-                                        },
-                                    ))),
-                                })),
-                            });
+                            // Neither the parser nor the builder will let other subcomponents to
+                            // be added here.
+                            unreachable!()
                         }
                     }
                 }
@@ -249,17 +233,9 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
                     .as_slice(),
                 );
             }
-            CalendarComponent::Alarm(_)
-            | CalendarComponent::Standard(_)
-            | CalendarComponent::Daylight(_) => {
-                errors.push(ICalendarError {
-                    message: "Component is not allowed at the top level".to_string(),
-                    location: Some(ICalendarLocation::Component(ComponentLocation {
-                        index,
-                        name: component_name(component).to_string(),
-                        location: None,
-                    })),
-                });
+            _ => {
+                // Component at the wrong level will get picked up as IANA components
+                unreachable!()
             }
         }
     }
@@ -2208,6 +2184,155 @@ END:VCALENDAR\r\n";
             "In component \"VEVENT\" at index 0, in component property \"RDATE\" at index 6: Redundant value specification which matches the default value",
             "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"TRIGGER\" at index 2: Redundant value specification which matches the default value",
             "In component \"VTODO\" at index 1, in component property \"DUE\" at index 2: Redundant value specification which matches the default value",
+        );
+    }
+
+    #[test]
+    fn iana_component() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:ANY\r\n\
+DTSTART:19900101T000000Z\r\n\
+END:ANY\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_no_errors!(errors);
+    }
+
+    #[test]
+    fn standard_at_top_level() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:DAYLIGHT\r\n\
+X-ANY:test\r\n\
+END:DAYLIGHT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        // Gets picked up as IANA
+        assert_no_errors!(errors);
+    }
+
+    #[test]
+    fn x_property_value_type_checks() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+X-TIME-INVALID-HOUR;VALUE=TIME:250000\r\n\
+X-TIME-INVALID-MINUTE;VALUE=TIME:007000\r\n\
+X-TIME-INVALID-SECOND;VALUE=TIME:000070\r\n\
+X-TIME-VALID;VALUE=TIME:235960\r\n\
+X-UTC-OFFSET-NEGATIVE-ZERO;VALUE=UTC-OFFSET:-000000\r\n\
+X-UTC-OFFSET-NEGATIVE-NON-ZERO;VALUE=UTC-OFFSET:-000001\r\n\
+X-UTC-OFFSET-INVALID-MINUTE;VALUE=UTC-OFFSET:+006000\r\n\
+X-BASE-64;VALUE=BINARY;ENCODING=8BIT:nope\r\n\
+X-BASE-64;VALUE=BINARY;ENCODING=BASE64:##\r\n\
+X-BOOLEAN;VALUE=BOOLEAN:wendy\r\n\
+X-CAL-ADDRESS-NOT-URL;VALUE=CAL-ADDRESS:test\r\n\
+X-CAL-ADDRESS-NOT-MAILTO;VALUE=CAL-ADDRESS:mailto:hello@test.net\r\n\
+X-DATE;VALUE=DATE:19900101T000120\r\n\
+X-DATE-TIME;VALUE=DATE-TIME:19900101T000000P\r\n\
+X-DURATION;VALUE=DURATION:3W\r\n\
+X-FLOAT;VALUE=FLOAT:3.14.15\r\n\
+X-INTEGER;VALUE=INTEGER:3.14\r\n\
+X-PERIOD;VALUE=PERIOD:19900101T000000Z/19900101T000000W\r\n\
+X-RECUR;VALUE=RECUR:19900101T000000Z\r\n\
+X-TEXT;VALUE=TEXT:\\p\r\n\
+X-URI;VALUE=URI:hello\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"X-TIME-INVALID-HOUR\" at index 2: Found an invalid time at index 0 - Hour must be between 0 and 23",
+            "In component \"VEVENT\" at index 0, in component property \"X-TIME-INVALID-MINUTE\" at index 3: Found an invalid time at index 0 - Minute must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"X-TIME-INVALID-SECOND\" at index 4: Found an invalid time at index 0 - Second must be between 0 and 60",
+            "In component \"VEVENT\" at index 0, in component property \"X-UTC-OFFSET-NEGATIVE-ZERO\" at index 6: Found an invalid UTC offset - UTC offset must have a non-zero value if it is negative",
+            "In component \"VEVENT\" at index 0, in component property \"X-UTC-OFFSET-INVALID-MINUTE\" at index 8: Found an invalid UTC offset - Minutes must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"X-BASE-64\" at index 9: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64",
+            "In component \"VEVENT\" at index 0, in component property \"X-BASE-64\" at index 10: Property is declared to have a binary value but the value is not base64",
+            "In component \"VEVENT\" at index 0, in component property \"X-BOOLEAN\" at index 11: Property is declared to have a boolean value but the value is not a boolean",
+            "In component \"VEVENT\" at index 0, in component property \"X-CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but that is not valid for this property",
+            "In component \"VEVENT\" at index 0, in component property \"X-CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is a mailto: URI",
+            "In component \"VEVENT\" at index 0, in component property \"X-DATE\" at index 14: Property is declared to have a date value but the value is not a date",
+            "In component \"VEVENT\" at index 0, in component property \"X-DATE-TIME\" at index 15: Property is declared to have a date-time value but the value is not a date-time",
+            "In component \"VEVENT\" at index 0, in component property \"X-DURATION\" at index 16: Property is declared to have a duration value but the value is not a duration",
+            "In component \"VEVENT\" at index 0, in component property \"X-FLOAT\" at index 17: Property is declared to have a float value but the value is not a float",
+            "In component \"VEVENT\" at index 0, in component property \"X-INTEGER\" at index 18: Property is declared to have an integer value but the value is not an integer",
+            "In component \"VEVENT\" at index 0, in component property \"X-PERIOD\" at index 19: Property is declared to have a period value but the value is not a period",
+            "In component \"VEVENT\" at index 0, in component property \"X-RECUR\" at index 20: Property is declared to have a recurrence value but the value is not a recurrence",
+            "In component \"VEVENT\" at index 0, in component property \"X-TEXT\" at index 21: Property is declared to have a text value but the value is not a text",
+            "In component \"VEVENT\" at index 0, in component property \"X-URI\" at index 22: Property is declared to have a URI value but the value is not a URI",
+        );
+    }
+
+    #[test]
+    fn iana_property_value_type_checks() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+TIME-INVALID-HOUR;VALUE=TIME:250000\r\n\
+TIME-INVALID-MINUTE;VALUE=TIME:007000\r\n\
+TIME-INVALID-SECOND;VALUE=TIME:000070\r\n\
+TIME-VALID;VALUE=TIME:235960\r\n\
+UTC-OFFSET-NEGATIVE-ZERO;VALUE=UTC-OFFSET:-000000\r\n\
+UTC-OFFSET-NEGATIVE-NON-ZERO;VALUE=UTC-OFFSET:-000001\r\n\
+UTC-OFFSET-INVALID-MINUTE;VALUE=UTC-OFFSET:+006000\r\n\
+BASE-64;VALUE=BINARY;ENCODING=8BIT:nope\r\n\
+BASE-64;VALUE=BINARY;ENCODING=BASE64:##\r\n\
+BOOLEAN;VALUE=BOOLEAN:wendy\r\n\
+CAL-ADDRESS-NOT-URL;VALUE=CAL-ADDRESS:test\r\n\
+CAL-ADDRESS-NOT-MAILTO;VALUE=CAL-ADDRESS:mailto:hello@test.net\r\n\
+DATE;VALUE=DATE:19900101T000120\r\n\
+DATE-TIME;VALUE=DATE-TIME:19900101T000000P\r\n\
+OTHER-DURATION;VALUE=DURATION:3W\r\n\
+FLOAT;VALUE=FLOAT:3.14.15\r\n\
+INTEGER;VALUE=INTEGER:3.14\r\n\
+PERIOD;VALUE=PERIOD:19900101T000000Z/19900101T000000W\r\n\
+RECUR;VALUE=RECUR:19900101T000000Z\r\n\
+TEXT;VALUE=TEXT:\\p\r\n\
+OTHER-URI;VALUE=URI:hello\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"TIME-INVALID-HOUR\" at index 2: Found an invalid time at index 0 - Hour must be between 0 and 23",
+            "In component \"VEVENT\" at index 0, in component property \"TIME-INVALID-MINUTE\" at index 3: Found an invalid time at index 0 - Minute must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"TIME-INVALID-SECOND\" at index 4: Found an invalid time at index 0 - Second must be between 0 and 60",
+            "In component \"VEVENT\" at index 0, in component property \"UTC-OFFSET-NEGATIVE-ZERO\" at index 6: Found an invalid UTC offset - UTC offset must have a non-zero value if it is negative",
+            "In component \"VEVENT\" at index 0, in component property \"UTC-OFFSET-INVALID-MINUTE\" at index 8: Found an invalid UTC offset - Minutes must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"BASE-64\" at index 9: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64",
+            "In component \"VEVENT\" at index 0, in component property \"BASE-64\" at index 10: Property is declared to have a binary value but the value is not base64",
+            "In component \"VEVENT\" at index 0, in component property \"BOOLEAN\" at index 11: Property is declared to have a boolean value but the value is not a boolean",
+            "In component \"VEVENT\" at index 0, in component property \"CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but that is not valid for this property",
+            "In component \"VEVENT\" at index 0, in component property \"CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is a mailto: URI",
+            "In component \"VEVENT\" at index 0, in component property \"DATE\" at index 14: Property is declared to have a date value but the value is not a date",
+            "In component \"VEVENT\" at index 0, in component property \"DATE-TIME\" at index 15: Property is declared to have a date-time value but the value is not a date-time",
+            "In component \"VEVENT\" at index 0, in component property \"OTHER-DURATION\" at index 16: Property is declared to have a duration value but the value is not a duration",
+            "In component \"VEVENT\" at index 0, in component property \"FLOAT\" at index 17: Property is declared to have a float value but the value is not a float",
+            "In component \"VEVENT\" at index 0, in component property \"INTEGER\" at index 18: Property is declared to have an integer value but the value is not an integer",
+            "In component \"VEVENT\" at index 0, in component property \"PERIOD\" at index 19: Property is declared to have a period value but the value is not a period",
+            "In component \"VEVENT\" at index 0, in component property \"RECUR\" at index 20: Property is declared to have a recurrence value but the value is not a recurrence",
+            "In component \"VEVENT\" at index 0, in component property \"TEXT\" at index 21: Property is declared to have a text value but the value is not a text",
+            "In component \"VEVENT\" at index 0, in component property \"OTHER-URI\" at index 22: Property is declared to have a URI value but the value is not a URI",
         );
     }
 

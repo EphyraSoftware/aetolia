@@ -167,7 +167,7 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::Organizer(OrganizerProperty { value, .. }) => {
                         push_redundant_error_msg(errors, property_index, property);
 
-                        if value.starts_with("mailto:") {
+                        if !value.starts_with("mailto:") {
                             not_mailto = true;
                         }
                     }
@@ -592,7 +592,9 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::RecurrenceRule(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => match is_recur_valued(&x_prop.value) {
                         Ok(rule) => match rule.to_model() {
                             Ok(rule) => {
@@ -986,7 +988,10 @@ fn is_integer_valued(property_value: &String) -> bool {
     content.push(b';');
 
     let result = separated_list1(char(','), prop_value_integer::<Error>)(content.as_bytes());
-    result.is_ok()
+    match result {
+        Ok((rest, _)) => rest.len() == 1,
+        _ => false,
+    }
 }
 
 fn is_period_valued(property_value: &String) -> bool {
