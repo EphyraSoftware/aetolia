@@ -233,50 +233,138 @@ impl_other_params_builder!(MethodPropertyBuilder);
 
 #[derive(Debug)]
 pub enum ComponentProperty {
-    DateTimeStamp(DateTimeStampProperty),
-    UniqueIdentifier(UniqueIdentifierProperty),
-    DateTimeStart(DateTimeStartProperty),
-    Classification(ClassificationProperty),
-    DateTimeCreated(CreatedProperty),
-    Description(DescriptionProperty),
-    GeographicPosition(GeographicPositionProperty),
-    LastModified(LastModifiedProperty),
-    Location(LocationProperty),
-    Organizer(OrganizerProperty),
-    Priority(PriorityProperty),
-    Sequence(SequenceProperty),
-    Summary(SummaryProperty),
-    TimeTransparency(TimeTransparencyProperty),
-    RequestStatus(RequestStatusProperty),
-    Url(UrlProperty),
-    RecurrenceId(RecurrenceIdProperty),
-    RecurrenceRule(RecurrenceRuleProperty),
-    DateTimeEnd(DateTimeEndProperty),
-    Duration(DurationProperty),
+    /// RFC 5545, 3.8.1.1
+    /// Value type: URI or BINARY
     Attach(AttachProperty),
-    Attendee(AttendeeProperty),
+    /// RFC 5545, 3.8.1.2
+    /// Value type: TEXT
     Categories(CategoriesProperty),
+    /// RFC 5545, 3.8.1.3
+    /// Value type: TEXT
+    Classification(ClassificationProperty),
+    /// RFC 5545, 3.8.1.4
+    /// Value type: TEXT
     Comment(CommentProperty),
-    Contact(ContactProperty),
-    ExceptionDateTimes(ExceptionDateTimesProperty),
-    Status(StatusProperty),
-    RelatedTo(RelatedToProperty),
-    Resources(ResourcesProperty),
-    RecurrenceDateTimes(RecurrenceDateTimesProperty),
-    DateTimeCompleted(DateTimeCompletedProperty),
+    /// RFC 5545, 3.8.1.5
+    /// Value type: TEXT
+    Description(DescriptionProperty),
+    /// RFC 5545, 3.8.1.6
+    /// Value type: FLOAT
+    GeographicPosition(GeographicPositionProperty),
+    /// RFC 5545, 3.8.1.7
+    /// Value type: TEXT
+    Location(LocationProperty),
+    /// RFC 5545, 4.8.1.8
+    /// Value type: INTEGER
     PercentComplete(PercentCompleteProperty),
+    /// RFC 5545, 3.8.1.9
+    /// Value type: INTEGER
+    Priority(PriorityProperty),
+    /// RFC 5545, 3.8.1.10
+    /// Value type: TEXT
+    Resources(ResourcesProperty),
+    /// RFC 5545, 3.8.1.11
+    /// Value type: TEXT
+    Status(StatusProperty),
+    /// RFC 5545, 3.8.1.12
+    /// Value type: TEXT
+    Summary(SummaryProperty),
+    /// RFC 5545, 3.8.2.1
+    /// Value type: DATE-TIME
+    DateTimeCompleted(DateTimeCompletedProperty),
+    /// RFC 5545, 3.8.2.2
+    /// Value type: DATE-TIME or DATE
+    DateTimeEnd(DateTimeEndProperty),
+    /// RFC 5545, 3.8.2.3
+    /// Value type: DATE-TIME or DATE
     DateTimeDue(DateTimeDueProperty),
+    /// RFC 5545, 3.8.2.4
+    /// Value type: DATE-TIME or DATE
+    DateTimeStart(DateTimeStartProperty),
+    /// RFC 5545, 3.8.2.5
+    /// Value type: DURATION
+    Duration(DurationProperty),
+    /// RFC 5545, 3.8.2.6
+    /// Value type: PERIOD
     FreeBusyTime(FreeBusyTimeProperty),
+    /// RFC 5545, 3.8.2.7
+    /// Value type: TEXT
+    TimeTransparency(TimeTransparencyProperty),
+    /// RFC 5545, 3.8.3.1
+    /// Value type: TEXT
     TimeZoneId(TimeZoneIdProperty),
-    TimeZoneUrl(TimeZoneUrlProperty),
-    TimeZoneOffsetTo(TimeZoneOffsetToProperty),
-    TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
+    /// RFC 5545, 3.8.3.2
+    /// Value type: TEXT
     TimeZoneName(TimeZoneNameProperty),
+    /// RFC 5545, 3.8.3.3
+    /// Value type: UTC-OFFSET
+    TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
+    /// RFC 5545, 3.8.3.4
+    /// Value type: UTC-OFFSET
+    TimeZoneOffsetTo(TimeZoneOffsetToProperty),
+    /// RFC 5545, 3.8.3.5
+    /// Value type: URI
+    TimeZoneUrl(TimeZoneUrlProperty),
+    /// RFC 5545, 3.8.4.1
+    /// Value type: CAL-ADDRESS
+    Attendee(AttendeeProperty),
+    /// RFC 5545, 3.8.4.2
+    /// Value type: TEXT
+    Contact(ContactProperty),
+    /// RFC 5545, 3.8.4.3
+    /// Value type: CAL-ADDRESS
+    Organizer(OrganizerProperty),
+    /// RFC 5545, 3.8.4.4
+    /// Value type: DATE-TIME or DATE
+    RecurrenceId(RecurrenceIdProperty),
+    /// RFC 5545, 3.8.4.5
+    /// Value type: TEXT
+    RelatedTo(RelatedToProperty),
+    /// RFC 5545, 3.8.4.6
+    /// Value type: URI
+    Url(UrlProperty),
+    /// RFC 5545, 3.8.4.7
+    /// Value type: TEXT
+    UniqueIdentifier(UniqueIdentifierProperty),
+    /// RFC 5545, 3.8.5.1
+    /// Value type: DATE-TIME or DATE
+    ExceptionDateTimes(ExceptionDateTimesProperty),
+    /// RFC 5545, 3.8.5.2
+    /// Value type: DATE-TIME or DATE or PERIOD
+    RecurrenceDateTimes(RecurrenceDateTimesProperty),
+    /// RFC 5545, 3.8.5.3
+    /// Value type: RECUR
+    RecurrenceRule(RecurrenceRuleProperty),
+    /// RFC 5545, 3.8.6.1
+    /// Value type: TEXT
     Action(ActionProperty),
-    Trigger(Trigger),
+    /// RFC 5545, 3.8.6.2
+    /// Value type: INTEGER
     Repeat(RepeatProperty),
+    /// RFC 5545, 3.8.6.3
+    /// Value type: DURATION or DATE-TIME
+    Trigger(Trigger),
+    /// RFC 5545, 3.8.7.1
+    /// Value type: DATE-TIME
+    DateTimeCreated(CreatedProperty),
+    /// RFC 5545, 3.8.7.2
+    /// Value type: DATE-TIME
+    DateTimeStamp(DateTimeStampProperty),
+    /// RFC 5545, 3.8.7.3
+    /// Value type: DATE-TIME
+    LastModified(LastModifiedProperty),
+    /// RFC 5545, 3.8.7.4
+    /// Value type: INTEGER
+    Sequence(SequenceProperty),
+    /// RFC 5545, 3.8.8.1
+    /// Value type: TEXT or any other type
     IanaProperty(IanaProperty),
+    /// RFC 5545, 3.8.8.2
+    /// Value type: TEXT or any other type
     XProperty(XProperty),
+    /// RFC 5545, 3.8.8.3
+    /// Value type: TEXT
+    RequestStatus(RequestStatusProperty),
 }
 
 impl ComponentProperty {

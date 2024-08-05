@@ -322,6 +322,7 @@ pub(super) fn check_declared_value(
                         }
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         if dtstart.time.is_none() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
@@ -334,6 +335,7 @@ pub(super) fn check_declared_value(
                         }
                     }
                     ComponentProperty::DateTimeEnd(dtend) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         if dtend.time.is_none() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
@@ -404,6 +406,7 @@ pub(super) fn check_declared_value(
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::Trigger(trigger) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         match trigger {
                             Trigger::Relative(_) => {
                                 // Valid
@@ -818,6 +821,7 @@ pub(super) fn check_declared_value(
                         require_uri(errors, &url.value);
                     }
                     ComponentProperty::Attach(attach) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         require_uri(errors, &attach.value);
                     }
                     ComponentProperty::XProperty(x_prop) => {
@@ -1032,7 +1036,7 @@ fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::
 
 fn is_uri_valued(property_value: &str) -> bool {
     let mut content = property_value.as_bytes().to_vec();
-    content.push(b';');
+    content.push(b'\n');
 
     let result = param_value_uri::<Error>(content.as_bytes());
     match result {

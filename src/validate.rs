@@ -611,20 +611,7 @@ mod tests {
         };
 
         ($errors:expr, $messages:expr) => {
-            if $errors.len() != $messages.len() {
-                panic!(
-                    "Expected {} errors, but got: {:?}",
-                    $messages.len(),
-                    $errors
-                        .iter()
-                        .map(|e| e.to_string())
-                        .collect::<std::vec::Vec<_>>()
-                );
-            }
-
-            for (index, msg) in $messages.iter().enumerate() {
-                assert_eq!(msg, &$errors[index].to_string());
-            }
+            similar_asserts::assert_eq!($errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().as_slice(), $messages);
         };
     }
 
@@ -2078,7 +2065,7 @@ DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
 BEGIN:VALARM\r\n\
 ACTION:AUDIO\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 DURATION:PT15M\r\n\
 DURATION:PT15M\r\n\
 REPEAT:2\r\n\
@@ -2088,7 +2075,7 @@ ATTACH:ftp://example.com/pub/sounds/bell-01.aud\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:DISPLAY\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 DURATION:PT15M\r\n\
 DURATION:PT15M\r\n\
@@ -2097,7 +2084,7 @@ REPEAT:2\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:EMAIL\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 SUMMARY:New event\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 DURATION:PT15M\r\n\
@@ -2133,36 +2120,36 @@ DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
 BEGIN:VALARM\r\n\
 ACTION:AUDIO\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 DURATION:PT15M\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:AUDIO\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 REPEAT:2\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:DISPLAY\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 DURATION:PT15M\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:DISPLAY\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 REPEAT:2\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:EMAIL\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 SUMMARY:New event\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 DURATION:PT15M\r\n\
 END:VALARM\r\n\
 BEGIN:VALARM\r\n\
 ACTION:EMAIL\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 SUMMARY:New event\r\n\
 DESCRIPTION:Breakfast meeting with executive\r\n\
 REPEAT:2\r\n\
@@ -2180,6 +2167,47 @@ END:VCALENDAR\r\n";
             "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 3: DURATION and REPEAT properties must be present together",
             "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 4: DURATION and REPEAT properties must be present together",
             "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 5: DURATION and REPEAT properties must be present together",
+        );
+    }
+
+    #[test]
+    fn default_value_specified() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+ATTACH;VALUE=URI:ftp://example.com/pub/sounds/bell-01.aud\r\n\
+DTEND;VALUE=DATE-TIME:19900101T000000Z\r\n\
+DTSTART;VALUE=DATE-TIME:19900101T000000Z\r\n\
+EXDATE;VALUE=DATE-TIME:19900101T000000Z\r\n\
+RDATE;VALUE=DATE-TIME:19900101T000000Z\r\n\
+BEGIN:VALARM\r\n\
+ACTION:DISPLAY\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+TRIGGER;VALUE=DURATION:PT15M\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+BEGIN:VTODO\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+DUE;VALUE=DATE-TIME:19900101T000000Z\r\n\
+END:VTODO\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"ATTACH\" at index 2: Redundant value specification which matches the default value",
+            "In component \"VEVENT\" at index 0, in component property \"DTEND\" at index 3: Redundant value specification which matches the default value",
+            "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 4: Redundant value specification which matches the default value",
+            "In component \"VEVENT\" at index 0, in component property \"EXDATE\" at index 5: Redundant value specification which matches the default value",
+            "In component \"VEVENT\" at index 0, in component property \"RDATE\" at index 6: Redundant value specification which matches the default value",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"TRIGGER\" at index 2: Redundant value specification which matches the default value",
+            "In component \"VTODO\" at index 1, in component property \"DUE\" at index 2: Redundant value specification which matches the default value",
         );
     }
 
@@ -2306,7 +2334,7 @@ DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
 BEGIN:VALARM\r\n\
 ACTION:AUDIO\r\n\
-TRIGGER;VALUE=DURATION:P3W\r\n\
+TRIGGER:P3W\r\n\
 ATTACH:ftp://example.com/pub/sounds/bell-01.aud\r\n\
 ATTACH:ftp://example.com/pub/sounds/bell-01.aud\r\n\
 END:VALARM\r\n\
