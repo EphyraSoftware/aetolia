@@ -1982,6 +1982,208 @@ END:VCALENDAR\r\n";
     }
 
     #[test]
+    fn time_zone_nested_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+BEGIN:STANDARD\r\n\
+X-ANY:test\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+X-ANY:test\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VTIMEZONE\" at index 0, in nested component \"STANDARD\" at index 0: DTSTART is required",
+            "In component \"VTIMEZONE\" at index 0, in nested component \"STANDARD\" at index 0: TZOFFSETTO is required",
+            "In component \"VTIMEZONE\" at index 0, in nested component \"STANDARD\" at index 0: TZOFFSETFROM is required",
+            "In component \"VTIMEZONE\" at index 0, in nested component \"DAYLIGHT\" at index 1: DTSTART is required",
+            "In component \"VTIMEZONE\" at index 0, in nested component \"DAYLIGHT\" at index 1: TZOFFSETTO is required",
+            "In component \"VTIMEZONE\" at index 0, in nested component \"DAYLIGHT\" at index 1: TZOFFSETFROM is required",
+        );
+    }
+
+    #[test]
+    fn alarm_missing_action() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+BEGIN:VALARM\r\n\
+X-ANY:test\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0: Required exactly one ACTION property but found 0",
+        );
+    }
+
+    #[test]
+    fn alarm_missing_required_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+BEGIN:VALARM\r\n\
+ACTION:AUDIO\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:DISPLAY\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:EMAIL\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0: TRIGGER is required",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 1: TRIGGER is required",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 1: DESCRIPTION is required",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2: TRIGGER is required",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2: DESCRIPTION is required",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2: SUMMARY is required",
+        );
+    }
+
+    #[test]
+    fn alarm_missing_duplicate_optional_once_properties() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+BEGIN:VALARM\r\n\
+ACTION:AUDIO\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+DURATION:PT15M\r\n\
+DURATION:PT15M\r\n\
+REPEAT:2\r\n\
+REPEAT:2\r\n\
+ATTACH:ftp://example.com/pub/sounds/bell-01.aud\r\n\
+ATTACH:ftp://example.com/pub/sounds/bell-01.aud\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:DISPLAY\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+DURATION:PT15M\r\n\
+DURATION:PT15M\r\n\
+REPEAT:2\r\n\
+REPEAT:2\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:EMAIL\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+SUMMARY:New event\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+DURATION:PT15M\r\n\
+DURATION:PT15M\r\n\
+REPEAT:2\r\n\
+REPEAT:2\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"DURATION\" at index 3: DURATION must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"REPEAT\" at index 5: REPEAT must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0, in nested component property \"ATTACH\" at index 7: ATTACH must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 1, in nested component property \"DURATION\" at index 4: DURATION must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 1, in nested component property \"REPEAT\" at index 6: REPEAT must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2, in nested component property \"DURATION\" at index 5: DURATION must only appear once",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2, in nested component property \"REPEAT\" at index 7: REPEAT must only appear once",
+        );
+    }
+
+    #[test]
+    fn alarm_duration_and_trigger_not_present_together() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+BEGIN:VALARM\r\n\
+ACTION:AUDIO\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+DURATION:PT15M\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:AUDIO\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+REPEAT:2\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:DISPLAY\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+DURATION:PT15M\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:DISPLAY\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+REPEAT:2\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:EMAIL\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+SUMMARY:New event\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+DURATION:PT15M\r\n\
+END:VALARM\r\n\
+BEGIN:VALARM\r\n\
+ACTION:EMAIL\r\n\
+TRIGGER;VALUE=DURATION:P3W\r\n\
+SUMMARY:New event\r\n\
+DESCRIPTION:Breakfast meeting with executive\r\n\
+REPEAT:2\r\n\
+END:VALARM\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 0: DURATION and REPEAT properties must be present together",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 1: DURATION and REPEAT properties must be present together",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 2: DURATION and REPEAT properties must be present together",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 3: DURATION and REPEAT properties must be present together",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 4: DURATION and REPEAT properties must be present together",
+            "In component \"VEVENT\" at index 0, in nested component \"VALARM\" at index 5: DURATION and REPEAT properties must be present together",
+        );
+    }
+
+    #[test]
     fn x_prop_declares_boolean_but_is_not_boolean() {
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
