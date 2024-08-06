@@ -30,6 +30,17 @@ impl RecurrenceRule {
         }
     }
 
+    pub(crate) fn empty_with_capacity(capacity: usize) -> Self {
+        RecurrenceRule {
+            parts: Vec::with_capacity(capacity),
+        }
+    }
+
+    pub(crate) fn set_freq(mut self, freq: RecurFreq) -> Self {
+        self.parts.push(RecurRulePart::Freq(freq));
+        self
+    }
+
     pub fn set_until(mut self, date: time::Date, time: Option<time::Time>, is_utc: bool) -> Self {
         self.parts.push(RecurRulePart::Until((date, time, is_utc)));
         self

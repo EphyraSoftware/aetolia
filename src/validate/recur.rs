@@ -12,43 +12,35 @@ pub(super) fn validate_recurrence_rule(
     rule: &RecurrenceRule,
     property_index: usize,
 ) -> anyhow::Result<()> {
-    if rule.parts.is_empty() {
-        errors.push(ComponentPropertyError {
-            message: "Recurrence rule is empty".to_string(),
-            location: Some(ComponentPropertyLocation {
-                index: property_index,
-                name: component_property_name(property).to_string(),
-                property_location: Some(WithinPropertyLocation::Value),
-            }),
-        });
-        return Ok(());
-    }
-
+    let mut freq_index = 0;
     let freq = match &rule.parts[0] {
         RecurRulePart::Freq(freq) => {
             // Frequency should be the first part, this is correct
             freq
         }
         _ => {
-            errors.push(ComponentPropertyError {
-                message: "Recurrence rule must start with a frequency".to_string(),
-                location: Some(ComponentPropertyLocation {
-                    index: property_index,
-                    name: component_property_name(property).to_string(),
-                    property_location: Some(WithinPropertyLocation::Value),
-                }),
-            });
-
-            let maybe_freq = rule.parts.iter().find_map(|part| {
+            let maybe_freq = rule.parts.iter().enumerate().find_map(|(index, part)| {
                 if let RecurRulePart::Freq(freq) = part {
-                    Some(freq)
+                    Some((index, freq))
                 } else {
                     None
                 }
             });
 
             match maybe_freq {
-                Some(freq) => freq,
+                Some((index, freq)) => {
+                    errors.push(ComponentPropertyError {
+                        message: "Recurrence rule must start with a frequency".to_string(),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+
+                    freq_index = index;
+                    freq
+                }
                 None => {
                     errors.push(ComponentPropertyError {
                         message: "No frequency part found in recurrence rule, but it is required. This prevents the rest of the rule being checked".to_string(),
@@ -74,14 +66,16 @@ pub(super) fn validate_recurrence_rule(
     for (part_index, part) in rule.parts.iter().enumerate().skip(1) {
         match part {
             RecurRulePart::Freq(_) => {
-                errors.push(ComponentPropertyError {
-                    message: format!("Repeated FREQ part at index {part_index}"),
-                    location: Some(ComponentPropertyLocation {
-                        index: property_index,
-                        name: component_property_name(property).to_string(),
-                        property_location: Some(WithinPropertyLocation::Value),
-                    }),
-                });
+                if freq_index != part_index {
+                    errors.push(ComponentPropertyError {
+                        message: format!("Repeated FREQ part at index {part_index}"),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
             }
             RecurRulePart::Until(_) => {
                 let count = add_count(&mut seen_count, "UNTIL");

@@ -4,6 +4,7 @@ use crate::model::{
     DateTimeStampProperty, DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty,
     LastModifiedProperty, Param, PeriodEnd, StatusProperty,
 };
+use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::value::check_declared_value;
 use crate::validate::{
     check_occurrence, component_property_name, get_declared_value_type, validate_params,
@@ -638,7 +639,7 @@ pub(super) fn validate_component_properties(
                 );
                 do_validate_params(&mut errors, property_info, &recurrence_id.params);
             }
-            ComponentProperty::RecurrenceRule(recurrence_rule) => {
+            p @ ComponentProperty::RecurrenceRule(recurrence_rule) => {
                 // An RRULE can appear more than once, it just SHOULD NOT.
                 let occurrence_expectation = match property_location {
                     PropertyLocation::Event
@@ -655,6 +656,8 @@ pub(super) fn validate_component_properties(
                     index,
                     occurrence_expectation
                 );
+
+                validate_recurrence_rule(&mut errors, p, &recurrence_rule.rule, index)?;
 
                 let property_info = PropertyInfo::new(
                     calendar_info,

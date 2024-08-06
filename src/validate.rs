@@ -2337,6 +2337,83 @@ END:VCALENDAR\r\n";
     }
 
     #[test]
+    fn recur_invalid_occurrence() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+RRULE:FREQ=MONTHLY;COUNT=5;BYDAY=1SU\r\n\
+RRULE:COUNT=5\r\n\
+RRULE:COUNT=5;FREQ=MONTHLY;BYDAY=1SU\r\n\
+RRULE:FREQ=MONTHLY;FREQ=WEEKLY;BYDAY=1SU\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z;UNTIL=19900101T000001Z\r\n\
+RRULE:FREQ=WEEKLY;COUNT=3;COUNT=5\r\n\
+RRULE:FREQ=WEEKLY;INTERVAL=2;INTERVAL=2\r\n\
+RRULE:FREQ=WEEKLY;BYSECOND=1;BYSECOND=1\r\n\
+RRULE:FREQ=WEEKLY;BYMINUTE=1;BYMINUTE=1\r\n\
+RRULE:FREQ=WEEKLY;BYHOUR=1;BYHOUR=1\r\n\
+RRULE:FREQ=MONTHLY;BYDAY=1SU;BYDAY=1SU\r\n\
+RRULE:FREQ=YEARLY;BYMONTHDAY=1;BYMONTHDAY=1\r\n\
+RRULE:FREQ=YEARLY;BYYEARDAY=1;BYYEARDAY=1\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=1;BYWEEKNO=1\r\n\
+RRULE:FREQ=WEEKLY;BYMONTH=1;BYMONTH=1\r\n\
+RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=SU;WKST=SU;WKST=SU\r\n\
+RRULE:FREQ=YEARLY;BYDAY=1SU;BYSETPOS=1;BYSETPOS=1\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: No frequency part found in recurrence rule, but it is required. This prevents the rest of the rule being checked",
+             "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: Recurrence rule must start with a frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: Repeated FREQ part at index 1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 6: Repeated UNTIL part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 7: Repeated COUNT part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 8: Repeated INTERVAL part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 9: Repeated BYSECOND part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 10: Repeated BYMINUTE part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 11: Repeated BYHOUR part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 12: Repeated BYDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 13: Repeated BYMONTHDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 14: Repeated BYYEARDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 15: Repeated BYWEEKNO part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 16: Repeated BYMONTH part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 17: Repeated WKST part at index 4",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 18: Repeated BYSETPOS part at index 3",
+        );
+    }
+
+    #[test]
+    fn recur_invalid_time_range() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+METHOD:send\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:123\r\n\
+RRULE:FREQ=WEEKLY;BYSECOND=74\r\n\
+RRULE:FREQ=WEEKLY;BYMINUTE=98\r\n\
+RRULE:FREQ=WEEKLY;BYHOUR=25\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 2: Invalid BYSECOND part at index 1, seconds must be between 0 and 60",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: Invalid BYMINUTE part at index 1, minutes must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: Invalid BYHOUR part at index 1, hours must be between 0 and 23",
+        );
+    }
+
+    #[test]
     fn x_prop_declares_boolean_but_is_not_boolean() {
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
