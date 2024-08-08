@@ -317,23 +317,6 @@ where
         .parse(input)
 }
 
-fn ls_32<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
-where
-    E: ParseError<&'a [u8]>
-        + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
-        + From<Error<'a>>,
-{
-    alt((
-        tuple((h_16, char(':'), h_16)).map(|(a, _, b)| {
-            let mut r = Vec::with_capacity(4);
-            r.extend(hex::decode(a).unwrap());
-            r.extend(hex::decode(b).unwrap());
-            r
-        }),
-        ip_v4_addr.map(|a| a.to_vec()),
-    ))(input)
-}
-
 fn ip_v4_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], [u8; 4], E>
 where
     E: ParseError<&'a [u8]>
@@ -469,14 +452,14 @@ where
 impl Display for Uri<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", String::from_utf8_lossy(self.scheme))?;
-        f.write_char(':');
+        f.write_char(':')?;
 
         if let Some(authority) = &self.authority {
             f.write_char('/')?;
             f.write_char('/')?;
 
             if let Some(user_info) = &authority.user_info {
-                write!(f, "{}", String::from_utf8_lossy(user_info));
+                write!(f, "{}", String::from_utf8_lossy(user_info))?;
                 f.write_char('@')?;
             }
 

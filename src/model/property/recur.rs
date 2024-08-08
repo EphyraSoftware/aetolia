@@ -1,11 +1,9 @@
-use crate::common::{OffsetWeekday, RecurFreq, Weekday};
-use crate::parser::DateOrDateTime;
-use std::collections::HashSet;
+use crate::common::{CalendarDateTime, OffsetWeekday, RecurFreq, Weekday};
 
 #[derive(Debug)]
 pub enum RecurRulePart {
     Freq(RecurFreq),
-    Until((time::Date, Option<time::Time>, bool)),
+    Until(CalendarDateTime),
     Count(u64),
     Interval(u64),
     BySecList(Vec<u8>),
@@ -32,8 +30,20 @@ impl RecurrenceRule {
         }
     }
 
+    pub(crate) fn empty_with_capacity(capacity: usize) -> Self {
+        RecurrenceRule {
+            parts: Vec::with_capacity(capacity),
+        }
+    }
+
+    pub(crate) fn set_freq(mut self, freq: RecurFreq) -> Self {
+        self.parts.push(RecurRulePart::Freq(freq));
+        self
+    }
+
     pub fn set_until(mut self, date: time::Date, time: Option<time::Time>, is_utc: bool) -> Self {
-        self.parts.push(RecurRulePart::Until((date, time, is_utc)));
+        self.parts
+            .push(RecurRulePart::Until((date, time, is_utc).into()));
         self
     }
 

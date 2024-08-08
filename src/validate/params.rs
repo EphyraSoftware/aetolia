@@ -1,5 +1,7 @@
 use crate::common::ParticipationStatusUnknown;
 use crate::model::Param;
+use crate::parser::param::param_value_participation_status;
+use crate::parser::Error;
 use crate::validate::error::ParamError;
 use crate::validate::{
     param_name, OccurrenceExpectation, PropertyInfo, PropertyKind, PropertyLocation, ValueType,
@@ -9,7 +11,7 @@ use std::collections::HashMap;
 macro_rules! check_property_param_occurrence {
     ($errors:ident, $seen:ident, $param:ident, $index:ident, $occur:expr) => {
         let name = $crate::validate::param_name($param);
-        let count = $crate::validate::add_to_seen($seen, name);
+        $crate::validate::add_to_seen($seen, name);
         if let Some(message) = $crate::validate::check_occurrence(&$seen, name, $occur.clone()) {
             $errors.push($crate::validate::ParamError {
                 index: $index,
@@ -26,7 +28,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
     let mut seen = HashMap::<String, u32>::new();
     for (index, param) in params.iter().enumerate() {
         match param {
-            Param::CommonName { name } => {
+            Param::CommonName { .. } => {
                 validate_common_name_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "CN" => {
@@ -100,6 +102,15 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                     &property_info,
                 );
             }
+            Param::Other { name, .. } if name == "FBTYPE" => {
+                validate_free_busy_time_type_param(
+                    &mut errors,
+                    &mut seen,
+                    param,
+                    index,
+                    &property_info,
+                );
+            }
             Param::Language { .. } => {
                 validate_language_param(&mut errors, &mut seen, param, index, &property_info);
                 // Language is not further validated by this program
@@ -122,6 +133,29 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                     index,
                     &property_info,
                 );
+            }
+            Param::Other { name, value } if name == "PARTSTAT" => {
+                let mut v = value.as_bytes().to_vec();
+                v.push(b';');
+                match param_value_participation_status::<Error>(&v) {
+                    Ok((_, status)) => {
+                        validate_part_stat_param(
+                            &mut errors,
+                            &mut seen,
+                            param,
+                            &status,
+                            index,
+                            &property_info,
+                        );
+                    }
+                    Err(_) => {
+                        errors.push(ParamError {
+                            index,
+                            name: param_name(param).to_string(),
+                            message: "Invalid participation status (PARTSTAT) value".to_string(),
+                        });
+                    }
+                }
             }
             Param::Range { .. } => {
                 // The parser should reject wrong values for this param and the builder won't let you
@@ -193,19 +227,29 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 );
             }
             Param::Other { name, value } if name == "TZID" => {
+                let (value, unique) = match value.chars().next() {
+                    Some('/') => (value.splitn(2, '/').last().unwrap().to_string(), true),
+                    _ => (value.clone(), false),
+                };
+
                 validate_time_zone_id_param(
                     &mut errors,
                     &mut seen,
                     param,
-                    value,
-                    false,
+                    &value,
+                    unique,
                     index,
                     &property_info,
                 );
             }
-            Param::AltRep { .. } => {}
-            _ => {
-                unimplemented!()
+            Param::AltRep { .. } => {
+                validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            Param::Other { name, .. } | Param::Others { name, .. } if name == "ALTREP" => {
+                validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
+            }
+            e => {
+                panic!("Param not yet implemented: {:?}", e);
             }
         }
     }
@@ -468,6 +512,16 @@ fn validate_part_stat_param(
     index: usize,
     property_info: &PropertyInfo,
 ) {
+    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
+        errors.push(ParamError {
+            index,
+            name: param_name(param).to_string(),
+            message: "Participation status (PARTSTAT) is not allowed for this property type"
+                .to_string(),
+        });
+        return;
+    }
+
     match &property_info.property_location {
         PropertyLocation::Event => {
             match status {
@@ -517,19 +571,9 @@ fn validate_part_stat_param(
             errors.push(ParamError {
                 index,
                 name: param_name(param).to_string(),
-                message: format!("Participation status (PARTSTAT) property is not expected in a [{location:?}] component context"),
+                message: format!("Participation status (PARTSTAT) parameter is not expected in a [{location:?}] component context"),
             });
         }
-    }
-
-    if !property_info.is_other && property_info.value_type != ValueType::CalendarAddress {
-        errors.push(ParamError {
-            index,
-            name: param_name(param).to_string(),
-            message: "Participation status (PARTSTAT) is not allowed for this property type"
-                .to_string(),
-        });
-        return;
     }
 
     let occurrence_expectation = match property_info.property_kind {

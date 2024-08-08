@@ -10,11 +10,11 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::character::streaming::crlf;
 use nom::combinator::{cut, eof, verify};
-use nom::error::{ParseError, VerboseError, VerboseErrorKind};
+use nom::error::ParseError;
 use nom::multi::{many0, many1};
 use nom::sequence::tuple;
+use nom::IResult;
 use nom::Parser;
-use nom::{IResult, Offset};
 
 pub mod types;
 
@@ -114,7 +114,9 @@ where
         tag("BEGIN:"),
         iana_token,
         crlf,
-        cut(many1(content_line)),
+        cut(many1(verify(content_line, |line| {
+            line.property_name != "END".as_bytes()
+        }))),
         tag("END:"),
         iana_token,
         tag("\r\n"),
@@ -160,10 +162,12 @@ where
     Ok((input, CalendarComponent::XComp { name, lines }))
 }
 
+#[cfg(test)]
 trait ReprStr {
     fn repr_str(&self) -> &str;
 }
 
+#[cfg(test)]
 impl ReprStr for &[u8] {
     fn repr_str(&self) -> &str {
         unsafe { std::str::from_utf8_unchecked(self) }
@@ -171,7 +175,10 @@ impl ReprStr for &[u8] {
 }
 
 // Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
-fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
+#[cfg(test)]
+fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> String {
+    use nom::error::VerboseErrorKind;
+    use nom::Offset;
     use std::fmt::Write;
 
     let mut result = String::new();
@@ -288,6 +295,7 @@ fn convert_error_mod<I: ReprStr>(input: I, e: VerboseError<I>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::clear_errors;
     use crate::parser::pre::content_line_first_pass;
     use crate::parser::property::types::VersionProperty;
     use crate::test_utils::check_rem;
@@ -335,5 +343,7 @@ mod tests {
                 panic!("unexpected result: {:?}", e)
             }
         }
+
+        unsafe { clear_errors() };
     }
 }

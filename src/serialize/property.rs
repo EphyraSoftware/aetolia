@@ -10,7 +10,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DTSTAMP")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::UniqueIdentifier(property) => {
                 writer.write_all(b"UID")?;
@@ -22,7 +22,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DTSTART")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::Classification(property) => {
                 writer.write_all(b"CLASS")?;
@@ -34,7 +34,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"CREATED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::Description(property) => {
                 writer.write_all(b"DESCRIPTION")?;
@@ -53,7 +53,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"LAST-MODIFIED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::Location(property) => {
                 writer.write_all(b"LOCATION")?;
@@ -118,7 +118,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"RECURRENCE-ID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::RecurrenceRule(property) => {
                 writer.write_all(b"RRULE")?;
@@ -130,7 +130,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DTEND")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::Duration(property) => {
                 writer.write_all(b"DURATION")?;
@@ -226,7 +226,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"COMPLETED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::PercentComplete(property) => {
                 writer.write_all(b"PERCENT-COMPLETE")?;
@@ -238,7 +238,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DUE")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                (property.date, property.time, property.is_utc).write_model(writer)?;
+                property.date_time.write_model(writer)?;
             }
             ComponentProperty::FreeBusyTime(property) => {
                 writer.write_all(b"FREEBUSY")?;
@@ -256,6 +256,9 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"TZID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
+                if property.unique_registry_id {
+                    writer.write_all(b"/")?;
+                }
                 writer.write_all(property.value.as_bytes())?;
             }
             ComponentProperty::TimeZoneUrl(property) => {
@@ -299,7 +302,7 @@ impl WriteModel for crate::model::ComponentProperty {
                     crate::model::Trigger::Absolute(property) => {
                         property.params.as_slice().write_model(writer)?;
                         writer.write_all(b":")?;
-                        (property.date, property.time, property.is_utc).write_model(writer)?;
+                        property.date_time.write_model(writer)?;
                     }
                 }
             }

@@ -340,7 +340,7 @@ pub(crate) use directory_entry_reference_param;
 macro_rules! add_is_utc {
     () => {
         pub fn add_is_utc(mut self) -> Self {
-            self.inner.is_utc = true;
+            self.inner.date_time.set_utc(true);
             self
         }
     };

@@ -7,17 +7,11 @@ impl ToModel for Vec<RecurRulePart> {
     type Model = RecurrenceRule;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let mut rule = match self.first() {
-            Some(RecurRulePart::Freq(freq)) => RecurrenceRule::new(freq.clone()),
-            _ => {
-                anyhow::bail!("First part of recurrence rule must be FREQ")
-            }
-        };
-
-        for part in self.iter().skip(1) {
+        let mut rule = RecurrenceRule::empty_with_capacity(self.len());
+        for part in self.iter() {
             match part {
-                RecurRulePart::Freq(_) => {
-                    anyhow::bail!("FREQ can only be specified once")
+                RecurRulePart::Freq(f) => {
+                    rule = rule.set_freq(f.clone());
                 }
                 RecurRulePart::Until(date_time) => {
                     let (date, maybe_time, is_utc) = date_time.to_model()?;

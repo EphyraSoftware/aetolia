@@ -10,19 +10,22 @@ impl ToModel for crate::parser::DateTimeStampProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::DateTimeStampProperty {
-            date: time::Date::from_calendar_date(
-                self.value.date.year as i32,
-                time::Month::try_from(self.value.date.month).context("Invalid month")?,
-                self.value.date.day,
+            date_time: (
+                time::Date::from_calendar_date(
+                    self.value.date.year as i32,
+                    time::Month::try_from(self.value.date.month).context("Invalid month")?,
+                    self.value.date.day,
+                )
+                .context("Invalid date")?,
+                time::Time::from_hms(
+                    self.value.time.hour,
+                    self.value.time.minute,
+                    self.value.time.second,
+                )
+                .context("Invalid time")?,
+                self.value.time.is_utc,
             )
-            .context("Invalid date")?,
-            time: time::Time::from_hms(
-                self.value.time.hour,
-                self.value.time.minute,
-                self.value.time.second,
-            )
-            .context("Invalid time")?,
-            is_utc: self.value.time.is_utc,
+                .into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -46,9 +49,7 @@ impl ToModel for crate::parser::DateTimeStartProperty<'_> {
         let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeStartProperty {
-            date,
-            time: maybe_time,
-            is_utc,
+            date_time: (date, maybe_time, is_utc).into(),
             params: self.params.to_model()?,
         })
     }
@@ -92,9 +93,7 @@ impl ToModel for crate::parser::CreatedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::CreatedProperty {
-            date,
-            time,
-            is_utc,
+            date_time: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -130,9 +129,7 @@ impl ToModel for crate::parser::LastModifiedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::LastModifiedProperty {
-            date,
-            time,
-            is_utc,
+            date_time: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -233,9 +230,7 @@ impl ToModel for crate::parser::RecurrenceIdProperty<'_> {
         let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::RecurrenceIdProperty {
-            date,
-            time: maybe_time,
-            is_utc,
+            date_time: (date, maybe_time, is_utc).into(),
             params: self.params.to_model()?,
         })
     }
@@ -259,9 +254,7 @@ impl ToModel for crate::parser::DateTimeEndProperty<'_> {
         let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeEndProperty {
-            date,
-            time: maybe_time,
-            is_utc,
+            date_time: (date, maybe_time, is_utc).into(),
             params: self.params.to_model()?,
         })
     }
@@ -552,9 +545,7 @@ impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::DateTimeCompletedProperty {
-            date,
-            time,
-            is_utc,
+            date_time: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -578,9 +569,7 @@ impl ToModel for crate::parser::DateTimeDueProperty<'_> {
         let (date, maybe_time, is_utc) = self.value.to_model()?;
 
         Ok(crate::model::DateTimeDueProperty {
-            date,
-            time: maybe_time,
-            is_utc,
+            date_time: (date, maybe_time, is_utc).into(),
             params: self.params.to_model()?,
         })
     }
@@ -691,9 +680,7 @@ impl ToModel for crate::parser::TriggerProperty<'_> {
                 let (date, time, is_utc) = date_time.try_into()?;
                 Ok(crate::model::Trigger::Absolute(
                     crate::model::AbsoluteTriggerProperty {
-                        date,
-                        time,
-                        is_utc,
+                        date_time: (date, time, is_utc).into(),
                         params: self.params.to_model()?,
                     },
                 ))

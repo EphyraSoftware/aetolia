@@ -10,7 +10,6 @@ use crate::model::{
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
-use std::ops::Deref;
 
 use crate::common::{
     CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
@@ -21,6 +20,47 @@ pub use recur::*;
 
 pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
+}
+
+pub trait DateTimeQuery {
+    fn is_date(&self) -> bool;
+    fn is_local_time(&self) -> bool;
+    fn is_utc(&self) -> bool;
+    fn is_local_time_with_timezone(&self) -> bool;
+}
+
+macro_rules! impl_date_time_query {
+    ($for_type:ty) => {
+        impl DateTimeQuery for $for_type {
+            fn is_date(&self) -> bool {
+                self.date_time.is_date()
+            }
+
+            // Form 1, local date-time
+            fn is_local_time(&self) -> bool {
+                self.date_time.is_date_time()
+                    && !self.date_time.is_utc()
+                    && !self
+                        .params
+                        .iter()
+                        .any(|p| matches!(p, Param::TimeZoneId { .. }))
+            }
+
+            // Form 2, UTC date-time
+            fn is_utc(&self) -> bool {
+                self.date_time.is_date_time() && self.date_time.is_utc()
+            }
+
+            // Form 3, date-time in a specific time zone
+            fn is_local_time_with_timezone(&self) -> bool {
+                self.date_time.is_date_time()
+                    && self
+                        .params
+                        .iter()
+                        .any(|p| matches!(p, Param::TimeZoneId { .. }))
+            }
+        }
+    };
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -234,50 +274,138 @@ impl_other_params_builder!(MethodPropertyBuilder);
 
 #[derive(Debug)]
 pub enum ComponentProperty {
-    DateTimeStamp(DateTimeStampProperty),
-    UniqueIdentifier(UniqueIdentifierProperty),
-    DateTimeStart(DateTimeStartProperty),
-    Classification(ClassificationProperty),
-    DateTimeCreated(CreatedProperty),
-    Description(DescriptionProperty),
-    GeographicPosition(GeographicPositionProperty),
-    LastModified(LastModifiedProperty),
-    Location(LocationProperty),
-    Organizer(OrganizerProperty),
-    Priority(PriorityProperty),
-    Sequence(SequenceProperty),
-    Summary(SummaryProperty),
-    TimeTransparency(TimeTransparencyProperty),
-    RequestStatus(RequestStatusProperty),
-    Url(UrlProperty),
-    RecurrenceId(RecurrenceIdProperty),
-    RecurrenceRule(RecurrenceRuleProperty),
-    DateTimeEnd(DateTimeEndProperty),
-    Duration(DurationProperty),
+    /// RFC 5545, 3.8.1.1
+    /// Value type: URI or BINARY
     Attach(AttachProperty),
-    Attendee(AttendeeProperty),
+    /// RFC 5545, 3.8.1.2
+    /// Value type: TEXT
     Categories(CategoriesProperty),
+    /// RFC 5545, 3.8.1.3
+    /// Value type: TEXT
+    Classification(ClassificationProperty),
+    /// RFC 5545, 3.8.1.4
+    /// Value type: TEXT
     Comment(CommentProperty),
-    Contact(ContactProperty),
-    ExceptionDateTimes(ExceptionDateTimesProperty),
-    Status(StatusProperty),
-    RelatedTo(RelatedToProperty),
-    Resources(ResourcesProperty),
-    RecurrenceDateTimes(RecurrenceDateTimesProperty),
-    DateTimeCompleted(DateTimeCompletedProperty),
+    /// RFC 5545, 3.8.1.5
+    /// Value type: TEXT
+    Description(DescriptionProperty),
+    /// RFC 5545, 3.8.1.6
+    /// Value type: FLOAT
+    GeographicPosition(GeographicPositionProperty),
+    /// RFC 5545, 3.8.1.7
+    /// Value type: TEXT
+    Location(LocationProperty),
+    /// RFC 5545, 4.8.1.8
+    /// Value type: INTEGER
     PercentComplete(PercentCompleteProperty),
+    /// RFC 5545, 3.8.1.9
+    /// Value type: INTEGER
+    Priority(PriorityProperty),
+    /// RFC 5545, 3.8.1.10
+    /// Value type: TEXT
+    Resources(ResourcesProperty),
+    /// RFC 5545, 3.8.1.11
+    /// Value type: TEXT
+    Status(StatusProperty),
+    /// RFC 5545, 3.8.1.12
+    /// Value type: TEXT
+    Summary(SummaryProperty),
+    /// RFC 5545, 3.8.2.1
+    /// Value type: DATE-TIME
+    DateTimeCompleted(DateTimeCompletedProperty),
+    /// RFC 5545, 3.8.2.2
+    /// Value type: DATE-TIME or DATE
+    DateTimeEnd(DateTimeEndProperty),
+    /// RFC 5545, 3.8.2.3
+    /// Value type: DATE-TIME or DATE
     DateTimeDue(DateTimeDueProperty),
+    /// RFC 5545, 3.8.2.4
+    /// Value type: DATE-TIME or DATE
+    DateTimeStart(DateTimeStartProperty),
+    /// RFC 5545, 3.8.2.5
+    /// Value type: DURATION
+    Duration(DurationProperty),
+    /// RFC 5545, 3.8.2.6
+    /// Value type: PERIOD
     FreeBusyTime(FreeBusyTimeProperty),
+    /// RFC 5545, 3.8.2.7
+    /// Value type: TEXT
+    TimeTransparency(TimeTransparencyProperty),
+    /// RFC 5545, 3.8.3.1
+    /// Value type: TEXT
     TimeZoneId(TimeZoneIdProperty),
-    TimeZoneUrl(TimeZoneUrlProperty),
-    TimeZoneOffsetTo(TimeZoneOffsetToProperty),
-    TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
+    /// RFC 5545, 3.8.3.2
+    /// Value type: TEXT
     TimeZoneName(TimeZoneNameProperty),
+    /// RFC 5545, 3.8.3.3
+    /// Value type: UTC-OFFSET
+    TimeZoneOffsetFrom(TimeZoneOffsetFromProperty),
+    /// RFC 5545, 3.8.3.4
+    /// Value type: UTC-OFFSET
+    TimeZoneOffsetTo(TimeZoneOffsetToProperty),
+    /// RFC 5545, 3.8.3.5
+    /// Value type: URI
+    TimeZoneUrl(TimeZoneUrlProperty),
+    /// RFC 5545, 3.8.4.1
+    /// Value type: CAL-ADDRESS
+    Attendee(AttendeeProperty),
+    /// RFC 5545, 3.8.4.2
+    /// Value type: TEXT
+    Contact(ContactProperty),
+    /// RFC 5545, 3.8.4.3
+    /// Value type: CAL-ADDRESS
+    Organizer(OrganizerProperty),
+    /// RFC 5545, 3.8.4.4
+    /// Value type: DATE-TIME or DATE
+    RecurrenceId(RecurrenceIdProperty),
+    /// RFC 5545, 3.8.4.5
+    /// Value type: TEXT
+    RelatedTo(RelatedToProperty),
+    /// RFC 5545, 3.8.4.6
+    /// Value type: URI
+    Url(UrlProperty),
+    /// RFC 5545, 3.8.4.7
+    /// Value type: TEXT
+    UniqueIdentifier(UniqueIdentifierProperty),
+    /// RFC 5545, 3.8.5.1
+    /// Value type: DATE-TIME or DATE
+    ExceptionDateTimes(ExceptionDateTimesProperty),
+    /// RFC 5545, 3.8.5.2
+    /// Value type: DATE-TIME or DATE or PERIOD
+    RecurrenceDateTimes(RecurrenceDateTimesProperty),
+    /// RFC 5545, 3.8.5.3
+    /// Value type: RECUR
+    RecurrenceRule(RecurrenceRuleProperty),
+    /// RFC 5545, 3.8.6.1
+    /// Value type: TEXT
     Action(ActionProperty),
-    Trigger(Trigger),
+    /// RFC 5545, 3.8.6.2
+    /// Value type: INTEGER
     Repeat(RepeatProperty),
+    /// RFC 5545, 3.8.6.3
+    /// Value type: DURATION or DATE-TIME
+    Trigger(Trigger),
+    /// RFC 5545, 3.8.7.1
+    /// Value type: DATE-TIME
+    DateTimeCreated(CreatedProperty),
+    /// RFC 5545, 3.8.7.2
+    /// Value type: DATE-TIME
+    DateTimeStamp(DateTimeStampProperty),
+    /// RFC 5545, 3.8.7.3
+    /// Value type: DATE-TIME
+    LastModified(LastModifiedProperty),
+    /// RFC 5545, 3.8.7.4
+    /// Value type: INTEGER
+    Sequence(SequenceProperty),
+    /// RFC 5545, 3.8.8.1
+    /// Value type: TEXT or any other type
     IanaProperty(IanaProperty),
+    /// RFC 5545, 3.8.8.2
+    /// Value type: TEXT or any other type
     XProperty(XProperty),
+    /// RFC 5545, 3.8.8.3
+    /// Value type: TEXT
+    RequestStatus(RequestStatusProperty),
 }
 
 impl ComponentProperty {
@@ -463,9 +591,7 @@ impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct DateTimeStampProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -486,9 +612,7 @@ where
         DateTimeStampPropertyBuilder {
             owner,
             inner: DateTimeStampProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -533,9 +657,7 @@ impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeStartProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -564,9 +686,7 @@ where
         DateTimeStartPropertyBuilder {
             owner,
             inner: DateTimeStartProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -580,6 +700,8 @@ where
 }
 
 impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
+
+impl_date_time_query!(DateTimeStartProperty);
 
 #[derive(Debug)]
 pub struct ClassificationProperty {
@@ -613,9 +735,7 @@ impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct CreatedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -632,9 +752,7 @@ where
         CreatedPropertyBuilder {
             owner,
             inner: CreatedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -718,9 +836,7 @@ impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct LastModifiedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -741,9 +857,7 @@ where
         LastModifiedPropertyBuilder {
             owner,
             inner: LastModifiedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -1024,9 +1138,7 @@ impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct RecurrenceIdProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1055,9 +1167,7 @@ where
         RecurrenceIdPropertyBuilder {
             owner,
             inner: RecurrenceIdProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -1109,9 +1219,7 @@ impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeEndProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1140,9 +1248,7 @@ where
         DateTimeEndPropertyBuilder {
             owner,
             inner: DateTimeEndProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -1584,20 +1690,20 @@ impl Period {
         }
     }
 
-    pub fn expand(&self) -> Option<(CalendarDateTime, CalendarDateTime)> {
+    pub fn expand(&self) -> anyhow::Result<Option<(CalendarDateTime, CalendarDateTime)>> {
         if self.start.2 {
-            Some((
+            Ok(Some((
                 self.start.into(),
                 match &self.end {
                     PeriodEnd::DateTime(end) => (*end).into(),
                     PeriodEnd::Duration(duration) => {
                         let cdt: CalendarDateTime = self.start.into();
-                        cdt.add(duration)
+                        cdt.add(duration)?
                     }
                 },
-            ))
+            )))
         } else {
-            None
+            Ok(None)
         }
     }
 }
@@ -1665,9 +1771,7 @@ impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct DateTimeCompletedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1684,9 +1788,7 @@ where
         CompletedPropertyBuilder {
             owner,
             inner: DateTimeCompletedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -1731,9 +1833,7 @@ impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeDueProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1762,9 +1862,7 @@ where
         DateTimeDuePropertyBuilder {
             owner,
             inner: DateTimeDueProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -2074,9 +2172,7 @@ impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct AbsoluteTriggerProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -2097,9 +2193,7 @@ where
         AbsoluteTriggerPropertyBuilder {
             owner,
             inner: AbsoluteTriggerProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: vec![Param::ValueType {
                     value: Value::DateTime,
                 }],

@@ -10,14 +10,14 @@ use crate::parser::uri::param_value_uri;
 use crate::parser::{
     prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
-    prop_value_utc_offset, DurationOrDateTime, Error, TriggerProperty,
+    prop_value_utc_offset, Error,
 };
 use crate::prelude::Trigger;
 use crate::serialize::WriteModel;
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::{
     component_property_name, get_declared_value_type, validate_time, validate_utc_offset,
-    ComponentPropertyError, ComponentPropertyLocation, WithinPropertyLocation,
+    ComponentPropertyError, ComponentPropertyLocation, PropertyLocation, WithinPropertyLocation,
 };
 use anyhow::Context;
 use nom::character::streaming::char;
@@ -26,6 +26,7 @@ use nom::AsBytes;
 
 pub(super) fn check_declared_value(
     errors: &mut Vec<ComponentPropertyError>,
+    maybe_dt_start: Option<&DateTimeStartProperty>,
     property: &ComponentProperty,
     property_index: usize,
 ) -> anyhow::Result<()> {
@@ -167,7 +168,7 @@ pub(super) fn check_declared_value(
                     | ComponentProperty::Organizer(OrganizerProperty { value, .. }) => {
                         push_redundant_error_msg(errors, property_index, property);
 
-                        if value.starts_with("mailto:") {
+                        if !value.starts_with("mailto:") {
                             not_mailto = true;
                         }
                     }
@@ -205,11 +206,13 @@ pub(super) fn check_declared_value(
             Value::Date => {
                 let mut invalid = false;
                 match property {
-                    ComponentProperty::DateTimeStart(DateTimeStartProperty { time, .. })
-                    | ComponentProperty::DateTimeEnd(DateTimeEndProperty { time, .. })
-                    | ComponentProperty::DateTimeDue(DateTimeDueProperty { time, .. })
-                    | ComponentProperty::RecurrenceId(RecurrenceIdProperty { time, .. }) => {
-                        if time.is_some() {
+                    ComponentProperty::DateTimeStart(DateTimeStartProperty {
+                        date_time, ..
+                    })
+                    | ComponentProperty::DateTimeEnd(DateTimeEndProperty { date_time, .. })
+                    | ComponentProperty::DateTimeDue(DateTimeDueProperty { date_time, .. })
+                    | ComponentProperty::RecurrenceId(RecurrenceIdProperty { date_time, .. }) => {
+                        if date_time.is_date_time() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date value but the value is a date-time".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -299,18 +302,13 @@ pub(super) fn check_declared_value(
                     ComponentProperty::DateTimeCompleted(_)
                     | ComponentProperty::DateTimeCreated(_)
                     | ComponentProperty::DateTimeStamp(_)
-                    | ComponentProperty::LastModified(_)
                     | ComponentProperty::DateTimeDue(_)
                     | ComponentProperty::RecurrenceId(_)
                     | ComponentProperty::ExceptionDateTimes(_)
-                    | ComponentProperty::RecurrenceDateTimes(_)
-                    | ComponentProperty::DateTimeCreated(_)
-                    | ComponentProperty::DateTimeStamp(_)
                     | ComponentProperty::LastModified(_) => {
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
-                        date_times,
                         periods,
                         ..
                     }) => {
@@ -327,7 +325,8 @@ pub(super) fn check_declared_value(
                         }
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {
-                        if dtstart.time.is_none() {
+                        push_redundant_error_msg(errors, property_index, property);
+                        if dtstart.date_time.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -338,8 +337,9 @@ pub(super) fn check_declared_value(
                             });
                         }
                     }
-                    ComponentProperty::DateTimeEnd(dtend) => {
-                        if dtend.time.is_none() {
+                    ComponentProperty::DateTimeEnd(dt_end) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                        if dt_end.date_time.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -355,7 +355,7 @@ pub(super) fn check_declared_value(
                             Trigger::Relative(_) => {
                                 // Valid
                             }
-                            Trigger::Absolute(dur_trigger) => {
+                            Trigger::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a date-time value but has an absolute trigger".to_string(),
                                     location: Some(ComponentPropertyLocation {
@@ -409,11 +409,12 @@ pub(super) fn check_declared_value(
                         push_redundant_error_msg(errors, property_index, property);
                     }
                     ComponentProperty::Trigger(trigger) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         match trigger {
                             Trigger::Relative(_) => {
                                 // Valid
                             }
-                            Trigger::Absolute(dur_trigger) => {
+                            Trigger::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a duration value but has an absolute trigger".to_string(),
                                     location: Some(ComponentPropertyLocation {
@@ -546,7 +547,6 @@ pub(super) fn check_declared_value(
                     }
                     ComponentProperty::RecurrenceDateTimes(RecurrenceDateTimesProperty {
                         date_times,
-                        periods,
                         ..
                     }) => {
                         if !date_times.is_empty() {
@@ -595,11 +595,20 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
+                    ComponentProperty::RecurrenceRule(_) => {
+                        push_redundant_error_msg(errors, property_index, property);
+                    }
                     ComponentProperty::XProperty(x_prop) => match is_recur_valued(&x_prop.value) {
                         Ok(rule) => match rule.to_model() {
                             Ok(rule) => {
-                                validate_recurrence_rule(errors, property, &rule, property_index)?;
+                                validate_recurrence_rule(
+                                    errors,
+                                    property,
+                                    &rule,
+                                    maybe_dt_start,
+                                    PropertyLocation::Other,
+                                    property_index,
+                                )?;
                             }
                             Err(e) => {
                                 errors.push(ComponentPropertyError {
@@ -627,6 +636,8 @@ pub(super) fn check_declared_value(
                                         errors,
                                         property,
                                         &rule,
+                                        maybe_dt_start,
+                                        PropertyLocation::Other,
                                         property_index,
                                     )?;
                                 }
@@ -805,7 +816,7 @@ pub(super) fn check_declared_value(
                 }
             }
             Value::Uri => {
-                let mut require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
+                let require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
                     if !is_uri_valued(v) {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a URI value but the value is not a URI".to_string(),
@@ -824,6 +835,7 @@ pub(super) fn check_declared_value(
                         require_uri(errors, &url.value);
                     }
                     ComponentProperty::Attach(attach) => {
+                        push_redundant_error_msg(errors, property_index, property);
                         require_uri(errors, &attach.value);
                     }
                     ComponentProperty::XProperty(x_prop) => {
@@ -945,7 +957,7 @@ fn is_date_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_date::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -956,7 +968,7 @@ fn is_date_time_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_date_time::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -967,7 +979,7 @@ fn is_duration_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_duration::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -978,7 +990,7 @@ fn is_float_valued(property_value: &String) -> bool {
 
     let result = separated_list1(char(','), prop_value_float::<Error>)(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -988,7 +1000,10 @@ fn is_integer_valued(property_value: &String) -> bool {
     content.push(b';');
 
     let result = separated_list1(char(','), prop_value_integer::<Error>)(content.as_bytes());
-    result.is_ok()
+    match result {
+        Ok((rest, _)) => rest.len() == 1,
+        _ => false,
+    }
 }
 
 fn is_period_valued(property_value: &String) -> bool {
@@ -997,7 +1012,7 @@ fn is_period_valued(property_value: &String) -> bool {
 
     let result = prop_value_period::<Error>(content.as_bytes());
     match result {
-        Ok((rest, period)) => rest.len() == 1,
+        Ok((rest, _)) => rest.len() == 1,
         _ => false,
     }
 }
@@ -1038,7 +1053,7 @@ fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::
 
 fn is_uri_valued(property_value: &str) -> bool {
     let mut content = property_value.as_bytes().to_vec();
-    content.push(b';');
+    content.push(b'\n');
 
     let result = param_value_uri::<Error>(content.as_bytes());
     match result {
