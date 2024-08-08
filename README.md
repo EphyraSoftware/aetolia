@@ -1,5 +1,8 @@
 # aetolia
 
+[![Build](https://github.com/EphyraSoftware/aetolia/actions/workflows/build.yaml/badge.svg)](https://github.com/EphyraSoftware/aetolia/actions/workflows/build.yaml)
+[![coverage](https://shields.io/endpoint?url=https://ephyrasoftware.github.io/aetolia/coverage.json)](https://ephyrasoftware.github.io/aetolia/index.html)
+
 Calendar tools based on the open iCalendar standard format.
 
 This library is still under development and not quite ready for use. It contains a parser, a builder, a validator and a serializer for iCalendar data.
