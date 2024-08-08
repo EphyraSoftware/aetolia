@@ -1,7 +1,9 @@
 use crate::common::RecurFreq;
-use crate::model::{ComponentProperty, RecurRulePart, RecurrenceRule};
+use crate::model::{
+    ComponentProperty, DateTimeQuery, DateTimeStartProperty, RecurRulePart, RecurrenceRule,
+};
 use crate::validate::{
-    component_property_name, ComponentPropertyError, ComponentPropertyLocation,
+    component_property_name, ComponentPropertyError, ComponentPropertyLocation, PropertyLocation,
     WithinPropertyLocation,
 };
 use std::collections::HashMap;
@@ -10,8 +12,24 @@ pub(super) fn validate_recurrence_rule(
     errors: &mut Vec<ComponentPropertyError>,
     property: &ComponentProperty,
     rule: &RecurrenceRule,
+    maybe_dt_start: Option<&DateTimeStartProperty>,
+    property_location: PropertyLocation,
     property_index: usize,
 ) -> anyhow::Result<()> {
+    let dt_start = if let Some(dt_start) = maybe_dt_start {
+        dt_start
+    } else {
+        errors.push(ComponentPropertyError {
+            message: "Recurrence rule must have a DTSTART property associated with it".to_string(),
+            location: Some(ComponentPropertyLocation {
+                index: property_index,
+                name: component_property_name(property).to_string(),
+                property_location: Some(WithinPropertyLocation::Value),
+            }),
+        });
+        return Ok(());
+    };
+
     let mut freq_index = 0;
     let freq = match &rule.parts[0] {
         RecurRulePart::Freq(freq) => {
@@ -77,7 +95,7 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
             }
-            RecurRulePart::Until(_) => {
+            RecurRulePart::Until(until) => {
                 let count = add_count(&mut seen_count, "UNTIL");
                 if count > 1 {
                     errors.push(ComponentPropertyError {
@@ -90,7 +108,69 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                // TODO The value of the UNTIL rule part MUST have the same value type as the "DTSTART" property.
+                match property_location {
+                    // STANDARD or DAYLIGHT have different rules
+                    PropertyLocation::TimeZoneComponent => {
+                        if !until.is_utc() {
+                            errors.push(ComponentPropertyError {
+                                message: format!(
+                                    "UNTIL part at index {part_index} must be a UTC time here"
+                                ),
+                                location: Some(ComponentPropertyLocation {
+                                    index: property_index,
+                                    name: component_property_name(property).to_string(),
+                                    property_location: Some(WithinPropertyLocation::Value),
+                                }),
+                            });
+                        }
+                    }
+                    _ => match (dt_start.date_time.is_date_time(), until.is_date_time()) {
+                        (true, false) => {
+                            errors.push(ComponentPropertyError {
+                                    message: format!("UNTIL part at index {part_index} is a date, but the associated DTSTART property is a date-time"),
+                                    location: Some(ComponentPropertyLocation {
+                                        index: property_index,
+                                        name: component_property_name(property).to_string(),
+                                        property_location: Some(WithinPropertyLocation::Value),
+                                    }),
+                                });
+                        }
+                        (false, true) => {
+                            errors.push(ComponentPropertyError {
+                                    message: format!("UNTIL part at index {part_index} is a date-time, but the associated DTSTART property is a date"),
+                                    location: Some(ComponentPropertyLocation {
+                                        index: property_index,
+                                        name: component_property_name(property).to_string(),
+                                        property_location: Some(WithinPropertyLocation::Value),
+                                    }),
+                                });
+                        }
+                        (true, true) => {
+                            if dt_start.is_local_time() && until.is_utc() {
+                                errors.push(ComponentPropertyError {
+                                        message: format!("UNTIL part at index {part_index} must be a local time if the associated DTSTART property is a local time"),
+                                        location: Some(ComponentPropertyLocation {
+                                            index: property_index,
+                                            name: component_property_name(property).to_string(),
+                                            property_location: Some(WithinPropertyLocation::Value),
+                                        }),
+                                    });
+                            } else if (dt_start.is_utc() || dt_start.is_local_time_with_timezone())
+                                && !until.is_utc()
+                            {
+                                errors.push(ComponentPropertyError {
+                                        message: format!("UNTIL part at index {part_index} must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone"),
+                                        location: Some(ComponentPropertyLocation {
+                                            index: property_index,
+                                            name: component_property_name(property).to_string(),
+                                            property_location: Some(WithinPropertyLocation::Value),
+                                        }),
+                                    });
+                            }
+                        }
+                        (false, false) => {}
+                    },
+                }
             }
             RecurRulePart::Count(_) => {
                 let count = add_count(&mut seen_count, "COUNT");
@@ -142,7 +222,16 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                // TODO The BYSECOND, BYMINUTE and BYHOUR rule parts MUST NOT be specified when the associated "DTSTART" property has a DATE value type.
+                if dt_start.date_time.is_date() {
+                    errors.push(ComponentPropertyError {
+                        message: format!("BYSECOND part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
             }
             RecurRulePart::ByMinute(minute_list) => {
                 let count = add_count(&mut seen_count, "BYMINUTE");
@@ -168,7 +257,16 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                // TODO The BYSECOND, BYMINUTE and BYHOUR rule parts MUST NOT be specified when the associated "DTSTART" property has a DATE value type.
+                if dt_start.date_time.is_date() {
+                    errors.push(ComponentPropertyError {
+                        message: format!("BYMINUTE part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
             }
             RecurRulePart::ByHour(hour_list) => {
                 let count = add_count(&mut seen_count, "BYHOUR");
@@ -194,7 +292,16 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                // TODO The BYSECOND, BYMINUTE and BYHOUR rule parts MUST NOT be specified when the associated "DTSTART" property has a DATE value type.
+                if dt_start.date_time.is_date() {
+                    errors.push(ComponentPropertyError {
+                        message: format!("BYHOUR part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        location: Some(ComponentPropertyLocation {
+                            index: property_index,
+                            name: component_property_name(property).to_string(),
+                            property_location: Some(WithinPropertyLocation::Value),
+                        }),
+                    });
+                }
             }
             RecurRulePart::ByDay(day_list) => {
                 let count = add_count(&mut seen_count, "BYDAY");

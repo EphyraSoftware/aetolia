@@ -22,6 +22,47 @@ pub trait AddComponentProperty {
     fn add_property(&mut self, property: ComponentProperty);
 }
 
+pub trait DateTimeQuery {
+    fn is_date(&self) -> bool;
+    fn is_local_time(&self) -> bool;
+    fn is_utc(&self) -> bool;
+    fn is_local_time_with_timezone(&self) -> bool;
+}
+
+macro_rules! impl_date_time_query {
+    ($for_type:ty) => {
+        impl DateTimeQuery for $for_type {
+            fn is_date(&self) -> bool {
+                self.date_time.is_date()
+            }
+
+            // Form 1, local date-time
+            fn is_local_time(&self) -> bool {
+                self.date_time.is_date_time()
+                    && !self.date_time.is_utc()
+                    && !self
+                        .params
+                        .iter()
+                        .any(|p| matches!(p, Param::TimeZoneId { .. }))
+            }
+
+            // Form 2, UTC date-time
+            fn is_utc(&self) -> bool {
+                self.date_time.is_date_time() && self.date_time.is_utc()
+            }
+
+            // Form 3, date-time in a specific time zone
+            fn is_local_time_with_timezone(&self) -> bool {
+                self.date_time.is_date_time()
+                    && self
+                        .params
+                        .iter()
+                        .any(|p| matches!(p, Param::TimeZoneId { .. }))
+            }
+        }
+    };
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum Classification {
     Public,
@@ -550,9 +591,7 @@ impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct DateTimeStampProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -573,9 +612,7 @@ where
         DateTimeStampPropertyBuilder {
             owner,
             inner: DateTimeStampProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -620,9 +657,7 @@ impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeStartProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -651,9 +686,7 @@ where
         DateTimeStartPropertyBuilder {
             owner,
             inner: DateTimeStartProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -667,6 +700,8 @@ where
 }
 
 impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
+
+impl_date_time_query!(DateTimeStartProperty);
 
 #[derive(Debug)]
 pub struct ClassificationProperty {
@@ -700,9 +735,7 @@ impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct CreatedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -719,9 +752,7 @@ where
         CreatedPropertyBuilder {
             owner,
             inner: CreatedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -805,9 +836,7 @@ impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct LastModifiedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -828,9 +857,7 @@ where
         LastModifiedPropertyBuilder {
             owner,
             inner: LastModifiedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -1111,9 +1138,7 @@ impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct RecurrenceIdProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1142,9 +1167,7 @@ where
         RecurrenceIdPropertyBuilder {
             owner,
             inner: RecurrenceIdProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -1196,9 +1219,7 @@ impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeEndProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1227,9 +1248,7 @@ where
         DateTimeEndPropertyBuilder {
             owner,
             inner: DateTimeEndProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -1671,20 +1690,20 @@ impl Period {
         }
     }
 
-    pub fn expand(&self) -> Option<(CalendarDateTime, CalendarDateTime)> {
+    pub fn expand(&self) -> anyhow::Result<Option<(CalendarDateTime, CalendarDateTime)>> {
         if self.start.2 {
-            Some((
+            Ok(Some((
                 self.start.into(),
                 match &self.end {
                     PeriodEnd::DateTime(end) => (*end).into(),
                     PeriodEnd::Duration(duration) => {
                         let cdt: CalendarDateTime = self.start.into();
-                        cdt.add(duration)
+                        cdt.add(duration)?
                     }
                 },
-            ))
+            )))
         } else {
-            None
+            Ok(None)
         }
     }
 }
@@ -1752,9 +1771,7 @@ impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct DateTimeCompletedProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1771,9 +1788,7 @@ where
         CompletedPropertyBuilder {
             owner,
             inner: DateTimeCompletedProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -1818,9 +1833,7 @@ impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
 #[derive(Debug, Clone)]
 pub struct DateTimeDueProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: Option<time::Time>,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -1849,9 +1862,7 @@ where
         DateTimeDuePropertyBuilder {
             owner,
             inner: DateTimeDueProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params,
             },
         }
@@ -2161,9 +2172,7 @@ impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 
 #[derive(Debug)]
 pub struct AbsoluteTriggerProperty {
-    pub(crate) date: time::Date,
-    pub(crate) time: time::Time,
-    pub(crate) is_utc: bool,
+    pub(crate) date_time: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -2184,9 +2193,7 @@ where
         AbsoluteTriggerPropertyBuilder {
             owner,
             inner: AbsoluteTriggerProperty {
-                date,
-                time,
-                is_utc: false,
+                date_time: (date, time, false).into(),
                 params: vec![Param::ValueType {
                     value: Value::DateTime,
                 }],

@@ -2345,6 +2345,7 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
+DTSTART:19900101T000000Z\r\n\
 RRULE:FREQ=MONTHLY;COUNT=5;BYDAY=1SU\r\n\
 RRULE:COUNT=5\r\n\
 RRULE:COUNT=5;FREQ=MONTHLY;BYDAY=1SU\r\n\
@@ -2369,22 +2370,22 @@ END:VCALENDAR\r\n";
 
         assert_errors!(
             errors,
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: No frequency part found in recurrence rule, but it is required. This prevents the rest of the rule being checked",
-             "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: Recurrence rule must start with a frequency",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: Repeated FREQ part at index 1",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 6: Repeated UNTIL part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 7: Repeated COUNT part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 8: Repeated INTERVAL part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 9: Repeated BYSECOND part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 10: Repeated BYMINUTE part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 11: Repeated BYHOUR part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 12: Repeated BYDAY part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 13: Repeated BYMONTHDAY part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 14: Repeated BYYEARDAY part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 15: Repeated BYWEEKNO part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 16: Repeated BYMONTH part at index 2",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 17: Repeated WKST part at index 4",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 18: Repeated BYSETPOS part at index 3",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: No frequency part found in recurrence rule, but it is required. This prevents the rest of the rule being checked",
+             "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: Recurrence rule must start with a frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 6: Repeated FREQ part at index 1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 7: Repeated UNTIL part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 8: Repeated COUNT part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 9: Repeated INTERVAL part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 10: Repeated BYSECOND part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 11: Repeated BYMINUTE part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 12: Repeated BYHOUR part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 13: Repeated BYDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 14: Repeated BYMONTHDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 15: Repeated BYYEARDAY part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 16: Repeated BYWEEKNO part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 17: Repeated BYMONTH part at index 2",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 18: Repeated WKST part at index 4",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 19: Repeated BYSETPOS part at index 3",
         );
     }
 
@@ -2397,6 +2398,7 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
+DTSTART:19900101T000000Z\r\n\
 RRULE:FREQ=WEEKLY;BYSECOND=74\r\n\
 RRULE:FREQ=WEEKLY;BYMINUTE=98\r\n\
 RRULE:FREQ=WEEKLY;BYHOUR=25\r\n\
@@ -2407,9 +2409,58 @@ END:VCALENDAR\r\n";
 
         assert_errors!(
             errors,
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 2: Invalid BYSECOND part at index 1, seconds must be between 0 and 60",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: Invalid BYMINUTE part at index 1, minutes must be between 0 and 59",
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: Invalid BYHOUR part at index 1, hours must be between 0 and 23",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: Invalid BYSECOND part at index 1, seconds must be between 0 and 60",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: Invalid BYMINUTE part at index 1, minutes must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: Invalid BYHOUR part at index 1, hours must be between 0 and 23",
+        );
+    }
+
+    #[test]
+    fn recur_mismatched_date_time_start_type() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:1\r\n\
+DTSTART;VALUE=DATE:19900101\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z\r\n\
+END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:2\r\n\
+DTSTART:19900101T000000Z\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101\r\n\
+END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:3\r\n\
+DTSTART:19900101T000000Z\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000\r\n\
+END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:4\r\n\
+DTSTART;TZID=/America/New_York:19900101T000000\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000\r\n\
+END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:4\r\n\
+DTSTART:19900101T000000\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date-time, but the associated DTSTART property is a date",
+            "In component \"VEVENT\" at index 1, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date, but the associated DTSTART property is a date-time",
+            "In component \"VEVENT\" at index 2, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone",
+            "In component \"VEVENT\" at index 3, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone",
+            "In component \"VEVENT\" at index 4, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a local time if the associated DTSTART property is a local time",
         );
     }
 

@@ -76,18 +76,27 @@ pub(super) fn validate_component_properties(
         _ => OccurrenceExpectation::Never,
     };
 
+    let is_recurring = properties
+        .iter()
+        .any(|p| matches!(p, ComponentProperty::RecurrenceRule(_)));
+
     let dt_start_expectation = match property_location {
         PropertyLocation::Event => {
-            if calendar_info.method.is_none() {
+            if calendar_info.method.is_none() || is_recurring {
                 OccurrenceExpectation::Once
             } else {
                 OccurrenceExpectation::OptionalOnce
             }
         }
         PropertyLocation::TimeZoneComponent => OccurrenceExpectation::Once,
-        PropertyLocation::ToDo | PropertyLocation::Journal | PropertyLocation::FreeBusy => {
-            OccurrenceExpectation::OptionalOnce
+        PropertyLocation::ToDo | PropertyLocation::Journal => {
+            if is_recurring {
+                OccurrenceExpectation::Once
+            } else {
+                OccurrenceExpectation::OptionalOnce
+            }
         }
+        PropertyLocation::FreeBusy => OccurrenceExpectation::OptionalOnce,
         PropertyLocation::TimeZone | PropertyLocation::Alarm => OccurrenceExpectation::Never,
         PropertyLocation::Other => OccurrenceExpectation::OptionalMany,
         _ => OccurrenceExpectation::Never,
@@ -228,9 +237,14 @@ pub(super) fn validate_component_properties(
     let mut has_due = false;
     let mut has_repeat = false;
 
+    let maybe_dt_start = properties.iter().find_map(|p| match p {
+        ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
+        _ => None,
+    });
+
     let mut seen = HashMap::<String, u32>::new();
     for (index, property) in properties.iter().enumerate() {
-        check_declared_value(&mut errors, property, index)?;
+        check_declared_value(&mut errors, maybe_dt_start, property, index)?;
 
         let do_validate_params = |errors: &mut Vec<ComponentPropertyError>,
                                   property_info: PropertyInfo,
@@ -296,13 +310,13 @@ pub(super) fn validate_component_properties(
                     calendar_info,
                     property_location.clone(),
                     PropertyKind::DateTimeStart,
-                    if date_time_start.time.is_some() {
+                    if date_time_start.date_time.is_date_time() {
                         ValueType::DateTime
                     } else {
                         ValueType::Date
                     },
                 )
-                .utc(date_time_start.is_utc);
+                .utc(date_time_start.date_time.is_utc());
                 do_validate_params(&mut errors, property_info, &date_time_start.params);
             }
             ComponentProperty::Classification(_) => {
@@ -615,11 +629,6 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                let maybe_dt_start = properties.iter().find_map(|p| match p {
-                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
-                    _ => None,
-                });
-
                 let dt_start_type = maybe_dt_start
                     .and_then(|dt_start| {
                         get_declared_value_type(&ComponentProperty::DateTimeStart(dt_start.clone()))
@@ -657,7 +666,14 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                validate_recurrence_rule(&mut errors, p, &recurrence_rule.rule, index)?;
+                validate_recurrence_rule(
+                    &mut errors,
+                    p,
+                    &recurrence_rule.rule,
+                    maybe_dt_start,
+                    property_location.clone(),
+                    index,
+                )?;
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -685,11 +701,6 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                let maybe_dt_start = properties.iter().find_map(|p| match p {
-                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
-                    _ => None,
-                });
-
                 validate_date_time_end(
                     &mut errors,
                     date_time_end,
@@ -702,7 +713,7 @@ pub(super) fn validate_component_properties(
                     calendar_info,
                     property_location.clone(),
                     PropertyKind::DateTimeEnd,
-                    if date_time_end.time.is_some() {
+                    if date_time_end.date_time.is_date_time() {
                         ValueType::DateTime
                     } else {
                         ValueType::Date
@@ -728,10 +739,6 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                let maybe_dt_start = properties.iter().find_map(|p| match p {
-                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
-                    _ => None,
-                });
                 validate_duration_property(
                     &mut errors,
                     duration,
@@ -1068,11 +1075,6 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                let maybe_dt_start = properties.iter().find_map(|p| match p {
-                    ComponentProperty::DateTimeStart(dt_start) => Some(dt_start),
-                    _ => None,
-                });
-
                 validate_date_time_due(
                     &mut errors,
                     date_time_due,
@@ -1085,7 +1087,7 @@ pub(super) fn validate_component_properties(
                     calendar_info,
                     property_location.clone(),
                     PropertyKind::DateTimeDue,
-                    if date_time_due.time.is_some() {
+                    if date_time_due.date_time.is_date_time() {
                         ValueType::DateTime
                     } else {
                         ValueType::Date
@@ -1107,7 +1109,7 @@ pub(super) fn validate_component_properties(
                     occurrence_expectation
                 );
 
-                validate_free_busy_time(&mut errors, free_busy_time, index);
+                validate_free_busy_time(&mut errors, free_busy_time, index)?;
 
                 let property_info = PropertyInfo::new(
                     calendar_info,
@@ -1433,7 +1435,7 @@ fn validate_duration_property(
     match property_location {
         PropertyLocation::Event | PropertyLocation::ToDo => {
             if let Some(dt_start) = maybe_dt_start {
-                if dt_start.time.is_none()
+                if dt_start.date_time.is_date()
                     && duration_property.duration.weeks.is_none()
                     && duration_property.duration.days.is_none()
                 {
@@ -1460,7 +1462,7 @@ fn validate_date_time_completed(
     date_time_completed_property: &DateTimeCompletedProperty,
     index: usize,
 ) {
-    if !date_time_completed_property.is_utc {
+    if !date_time_completed_property.date_time.is_utc() {
         errors.push(ComponentPropertyError {
             message: "DTEND must be a UTC date-time".to_string(),
             location: Some(ComponentPropertyLocation {
@@ -1496,7 +1498,7 @@ fn validate_date_time_end(
     if let Some(dt_start) = maybe_dt_start {
         match property_location {
             PropertyLocation::Event => {
-                if dt_start.is_utc != date_time_end_property.is_utc {
+                if dt_start.date_time.is_utc() != date_time_end_property.date_time.is_utc() {
                     errors.push(ComponentPropertyError {
                         message: "DTEND must have the same time type as DTSTART, both UTC or both not UTC".to_string(),
                         location: Some(ComponentPropertyLocation {
@@ -1508,7 +1510,7 @@ fn validate_date_time_end(
                 }
             }
             PropertyLocation::FreeBusy => {
-                if !dt_start.is_utc || !date_time_end_property.is_utc {
+                if !dt_start.date_time.is_utc() || !date_time_end_property.date_time.is_utc() {
                     errors.push(ComponentPropertyError {
                         message: "DTSTART and DTEND for FREEBUSY must be UTC date-times"
                             .to_string(),
@@ -1525,7 +1527,11 @@ fn validate_date_time_end(
             }
         }
 
-        match date_time_end_property.date.cmp(&dt_start.date) {
+        match date_time_end_property
+            .date_time
+            .date()
+            .cmp(dt_start.date_time.date())
+        {
             Ordering::Less => {
                 errors.push(ComponentPropertyError {
                     message: "DTEND is before DTSTART".to_string(),
@@ -1538,9 +1544,10 @@ fn validate_date_time_end(
             }
             Ordering::Equal => {
                 // Because the types must match above, not need to check for other combinations here
-                if let (Some(dt_end_time), Some(dt_start_time)) =
-                    (date_time_end_property.time, dt_start.time)
-                {
+                if let (Some(dt_end_time), Some(dt_start_time)) = (
+                    date_time_end_property.date_time.time_opt(),
+                    dt_start.date_time.time_opt(),
+                ) {
                     if dt_end_time < dt_start_time {
                         errors.push(ComponentPropertyError {
                             message: "DTEND is before DTSTART".to_string(),
@@ -1630,7 +1637,7 @@ fn validate_date_time_due(
     if let Some(dt_start) = maybe_dt_start {
         match property_location {
             PropertyLocation::Event => {
-                if dt_start.is_utc != date_time_due_property.is_utc {
+                if dt_start.date_time.is_utc() != date_time_due_property.date_time.is_utc() {
                     errors.push(ComponentPropertyError {
                         message:
                             "DUE must have the same time type as DTSTART, both UTC or both not UTC"
@@ -1648,7 +1655,11 @@ fn validate_date_time_due(
             }
         }
 
-        match date_time_due_property.date.cmp(&dt_start.date) {
+        match date_time_due_property
+            .date_time
+            .date()
+            .cmp(dt_start.date_time.date())
+        {
             Ordering::Less => {
                 errors.push(ComponentPropertyError {
                     message: "DUE is before DTSTART".to_string(),
@@ -1661,9 +1672,10 @@ fn validate_date_time_due(
             }
             Ordering::Equal => {
                 // Because the types must match above, not need to check for other combinations here
-                if let (Some(dt_end_time), Some(dt_start_time)) =
-                    (date_time_due_property.time, dt_start.time)
-                {
+                if let (Some(dt_end_time), Some(dt_start_time)) = (
+                    date_time_due_property.date_time.time_opt(),
+                    dt_start.date_time.time_opt(),
+                ) {
                     if dt_end_time < dt_start_time {
                         errors.push(ComponentPropertyError {
                             message: "DUE is before DTSTART".to_string(),
@@ -1694,10 +1706,10 @@ fn validate_date_time_start(
         .params
         .iter()
         .any(|p| matches!(p, Param::ValueType { .. }))
-        && date_time_start_property.time.is_none()
+        && date_time_start_property.date_time.is_date()
     {
         errors.push(ComponentPropertyError {
-            message: "DTSTART defaults to date-time but only has a date value".to_string(),
+            message: "DTSTART defaults to date-time but has a date value".to_string(),
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "DTSTART".to_string(),
@@ -1711,7 +1723,9 @@ fn validate_date_time_start(
             // Nothing further to check, valid
         }
         PropertyLocation::FreeBusy => {
-            if date_time_start_property.time.is_none() || !date_time_start_property.is_utc {
+            if date_time_start_property.date_time.is_date()
+                || !date_time_start_property.date_time.is_utc()
+            {
                 errors.push(ComponentPropertyError {
                     message: "DTSTART for FREEBUSY must be a UTC date-time".to_string(),
                     location: Some(ComponentPropertyLocation {
@@ -1723,7 +1737,9 @@ fn validate_date_time_start(
             }
         }
         PropertyLocation::TimeZoneComponent => {
-            if date_time_start_property.time.is_none() || date_time_start_property.is_utc {
+            if date_time_start_property.date_time.is_date()
+                || date_time_start_property.date_time.is_utc()
+            {
                 errors.push(ComponentPropertyError {
                     message: "DTSTART must be a local time".to_string(),
                     location: Some(ComponentPropertyLocation {
@@ -1811,7 +1827,7 @@ fn validate_free_busy_time(
     errors: &mut Vec<ComponentPropertyError>,
     free_busy_time_property: &FreeBusyTimeProperty,
     index: usize,
-) {
+) -> anyhow::Result<()> {
     if !free_busy_time_property.value.iter().all(|p| {
         p.start.2
             && match p.end {
@@ -1832,8 +1848,8 @@ fn validate_free_busy_time(
     let date_times = free_busy_time_property
         .value
         .iter()
-        .map(|p| p.expand().unwrap())
-        .collect::<Vec<_>>();
+        .map(|p| p.expand().map(|v| v.unwrap()))
+        .collect::<anyhow::Result<Vec<_>>>()?;
     let all_ordered = date_times.windows(2).all(|w| {
         let (s1, e1) = &w[0];
         let (s2, e2) = &w[1];
@@ -1857,6 +1873,8 @@ fn validate_free_busy_time(
             }),
         });
     }
+
+    Ok(())
 }
 
 // RFC 5545, 3.8.7.2
@@ -1865,7 +1883,7 @@ fn validate_date_time_stamp(
     date_time_stamp_property: &DateTimeStampProperty,
     index: usize,
 ) {
-    if !date_time_stamp_property.is_utc {
+    if !date_time_stamp_property.date_time.is_utc() {
         errors.push(ComponentPropertyError {
             message: "DTSTAMP must be a UTC date-time".to_string(),
             location: Some(ComponentPropertyLocation {
@@ -1883,7 +1901,7 @@ fn validate_last_modified(
     last_modified_property: &LastModifiedProperty,
     index: usize,
 ) {
-    if !last_modified_property.is_utc {
+    if !last_modified_property.date_time.is_utc() {
         errors.push(ComponentPropertyError {
             message: "LAST-MODIFIED must be a UTC date-time".to_string(),
             location: Some(ComponentPropertyLocation {

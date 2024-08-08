@@ -17,7 +17,7 @@ use crate::serialize::WriteModel;
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::{
     component_property_name, get_declared_value_type, validate_time, validate_utc_offset,
-    ComponentPropertyError, ComponentPropertyLocation, WithinPropertyLocation,
+    ComponentPropertyError, ComponentPropertyLocation, PropertyLocation, WithinPropertyLocation,
 };
 use anyhow::Context;
 use nom::character::streaming::char;
@@ -26,6 +26,7 @@ use nom::AsBytes;
 
 pub(super) fn check_declared_value(
     errors: &mut Vec<ComponentPropertyError>,
+    maybe_dt_start: Option<&DateTimeStartProperty>,
     property: &ComponentProperty,
     property_index: usize,
 ) -> anyhow::Result<()> {
@@ -205,11 +206,13 @@ pub(super) fn check_declared_value(
             Value::Date => {
                 let mut invalid = false;
                 match property {
-                    ComponentProperty::DateTimeStart(DateTimeStartProperty { time, .. })
-                    | ComponentProperty::DateTimeEnd(DateTimeEndProperty { time, .. })
-                    | ComponentProperty::DateTimeDue(DateTimeDueProperty { time, .. })
-                    | ComponentProperty::RecurrenceId(RecurrenceIdProperty { time, .. }) => {
-                        if time.is_some() {
+                    ComponentProperty::DateTimeStart(DateTimeStartProperty {
+                        date_time, ..
+                    })
+                    | ComponentProperty::DateTimeEnd(DateTimeEndProperty { date_time, .. })
+                    | ComponentProperty::DateTimeDue(DateTimeDueProperty { date_time, .. })
+                    | ComponentProperty::RecurrenceId(RecurrenceIdProperty { date_time, .. }) => {
+                        if date_time.is_date_time() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date value but the value is a date-time".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -323,7 +326,7 @@ pub(super) fn check_declared_value(
                     }
                     ComponentProperty::DateTimeStart(dtstart) => {
                         push_redundant_error_msg(errors, property_index, property);
-                        if dtstart.time.is_none() {
+                        if dtstart.date_time.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -334,9 +337,9 @@ pub(super) fn check_declared_value(
                             });
                         }
                     }
-                    ComponentProperty::DateTimeEnd(dtend) => {
+                    ComponentProperty::DateTimeEnd(dt_end) => {
                         push_redundant_error_msg(errors, property_index, property);
-                        if dtend.time.is_none() {
+                        if dt_end.date_time.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
                                 location: Some(ComponentPropertyLocation {
@@ -598,7 +601,14 @@ pub(super) fn check_declared_value(
                     ComponentProperty::XProperty(x_prop) => match is_recur_valued(&x_prop.value) {
                         Ok(rule) => match rule.to_model() {
                             Ok(rule) => {
-                                validate_recurrence_rule(errors, property, &rule, property_index)?;
+                                validate_recurrence_rule(
+                                    errors,
+                                    property,
+                                    &rule,
+                                    maybe_dt_start,
+                                    PropertyLocation::Other,
+                                    property_index,
+                                )?;
                             }
                             Err(e) => {
                                 errors.push(ComponentPropertyError {
@@ -626,6 +636,8 @@ pub(super) fn check_declared_value(
                                         errors,
                                         property,
                                         &rule,
+                                        maybe_dt_start,
+                                        PropertyLocation::Other,
                                         property_index,
                                     )?;
                                 }

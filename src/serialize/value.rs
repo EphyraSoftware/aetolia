@@ -75,6 +75,12 @@ impl WriteModel for time::Time {
     }
 }
 
+impl WriteModel for crate::common::CalendarDateTime {
+    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        (*self.date(), self.time_opt().cloned(), self.is_utc()).write_model(writer)
+    }
+}
+
 impl WriteModel for crate::common::Value {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         use crate::common::Value;
@@ -432,9 +438,9 @@ impl WriteModel for crate::model::RecurrenceRule {
                     writer.write_all(b"FREQ=")?;
                     freq.write_model(writer)?;
                 }
-                RecurRulePart::Until((date, time, is_utc)) => {
+                RecurRulePart::Until(until) => {
                     writer.write_all(b";UNTIL=")?;
-                    (*date, *time, *is_utc).write_model(writer)?;
+                    until.write_model(writer)?;
                 }
                 RecurRulePart::Count(count) => {
                     write!(writer, ";COUNT={}", count)?;

@@ -1,9 +1,9 @@
-use crate::common::{OffsetWeekday, RecurFreq, Weekday};
+use crate::common::{CalendarDateTime, OffsetWeekday, RecurFreq, Weekday};
 
 #[derive(Debug)]
 pub enum RecurRulePart {
     Freq(RecurFreq),
-    Until((time::Date, Option<time::Time>, bool)),
+    Until(CalendarDateTime),
     Count(u64),
     Interval(u64),
     BySecList(Vec<u8>),
@@ -42,7 +42,8 @@ impl RecurrenceRule {
     }
 
     pub fn set_until(mut self, date: time::Date, time: Option<time::Time>, is_utc: bool) -> Self {
-        self.parts.push(RecurRulePart::Until((date, time, is_utc)));
+        self.parts
+            .push(RecurRulePart::Until((date, time, is_utc).into()));
         self
     }
 
