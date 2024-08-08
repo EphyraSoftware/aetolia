@@ -2423,6 +2423,11 @@ VERSION:2.0\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:1\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z\r\n\
+END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:1\r\n\
 DTSTART;VALUE=DATE:19900101\r\n\
 RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z\r\n\
 END:VEVENT\r\n\
@@ -2450,17 +2455,60 @@ UID:4\r\n\
 DTSTART:19900101T000000\r\n\
 RRULE:FREQ=WEEKLY;UNTIL=19900101T000000Z\r\n\
 END:VEVENT\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:4\r\n\
+DTSTART;VALUE=DATE:19900101\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101\r\n\
+END:VEVENT\r\n\
+BEGIN:VTIMEZONE\r\n\
+TZID:test\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:19900101T000000\r\n\
+RRULE:FREQ=WEEKLY;UNTIL=19900101T001000\r\n\
+TZOFFSETTO:+0000\r\n\
+TZOFFSETFROM:+0000\r\n\
+END:STANDARD\r\n\
+END:VTIMEZONE\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
         assert_errors!(
             errors,
-            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date-time, but the associated DTSTART property is a date",
-            "In component \"VEVENT\" at index 1, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date, but the associated DTSTART property is a date-time",
-            "In component \"VEVENT\" at index 2, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 2: Recurrence rule must have a DTSTART property associated with it",
+            "In component \"VEVENT\" at index 0: DTSTART is required",
+            "In component \"VEVENT\" at index 1, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date-time, but the associated DTSTART property is a date",
+            "In component \"VEVENT\" at index 2, in component property \"RRULE\" at index 3: UNTIL part at index 1 is a date, but the associated DTSTART property is a date-time",
             "In component \"VEVENT\" at index 3, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone",
-            "In component \"VEVENT\" at index 4, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a local time if the associated DTSTART property is a local time",
+            "In component \"VEVENT\" at index 4, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone",
+            "In component \"VEVENT\" at index 5, in component property \"RRULE\" at index 3: UNTIL part at index 1 must be a local time if the associated DTSTART property is a local time",
+            "In component \"VTIMEZONE\" at index 7, in nested component \"STANDARD\" at index 0, in nested component property \"RRULE\" at index 1: UNTIL part at index 1 must be a UTC time here",
+        );
+    }
+
+    #[test]
+    fn recur_invalid_freq_with_date_dt_start() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:1\r\n\
+DTSTART;VALUE=DATE:19900101\r\n\
+RRULE:FREQ=SECONDLY;BYSECOND=1,5\r\n\
+RRULE:FREQ=MINUTELY;BYMINUTE=1,5\r\n\
+RRULE:FREQ=HOURLY;BYHOUR=1,5\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: BYSECOND part at index 1 is not valid when the associated DTSTART property has a DATE value type",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: BYMINUTE part at index 1 is not valid when the associated DTSTART property has a DATE value type",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: BYHOUR part at index 1 is not valid when the associated DTSTART property has a DATE value type",
         );
     }
 
