@@ -35,8 +35,7 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Generate content
         run: |
-          ls -al
-          ls -al ./scripts/
+          cargo install grcov
           ./scripts/coverage.sh
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
