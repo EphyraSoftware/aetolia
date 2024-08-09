@@ -9,8 +9,8 @@ use crate::model::property::{
 use crate::model::*;
 
 pub struct ICalObject {
-    pub(crate) properties: Vec<CalendarProperty>,
-    pub(crate) components: Vec<CalendarComponent>,
+    pub properties: Vec<CalendarProperty>,
+    pub components: Vec<CalendarComponent>,
 }
 
 impl ICalObject {

@@ -1,15 +1,18 @@
 use crate::model::component::time_zone::TimeZoneComponentBuilder;
 use crate::model::{
     add_comment, add_date_time_start, add_recurrence_date, add_recurrence_rule,
-    impl_other_component_properties, AddComponentProperty, CalendarComponent, ComponentProperty,
-    IanaComponentPropertyBuilder, TimeZoneNamePropertyBuilder, TimeZoneOffset,
-    TimeZoneOffsetFromPropertyBuilder, TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
+    impl_component_access, impl_other_component_properties, AddComponentProperty,
+    CalendarComponent, ComponentProperty, IanaComponentPropertyBuilder,
+    TimeZoneNamePropertyBuilder, TimeZoneOffset, TimeZoneOffsetFromPropertyBuilder,
+    TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
 };
 
 #[derive(Debug)]
 pub struct StandardComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
+
+impl_component_access!(StandardComponent);
 
 impl StandardComponent {
     pub(crate) fn new() -> Self {

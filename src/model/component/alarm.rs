@@ -1,8 +1,8 @@
 use crate::model::property::ComponentProperty;
 use crate::model::{
     add_action, add_attach, add_description, add_duration, add_repeat, add_summary, add_trigger,
-    impl_other_component_properties, Action, AttendeePropertyBuilder, IanaComponentPropertyBuilder,
-    ParticipationStatusEvent, XComponentPropertyBuilder,
+    impl_component_access, impl_other_component_properties, Action, AttendeePropertyBuilder,
+    IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
 };
 use crate::prelude::AddComponentProperty;
 
@@ -10,6 +10,8 @@ use crate::prelude::AddComponentProperty;
 pub struct AlarmComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
+
+impl_component_access!(AlarmComponent);
 
 impl AlarmComponent {
     pub(crate) fn new() -> Self {

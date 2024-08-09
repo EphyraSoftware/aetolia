@@ -1,76 +1,187 @@
 #[derive(Debug, Clone)]
 pub enum Param {
-    AltRep {
-        uri: String,
-    },
-    CommonName {
-        name: String,
-    },
-    ValueType {
-        value: Value,
-    },
-    TimeZoneId {
-        tz_id: String,
-        unique: bool,
-    },
-    Language {
-        language: LanguageTag,
-    },
-    DirectoryEntryReference {
-        uri: String,
-    },
-    SentBy {
-        address: String,
-    },
-    Range {
-        range: Range,
-    },
-    FormatType {
-        type_name: String,
-        sub_type_name: String,
-    },
-    Encoding {
-        encoding: Encoding,
-    },
-    CalendarUserType {
-        cu_type: CalendarUserType,
-    },
-    Members {
-        members: Vec<String>,
-    },
-    Role {
-        role: Role,
-    },
-    ParticipationStatus {
-        status: ParticipationStatusUnknown,
-    },
-    Rsvp {
-        rsvp: bool,
-    },
-    DelegatedTo {
-        delegates: Vec<String>,
-    },
-    DelegatedFrom {
-        delegators: Vec<String>,
-    },
-    RelationshipType {
-        relationship: RelationshipType,
-    },
-    FreeBusyTimeType {
-        fb_type: FreeBusyTimeType,
-    },
-    Related {
-        related: Related,
-    },
-    Other {
-        name: String,
-        value: String,
-    },
-    Others {
-        name: String,
-        values: Vec<String>,
-    },
+    AltRep(AlternateRepresentationParam),
+    CommonName(CommonNameParam),
+    ValueType(ValueTypeParam),
+    TimeZoneId(TimeZoneIdParam),
+    Language(LanguageParam),
+    DirectoryEntryReference(DirectoryEntryReferenceParam),
+    SentBy(SentByParam),
+    Range(RangeParam),
+    FormatType(FormatTypeParam),
+    Encoding(EncodingParam),
+    CalendarUserType(CalendarUserTypeParam),
+    Members(MembersParam),
+    Role(RoleParam),
+    ParticipationStatus(ParticipationStatusParam),
+    Rsvp(RsvpParam),
+    DelegatedTo(DelegatedToParam),
+    DelegatedFrom(DelegatedFromParam),
+    RelationshipType(RelationshipTypeParam),
+    FreeBusyTimeType(FreeBusyTimeTypeParam),
+    Related(RelatedParam),
+    Other { name: String, value: String },
+    Others { name: String, values: Vec<String> },
 }
+
+pub trait ParamInner<T> {
+    fn param_inner(&self) -> Option<&T>;
+}
+
+macro_rules! impl_param_inner {
+    ($for_type:ty, $variant:ident) => {
+        impl $crate::model::ParamInner<$for_type> for Param {
+            fn param_inner(&self) -> Option<&$for_type> {
+                match self {
+                    $crate::model::Param::$variant(p) => Some(p),
+                    _ => None,
+                }
+            }
+        }
+    };
+}
+
+#[derive(Debug, Clone)]
+pub struct AlternateRepresentationParam {
+    pub uri: String,
+}
+
+impl_param_inner!(AlternateRepresentationParam, AltRep);
+
+#[derive(Debug, Clone)]
+pub struct CommonNameParam {
+    pub name: String,
+}
+
+impl_param_inner!(CommonNameParam, CommonName);
+
+#[derive(Debug, Clone)]
+pub struct ValueTypeParam {
+    pub value: Value,
+}
+
+impl_param_inner!(ValueTypeParam, ValueType);
+
+#[derive(Debug, Clone)]
+pub struct TimeZoneIdParam {
+    pub tz_id: String,
+    pub unique: bool,
+}
+
+impl_param_inner!(TimeZoneIdParam, TimeZoneId);
+
+#[derive(Debug, Clone)]
+pub struct LanguageParam {
+    pub language: LanguageTag,
+}
+
+impl_param_inner!(LanguageParam, Language);
+
+#[derive(Debug, Clone)]
+pub struct DirectoryEntryReferenceParam {
+    pub uri: String,
+}
+
+impl_param_inner!(DirectoryEntryReferenceParam, DirectoryEntryReference);
+
+#[derive(Debug, Clone)]
+pub struct SentByParam {
+    pub address: String,
+}
+
+impl_param_inner!(SentByParam, SentBy);
+
+#[derive(Debug, Clone)]
+pub struct RangeParam {
+    pub range: Range,
+}
+
+impl_param_inner!(RangeParam, Range);
+
+#[derive(Debug, Clone)]
+pub struct FormatTypeParam {
+    pub type_name: String,
+    pub sub_type_name: String,
+}
+
+impl_param_inner!(FormatTypeParam, FormatType);
+
+#[derive(Debug, Clone)]
+pub struct EncodingParam {
+    pub encoding: Encoding,
+}
+
+impl_param_inner!(EncodingParam, Encoding);
+
+#[derive(Debug, Clone)]
+pub struct CalendarUserTypeParam {
+    pub cu_type: CalendarUserType,
+}
+
+impl_param_inner!(CalendarUserTypeParam, CalendarUserType);
+
+#[derive(Debug, Clone)]
+pub struct MembersParam {
+    pub members: Vec<String>,
+}
+
+impl_param_inner!(MembersParam, Members);
+
+#[derive(Debug, Clone)]
+pub struct RoleParam {
+    pub role: Role,
+}
+
+impl_param_inner!(RoleParam, Role);
+
+#[derive(Debug, Clone)]
+pub struct ParticipationStatusParam {
+    pub status: ParticipationStatusUnknown,
+}
+
+impl_param_inner!(ParticipationStatusParam, ParticipationStatus);
+
+#[derive(Debug, Clone)]
+pub struct RsvpParam {
+    pub rsvp: bool,
+}
+
+impl_param_inner!(RsvpParam, Rsvp);
+
+#[derive(Debug, Clone)]
+pub struct DelegatedToParam {
+    pub delegates: Vec<String>,
+}
+
+impl_param_inner!(DelegatedToParam, DelegatedTo);
+
+#[derive(Debug, Clone)]
+pub struct DelegatedFromParam {
+    pub delegators: Vec<String>,
+}
+
+impl_param_inner!(DelegatedFromParam, DelegatedFrom);
+
+#[derive(Debug, Clone)]
+pub struct RelationshipTypeParam {
+    pub relationship: RelationshipType,
+}
+
+impl_param_inner!(RelationshipTypeParam, RelationshipType);
+
+#[derive(Debug, Clone)]
+pub struct FreeBusyTimeTypeParam {
+    pub fb_type: FreeBusyTimeType,
+}
+
+impl_param_inner!(FreeBusyTimeTypeParam, FreeBusyTimeType);
+
+#[derive(Debug, Clone)]
+pub struct RelatedParam {
+    pub related: Related,
+}
+
+impl_param_inner!(RelatedParam, Related);
 
 impl Display for TimeTransparency {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -261,7 +372,11 @@ macro_rules! altrep_param {
         // TODO no generic URI representation for Rust? Maybe extract the URI parser in this crate and
         //      make that into a URI crate.
         pub fn add_alternate_representation(mut self, value: String) -> Self {
-            self.inner.params.push(Param::AltRep { uri: value });
+            self.inner
+                .params
+                .push(Param::AltRep($crate::model::AlternateRepresentationParam {
+                    uri: value,
+                }));
             self
         }
     };
@@ -272,7 +387,9 @@ pub(crate) use altrep_param;
 macro_rules! language_param {
     () => {
         pub fn add_language(mut self, language: $crate::common::LanguageTag) -> Self {
-            self.inner.params.push(Param::Language { language });
+            self.inner
+                .params
+                .push(Param::Language($crate::model::LanguageParam { language }));
             self
         }
     };
@@ -283,10 +400,12 @@ pub(crate) use language_param;
 macro_rules! tz_id_param {
     () => {
         pub fn add_tz_id<V: ToString>(mut self, tz_id: V, unique: bool) -> Self {
-            self.inner.params.push(Param::TimeZoneId {
-                tz_id: tz_id.to_string(),
-                unique,
-            });
+            self.inner
+                .params
+                .push(Param::TimeZoneId($crate::model::TimeZoneIdParam {
+                    tz_id: tz_id.to_string(),
+                    unique,
+                }));
             self
         }
     };
@@ -298,7 +417,9 @@ macro_rules! sent_by_param {
     () => {
         // TODO should be a URI
         pub fn add_sent_by(mut self, value: String) -> Self {
-            self.inner.params.push(Param::SentBy { address: value });
+            self.inner
+                .params
+                .push(Param::SentBy($crate::model::SentByParam { address: value }));
             self
         }
     };
@@ -309,9 +430,11 @@ pub(crate) use sent_by_param;
 macro_rules! common_name_param {
     () => {
         pub fn add_common_name<V: ToString>(mut self, value: V) -> Self {
-            self.inner.params.push(Param::CommonName {
-                name: value.to_string(),
-            });
+            self.inner
+                .params
+                .push(Param::CommonName($crate::model::CommonNameParam {
+                    name: value.to_string(),
+                }));
             self
         }
     };
@@ -323,9 +446,9 @@ macro_rules! directory_entry_reference_param {
     () => {
         // TODO should be a URI
         pub fn add_directory_entry_reference(mut self, value: String) -> Self {
-            self.inner
-                .params
-                .push(Param::DirectoryEntryReference { uri: value });
+            self.inner.params.push(Param::DirectoryEntryReference(
+                $crate::model::DirectoryEntryReferenceParam { uri: value },
+            ));
             self
         }
     };
@@ -340,7 +463,7 @@ pub(crate) use directory_entry_reference_param;
 macro_rules! add_is_utc {
     () => {
         pub fn add_is_utc(mut self) -> Self {
-            self.inner.date_time.set_utc(true);
+            self.inner.value.set_utc(true);
             self
         }
     };

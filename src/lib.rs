@@ -18,6 +18,7 @@ mod test_utils;
 mod validate;
 
 pub mod prelude {
+    pub use crate::common::PropertyKind;
     pub use crate::model::*;
     pub use crate::ops::load_ical;
     pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};

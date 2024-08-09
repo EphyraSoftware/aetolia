@@ -5,8 +5,10 @@ mod params;
 mod recur;
 mod value;
 
-use crate::common::Value;
-use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
+use crate::common::{PropertyKind, Value};
+use crate::model::{
+    CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param, ValueTypeParam,
+};
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
 use crate::validate::error::ICalendarError;
@@ -14,7 +16,7 @@ use crate::validate::params::validate_params;
 pub use error::*;
 use std::collections::{HashMap, HashSet};
 
-pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
+pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
 
     let time_zone_ids = ical_object
@@ -24,7 +26,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             if let CalendarComponent::TimeZone(time_zone) = component {
                 for property in &time_zone.properties {
                     if let ComponentProperty::TimeZoneId(tz_id) = property {
-                        return Some(tz_id.value.clone());
+                        return Some(tz_id.value.id.clone());
                     }
                 }
             }
@@ -37,7 +39,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
 
     errors.extend_from_slice(
         ICalendarError::many_from_calendar_property_errors(validate_calendar_properties(
-            &ical_object,
+            ical_object,
             &mut calendar_info,
         ))
         .as_slice(),
@@ -309,52 +311,6 @@ struct PropertyInfo<'a> {
     calendar_info: &'a CalendarInfo,
 }
 
-#[derive(Debug)]
-enum PropertyKind {
-    Attach,
-    Version,
-    DateTimeStart,
-    Description,
-    Organizer,
-    TimeZoneId,
-    Attendee,
-    Categories,
-    Comment,
-    GeographicPosition,
-    Location,
-    PercentComplete,
-    Priority,
-    Resources,
-    Status,
-    Summary,
-    DateTimeCompleted,
-    DateTimeEnd,
-    DateTimeDue,
-    Duration,
-    FreeBusyTime,
-    TimeTransparency,
-    TimeZoneName,
-    TimeZoneOffsetTo,
-    TimeZoneOffsetFrom,
-    TimeZoneUrl,
-    Contact,
-    RecurrenceId,
-    Related,
-    ExceptionDateTimes,
-    RecurrenceDateTimes,
-    RecurrenceRule,
-    Action,
-    Repeat,
-    Trigger,
-    DateTimeCreated,
-    DateTimeStamp,
-    LastModified,
-    Sequence,
-    RequestStatus,
-    #[allow(dead_code)]
-    Other,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 enum PropertyLocation {
     Calendar,
@@ -449,7 +405,7 @@ fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize
         .iter()
         .enumerate()
         .find_map(|(index, param)| {
-            if let Param::ValueType { value } = param {
+            if let Param::ValueType(ValueTypeParam { value }) = param {
                 return Some((value.clone(), index));
             }
 
@@ -637,7 +593,7 @@ END:VCALENDAR\r\n";
             .finish_property()
             .build();
 
-        let errors = validate_model(object).unwrap();
+        let errors = validate_model(&object).unwrap();
 
         assert_errors!(
             errors,
@@ -656,7 +612,7 @@ END:VCALENDAR\r\n";
             .finish_component()
             .build();
 
-        let errors = validate_model(object).unwrap();
+        let errors = validate_model(&object).unwrap();
 
         assert_errors!(errors, "In component \"VJOURNAL\" at index 0: No properties found in component, required at least one");
     }
@@ -2651,6 +2607,6 @@ END:VCALENDAR\r\n";
         let (rem, object) = crate::parser::ical_object::<Error>(content.as_bytes()).unwrap();
         check_rem(rem, 0);
 
-        validate_model(object.to_model().unwrap()).unwrap()
+        validate_model(&object.to_model().unwrap()).unwrap()
     }
 }

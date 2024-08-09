@@ -14,7 +14,7 @@ use crate::model::{
     add_unique_identifier, add_url, IanaComponentPropertyBuilder, ParticipationStatusEvent,
     StatusEvent, StatusPropertyBuilder, TimeTransparencyPropertyBuilder,
 };
-use crate::prelude::AttendeePropertyBuilder;
+use crate::prelude::{impl_component_access, AttendeePropertyBuilder};
 
 #[derive(Debug)]
 pub struct EventComponent {
@@ -22,12 +22,18 @@ pub struct EventComponent {
     pub(crate) alarms: Vec<CalendarComponent>,
 }
 
+impl_component_access!(EventComponent);
+
 impl EventComponent {
     pub fn new() -> Self {
         EventComponent {
             properties: Vec::new(),
             alarms: Vec::new(),
         }
+    }
+
+    pub fn alarms(&self) -> &[CalendarComponent] {
+        &self.alarms
     }
 }
 

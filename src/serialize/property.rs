@@ -1,3 +1,4 @@
+use crate::model::RecurrenceDateTimesPropertyValue;
 use crate::serialize::WriteModel;
 use std::io::Write;
 
@@ -10,7 +11,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DTSTAMP")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::UniqueIdentifier(property) => {
                 writer.write_all(b"UID")?;
@@ -22,7 +23,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DTSTART")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Classification(property) => {
                 writer.write_all(b"CLASS")?;
@@ -34,7 +35,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"CREATED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Description(property) => {
                 writer.write_all(b"DESCRIPTION")?;
@@ -46,14 +47,14 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"GEO")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                write!(writer, "{};", property.latitude)?;
-                write!(writer, "{}", property.longitude)?;
+                write!(writer, "{};", property.value.latitude)?;
+                write!(writer, "{}", property.value.longitude)?;
             }
             ComponentProperty::LastModified(property) => {
                 writer.write_all(b"LAST-MODIFIED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Location(property) => {
                 writer.write_all(b"LOCATION")?;
@@ -95,15 +96,15 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"REQUEST-STATUS")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                if let Some(code) = property.status_code.first() {
+                if let Some(code) = property.value.status_code.first() {
                     write!(writer, "{}", code)?;
                 }
-                for code in property.status_code.iter().skip(1) {
+                for code in property.value.status_code.iter().skip(1) {
                     write!(writer, ".{}", code)?;
                 }
                 writer.write_all(b";")?;
-                writer.write_all(property.description.as_bytes())?;
-                if let Some(exception_data) = &property.exception_data {
+                writer.write_all(property.value.description.as_bytes())?;
+                if let Some(exception_data) = &property.value.exception_data {
                     writer.write_all(b";")?;
                     writer.write_all(exception_data.as_bytes())?;
                 }
@@ -118,25 +119,25 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"RECURRENCE-ID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::RecurrenceRule(property) => {
                 writer.write_all(b"RRULE")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.rule.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::DateTimeEnd(property) => {
                 writer.write_all(b"DTEND")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Duration(property) => {
                 writer.write_all(b"DURATION")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.duration.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::Attach(property) => {
                 writer.write_all(b"ATTACH")?;
@@ -178,12 +179,12 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"EXDATE")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                if let Some((date, time, is_utc)) = property.date_times.first() {
-                    (*date, *time, *is_utc).write_model(writer)?;
+                if let Some(dt) = property.value.first() {
+                    dt.write_model(writer)?;
                 }
-                for (date, time, is_utc) in property.date_times.iter().skip(1) {
+                for dt in property.value.iter().skip(1) {
                     writer.write_all(b",")?;
-                    (*date, *time, *is_utc).write_model(writer)?;
+                    dt.write_model(writer)?;
                 }
             }
             ComponentProperty::Status(property) => {
@@ -214,19 +215,32 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"RDATE")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                if let Some((date, time, is_utc)) = property.date_times.first() {
-                    (*date, *time, *is_utc).write_model(writer)?;
-                }
-                for (date, time, is_utc) in property.date_times.iter().skip(1) {
-                    writer.write_all(b",")?;
-                    (*date, *time, *is_utc).write_model(writer)?;
+                match &property.value {
+                    RecurrenceDateTimesPropertyValue::DateTimes(date_times) => {
+                        if let Some(dt) = date_times.first() {
+                            dt.write_model(writer)?;
+                        }
+                        for dt in date_times.iter().skip(1) {
+                            writer.write_all(b",")?;
+                            dt.write_model(writer)?;
+                        }
+                    }
+                    RecurrenceDateTimesPropertyValue::Periods(periods) => {
+                        if let Some(period) = periods.first() {
+                            period.write_model(writer)?;
+                        }
+                        for period in periods.iter().skip(1) {
+                            writer.write_all(b",")?;
+                            period.write_model(writer)?;
+                        }
+                    }
                 }
             }
             ComponentProperty::DateTimeCompleted(property) => {
                 writer.write_all(b"COMPLETED")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::PercentComplete(property) => {
                 writer.write_all(b"PERCENT-COMPLETE")?;
@@ -238,7 +252,7 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"DUE")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.date_time.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::FreeBusyTime(property) => {
                 writer.write_all(b"FREEBUSY")?;
@@ -256,10 +270,10 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"TZID")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                if property.unique_registry_id {
+                if property.value.unique_registry_id {
                     writer.write_all(b"/")?;
                 }
-                writer.write_all(property.value.as_bytes())?;
+                writer.write_all(property.value.id.as_bytes())?;
             }
             ComponentProperty::TimeZoneUrl(property) => {
                 writer.write_all(b"TZURL")?;
@@ -271,13 +285,13 @@ impl WriteModel for crate::model::ComponentProperty {
                 writer.write_all(b"TZOFFSETTO")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.offset.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::TimeZoneOffsetFrom(property) => {
                 writer.write_all(b"TZOFFSETFROM")?;
                 property.params.as_slice().write_model(writer)?;
                 writer.write_all(b":")?;
-                property.offset.write_model(writer)?;
+                property.value.write_model(writer)?;
             }
             ComponentProperty::TimeZoneName(property) => {
                 writer.write_all(b"TZNAME")?;
@@ -293,16 +307,16 @@ impl WriteModel for crate::model::ComponentProperty {
             }
             ComponentProperty::Trigger(property) => {
                 writer.write_all(b"TRIGGER")?;
-                match property {
-                    crate::model::Trigger::Relative(property) => {
+                match &property.value {
+                    crate::model::TriggerValue::Relative(duration) => {
                         property.params.as_slice().write_model(writer)?;
                         writer.write_all(b":")?;
-                        property.value.write_model(writer)?;
+                        duration.write_model(writer)?;
                     }
-                    crate::model::Trigger::Absolute(property) => {
+                    crate::model::TriggerValue::Absolute(date_time) => {
                         property.params.as_slice().write_model(writer)?;
                         writer.write_all(b":")?;
-                        property.date_time.write_model(writer)?;
+                        date_time.write_model(writer)?;
                     }
                 }
             }

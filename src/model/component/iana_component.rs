@@ -6,6 +6,7 @@ use crate::model::property::{
     AddComponentProperty, ComponentProperty, IanaComponentPropertyBuilder,
 };
 use crate::model::XComponentPropertyBuilder;
+use crate::prelude::impl_component_access;
 
 #[derive(Debug)]
 pub struct IanaComponent {
@@ -13,12 +14,18 @@ pub struct IanaComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
 
+impl_component_access!(IanaComponent);
+
 impl IanaComponent {
     pub(crate) fn new(name: String) -> Self {
         IanaComponent {
             name,
             properties: Vec::new(),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 
