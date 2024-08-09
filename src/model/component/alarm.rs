@@ -6,7 +6,7 @@ use crate::model::{
 };
 use crate::prelude::AddComponentProperty;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AlarmComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

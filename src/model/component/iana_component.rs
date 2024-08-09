@@ -8,7 +8,7 @@ use crate::model::property::{
 use crate::model::XComponentPropertyBuilder;
 use crate::prelude::impl_component_access;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IanaComponent {
     pub(crate) name: String,
     pub(crate) properties: Vec<ComponentProperty>,

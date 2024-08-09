@@ -16,7 +16,7 @@ use crate::model::{
 };
 use crate::prelude::{impl_component_access, AttendeePropertyBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct EventComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) alarms: Vec<CalendarComponent>,

@@ -7,7 +7,7 @@ use crate::model::{
 };
 use crate::prelude::{impl_component_access, TimeZoneIdPropertyBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) components: Vec<CalendarComponent>,

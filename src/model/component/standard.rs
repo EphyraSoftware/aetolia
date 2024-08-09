@@ -7,7 +7,7 @@ use crate::model::{
     TimeZoneOffsetToPropertyBuilder, XComponentPropertyBuilder,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StandardComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

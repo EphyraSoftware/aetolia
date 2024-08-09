@@ -9,7 +9,7 @@ use crate::model::{
     StatusPropertyBuilder, XComponentPropertyBuilder,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct JournalComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

@@ -1,6 +1,6 @@
 use crate::common::{CalendarDateTime, OffsetWeekday, RecurFreq, Weekday};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RecurRulePart {
     Freq(RecurFreq),
     Until(CalendarDateTime),
@@ -18,7 +18,7 @@ pub enum RecurRulePart {
     WeekStart(Weekday),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RecurrenceRule {
     pub parts: Vec<RecurRulePart>,
 }

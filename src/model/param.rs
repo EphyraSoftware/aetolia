@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Param {
     AltRep(AlternateRepresentationParam),
     CommonName(CommonNameParam),
@@ -41,28 +41,28 @@ macro_rules! impl_param_inner {
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AlternateRepresentationParam {
     pub uri: String,
 }
 
 impl_param_inner!(AlternateRepresentationParam, AltRep);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CommonNameParam {
     pub name: String,
 }
 
 impl_param_inner!(CommonNameParam, CommonName);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValueTypeParam {
     pub value: Value,
 }
 
 impl_param_inner!(ValueTypeParam, ValueType);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TimeZoneIdParam {
     pub tz_id: String,
     pub unique: bool,
@@ -70,35 +70,35 @@ pub struct TimeZoneIdParam {
 
 impl_param_inner!(TimeZoneIdParam, TimeZoneId);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LanguageParam {
     pub language: LanguageTag,
 }
 
 impl_param_inner!(LanguageParam, Language);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DirectoryEntryReferenceParam {
     pub uri: String,
 }
 
 impl_param_inner!(DirectoryEntryReferenceParam, DirectoryEntryReference);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SentByParam {
     pub address: String,
 }
 
 impl_param_inner!(SentByParam, SentBy);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RangeParam {
     pub range: Range,
 }
 
 impl_param_inner!(RangeParam, Range);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FormatTypeParam {
     pub type_name: String,
     pub sub_type_name: String,
@@ -106,77 +106,77 @@ pub struct FormatTypeParam {
 
 impl_param_inner!(FormatTypeParam, FormatType);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EncodingParam {
     pub encoding: Encoding,
 }
 
 impl_param_inner!(EncodingParam, Encoding);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CalendarUserTypeParam {
     pub cu_type: CalendarUserType,
 }
 
 impl_param_inner!(CalendarUserTypeParam, CalendarUserType);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MembersParam {
     pub members: Vec<String>,
 }
 
 impl_param_inner!(MembersParam, Members);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RoleParam {
     pub role: Role,
 }
 
 impl_param_inner!(RoleParam, Role);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParticipationStatusParam {
     pub status: ParticipationStatusUnknown,
 }
 
 impl_param_inner!(ParticipationStatusParam, ParticipationStatus);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RsvpParam {
     pub rsvp: bool,
 }
 
 impl_param_inner!(RsvpParam, Rsvp);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DelegatedToParam {
     pub delegates: Vec<String>,
 }
 
 impl_param_inner!(DelegatedToParam, DelegatedTo);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DelegatedFromParam {
     pub delegators: Vec<String>,
 }
 
 impl_param_inner!(DelegatedFromParam, DelegatedFrom);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RelationshipTypeParam {
     pub relationship: RelationshipType,
 }
 
 impl_param_inner!(RelationshipTypeParam, RelationshipType);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FreeBusyTimeTypeParam {
     pub fb_type: FreeBusyTimeType,
 }
 
 impl_param_inner!(FreeBusyTimeTypeParam, FreeBusyTimeType);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RelatedParam {
     pub related: Related,
 }

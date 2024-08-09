@@ -8,7 +8,7 @@ use crate::model::{
 };
 use crate::prelude::{impl_component_access, Period};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FreeBusyComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }

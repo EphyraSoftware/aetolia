@@ -248,8 +248,8 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } | Param::Others { name, .. } if name == "ALTREP" => {
                 validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            e => {
-                panic!("Param not yet implemented: {:?}", e);
+            Param::Other { .. } | Param::Others { .. } => {
+                // Permit unknown parameters
             }
         }
     }
