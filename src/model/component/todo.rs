@@ -62,7 +62,7 @@ impl ToDoComponentBuilder {
 
     add_class!();
 
-    pub fn add_completed(
+    pub fn add_date_time_completed(
         self,
         date: time::Date,
         time: time::Time,
@@ -118,9 +118,9 @@ impl ToDoComponentBuilder {
 
     pub fn add_attendee(
         self,
-        value: String,
+        value: &str,
     ) -> AttendeePropertyBuilder<Self, ParticipationStatusToDo> {
-        AttendeePropertyBuilder::new(self, value)
+        AttendeePropertyBuilder::new(self, value.to_string())
     }
 
     add_categories!();

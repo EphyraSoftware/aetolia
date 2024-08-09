@@ -371,9 +371,6 @@ pub(super) fn check_declared_value(
                     ComponentProperty::Trigger(trigger) => {
                         match trigger.value {
                             TriggerValue::Relative(_) => {
-                                // Valid
-                            }
-                            TriggerValue::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a date-time value but has an absolute trigger".to_string(),
                                     location: Some(ComponentPropertyLocation {
@@ -385,6 +382,9 @@ pub(super) fn check_declared_value(
                                         }),
                                     }),
                                 });
+                            }
+                            TriggerValue::Absolute(_) => {
+                                // Valid
                             }
                         }
                     }

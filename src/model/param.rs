@@ -371,11 +371,11 @@ macro_rules! altrep_param {
     () => {
         // TODO no generic URI representation for Rust? Maybe extract the URI parser in this crate and
         //      make that into a URI crate.
-        pub fn add_alternate_representation(mut self, value: String) -> Self {
+        pub fn add_alternate_representation(mut self, value: &str) -> Self {
             self.inner
                 .params
                 .push(Param::AltRep($crate::model::AlternateRepresentationParam {
-                    uri: value,
+                    uri: value.to_string(),
                 }));
             self
         }
@@ -416,10 +416,12 @@ pub(crate) use tz_id_param;
 macro_rules! sent_by_param {
     () => {
         // TODO should be a URI
-        pub fn add_sent_by(mut self, value: String) -> Self {
+        pub fn add_sent_by(mut self, value: &str) -> Self {
             self.inner
                 .params
-                .push(Param::SentBy($crate::model::SentByParam { address: value }));
+                .push(Param::SentBy($crate::model::SentByParam {
+                    address: value.to_string(),
+                }));
             self
         }
     };
@@ -445,9 +447,11 @@ pub(crate) use common_name_param;
 macro_rules! directory_entry_reference_param {
     () => {
         // TODO should be a URI
-        pub fn add_directory_entry_reference(mut self, value: String) -> Self {
+        pub fn add_directory_entry_reference(mut self, value: &str) -> Self {
             self.inner.params.push(Param::DirectoryEntryReference(
-                $crate::model::DirectoryEntryReferenceParam { uri: value },
+                $crate::model::DirectoryEntryReferenceParam {
+                    uri: value.to_string(),
+                },
             ));
             self
         }
@@ -462,7 +466,7 @@ pub(crate) use directory_entry_reference_param;
 
 macro_rules! add_is_utc {
     () => {
-        pub fn add_is_utc(mut self) -> Self {
+        pub fn set_is_utc(mut self) -> Self {
             self.inner.value.set_utc(true);
             self
         }

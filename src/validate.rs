@@ -1123,13 +1123,13 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
-DESCRIPTION;RELTYPE=SIBLING:some text\r\n\
+DTSTART;RELTYPE=SIBLING:19920101T000010Z\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
     }
 
     #[test]

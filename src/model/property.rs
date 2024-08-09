@@ -1374,6 +1374,8 @@ where
         }
     }
 
+    add_is_utc!();
+
     tz_id_param!();
 
     impl_finish_component_property_build!(ComponentProperty::DateTimeEnd);
@@ -1511,10 +1513,10 @@ where
         self
     }
 
-    pub fn add_members(mut self, members: Vec<String>) -> Self {
-        self.inner
-            .params
-            .push(Param::Members(MembersParam { members }));
+    pub fn add_members(mut self, members: Vec<&str>) -> Self {
+        self.inner.params.push(Param::Members(MembersParam {
+            members: members.into_iter().map(|m| m.to_string()).collect(),
+        }));
         self
     }
 
@@ -1540,17 +1542,19 @@ where
         self
     }
 
-    pub fn add_delegated_to(mut self, delegates: Vec<String>) -> Self {
-        self.inner
-            .params
-            .push(Param::DelegatedTo(DelegatedToParam { delegates }));
+    pub fn add_delegated_to(mut self, delegates: Vec<&str>) -> Self {
+        self.inner.params.push(Param::DelegatedTo(DelegatedToParam {
+            delegates: delegates.into_iter().map(|d| d.to_string()).collect(),
+        }));
         self
     }
 
-    pub fn add_delegated_from(mut self, delegators: Vec<String>) -> Self {
+    pub fn add_delegated_from(mut self, delegators: Vec<&str>) -> Self {
         self.inner
             .params
-            .push(Param::DelegatedFrom(DelegatedFromParam { delegators }));
+            .push(Param::DelegatedFrom(DelegatedFromParam {
+                delegators: delegators.into_iter().map(|d| d.to_string()).collect(),
+            }));
         self
     }
 
@@ -2338,14 +2342,12 @@ where
             owner,
             inner: RelativeTriggerProperty {
                 value,
-                params: vec![Param::ValueType(ValueTypeParam {
-                    value: Value::Duration,
-                })],
+                params: Vec::new(),
             },
         }
     }
 
-    pub fn add_related(mut self, related: Related) -> Self {
+    pub fn add_trigger_relationship(mut self, related: Related) -> Self {
         self.inner
             .params
             .push(Param::Related(RelatedParam { related }));

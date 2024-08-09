@@ -639,7 +639,7 @@ fn validate_relationship_type_param(
     index: usize,
     property_info: &PropertyInfo,
 ) {
-    if !property_info.is_other && property_info.value_type != ValueType::Duration {
+    if !property_info.is_other && property_info.value_type != ValueType::Text {
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),

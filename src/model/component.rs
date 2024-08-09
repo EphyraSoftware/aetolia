@@ -114,7 +114,7 @@ pub(crate) use add_unique_identifier;
 
 macro_rules! add_class {
     () => {
-        pub fn add_class(
+        pub fn add_classification(
             self,
             value: $crate::model::property::Classification,
         ) -> $crate::model::property::ClassificationPropertyBuilder<Self> {
@@ -127,7 +127,7 @@ pub(crate) use add_class;
 
 macro_rules! add_created {
     () => {
-        pub fn add_created(
+        pub fn add_date_time_created(
             self,
             date: time::Date,
             time: time::Time,
@@ -200,9 +200,9 @@ macro_rules! add_location {
     () => {
         pub fn add_location(
             self,
-            value: String,
+            value: &str,
         ) -> $crate::model::property::LocationPropertyBuilder<Self> {
-            $crate::model::property::LocationPropertyBuilder::new(self, value)
+            $crate::model::property::LocationPropertyBuilder::new(self, value.to_string())
         }
     };
 }
@@ -213,9 +213,9 @@ macro_rules! add_organizer {
     () => {
         pub fn add_organizer(
             self,
-            value: String,
+            value: &str,
         ) -> $crate::model::property::OrganizerPropertyBuilder<Self> {
-            $crate::model::property::OrganizerPropertyBuilder::new(self, value)
+            $crate::model::property::OrganizerPropertyBuilder::new(self, value.to_string())
         }
     };
 }
@@ -277,8 +277,8 @@ pub(crate) use add_summary;
 
 macro_rules! add_url {
     () => {
-        pub fn add_url(self, value: String) -> $crate::model::property::UrlPropertyBuilder<Self> {
-            $crate::model::property::UrlPropertyBuilder::new(self, value)
+        pub fn add_url(self, value: &str) -> $crate::model::property::UrlPropertyBuilder<Self> {
+            $crate::model::property::UrlPropertyBuilder::new(self, value.to_string())
         }
     };
 }
@@ -321,16 +321,16 @@ macro_rules! add_attach {
     () => {
         pub fn add_attach_uri(
             self,
-            value: String,
+            value: &str,
         ) -> $crate::model::property::AttachPropertyBuilder<Self> {
-            $crate::model::property::AttachPropertyBuilder::new_with_uri(self, value)
+            $crate::model::property::AttachPropertyBuilder::new_with_uri(self, value.to_string())
         }
 
         pub fn add_attach_binary(
             self,
-            value: String,
+            value: &str,
         ) -> $crate::model::property::AttachPropertyBuilder<Self> {
-            $crate::model::property::AttachPropertyBuilder::new_with_binary(self, value)
+            $crate::model::property::AttachPropertyBuilder::new_with_binary(self, value.to_string())
         }
     };
 }
@@ -341,9 +341,12 @@ macro_rules! add_categories {
     () => {
         pub fn add_categories(
             self,
-            value: Vec<String>,
+            value: Vec<&str>,
         ) -> $crate::model::property::CategoriesPropertyBuilder<Self> {
-            $crate::model::property::CategoriesPropertyBuilder::new(self, value)
+            $crate::model::property::CategoriesPropertyBuilder::new(
+                self,
+                value.into_iter().map(|s| s.to_string()).collect(),
+            )
         }
     };
 }
@@ -394,14 +397,14 @@ macro_rules! add_request_status {
         pub fn add_request_status(
             self,
             status_code: &[u32],
-            description: String,
-            exception_data: std::option::Option<String>,
+            description: &str,
+            exception_data: std::option::Option<&str>,
         ) -> $crate::model::property::RequestStatusPropertyBuilder<Self> {
             $crate::model::property::RequestStatusPropertyBuilder::new(
                 self,
                 status_code.to_vec(),
-                description,
-                exception_data,
+                description.to_string(),
+                exception_data.map(|s| s.to_string()),
             )
         }
     };
@@ -411,11 +414,11 @@ pub(crate) use add_request_status;
 
 macro_rules! add_related {
     () => {
-        pub fn add_related(
+        pub fn add_related_to(
             self,
-            value: String,
+            value: &str,
         ) -> $crate::model::property::RelatedToPropertyBuilder<Self> {
-            $crate::model::property::RelatedToPropertyBuilder::new(self, value)
+            $crate::model::property::RelatedToPropertyBuilder::new(self, value.to_string())
         }
     };
 }
@@ -426,9 +429,12 @@ macro_rules! add_resources {
     () => {
         pub fn add_resources(
             self,
-            value: std::vec::Vec<String>,
+            value: std::vec::Vec<&str>,
         ) -> $crate::model::property::ResourcesPropertyBuilder<Self> {
-            $crate::model::property::ResourcesPropertyBuilder::new(self, value)
+            $crate::model::property::ResourcesPropertyBuilder::new(
+                self,
+                value.into_iter().map(|s| s.to_string()).collect(),
+            )
         }
     };
 }

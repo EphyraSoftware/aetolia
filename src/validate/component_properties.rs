@@ -1464,10 +1464,10 @@ fn validate_date_time_completed(
 ) {
     if !date_time_completed_property.value.is_utc() {
         errors.push(ComponentPropertyError {
-            message: "DTEND must be a UTC date-time".to_string(),
+            message: "COMPLETED must be a UTC date-time".to_string(),
             location: Some(ComponentPropertyLocation {
                 index,
-                name: "DTEND".to_string(),
+                name: "COMPLETED".to_string(),
                 property_location: Some(WithinPropertyLocation::Value),
             }),
         });
