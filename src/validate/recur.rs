@@ -124,7 +124,7 @@ pub(super) fn validate_recurrence_rule(
                             });
                         }
                     }
-                    _ => match (dt_start.date_time.is_date_time(), until.is_date_time()) {
+                    _ => match (dt_start.value.is_date_time(), until.is_date_time()) {
                         (true, false) => {
                             errors.push(ComponentPropertyError {
                                     message: format!("UNTIL part at index {part_index} is a date, but the associated DTSTART property is a date-time"),
@@ -222,7 +222,7 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                if dt_start.date_time.is_date() {
+                if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYSECOND part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
                         location: Some(ComponentPropertyLocation {
@@ -257,7 +257,7 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                if dt_start.date_time.is_date() {
+                if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYMINUTE part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
                         location: Some(ComponentPropertyLocation {
@@ -292,7 +292,7 @@ pub(super) fn validate_recurrence_rule(
                     });
                 }
 
-                if dt_start.date_time.is_date() {
+                if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYHOUR part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
                         location: Some(ComponentPropertyLocation {

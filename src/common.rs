@@ -390,6 +390,56 @@ impl Ord for CalendarDateTime {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum PropertyKind {
+    Attach,
+    Version,
+    DateTimeStart,
+    Description,
+    Organizer,
+    TimeZoneId,
+    Attendee,
+    Categories,
+    Comment,
+    GeographicPosition,
+    Location,
+    PercentComplete,
+    Priority,
+    Resources,
+    Status,
+    Summary,
+    DateTimeCompleted,
+    DateTimeEnd,
+    DateTimeDue,
+    Duration,
+    FreeBusyTime,
+    TimeTransparency,
+    TimeZoneName,
+    TimeZoneOffsetTo,
+    TimeZoneOffsetFrom,
+    TimeZoneUrl,
+    Contact,
+    RecurrenceId,
+    Related,
+    ExceptionDateTimes,
+    RecurrenceDateTimes,
+    RecurrenceRule,
+    Action,
+    Repeat,
+    Trigger,
+    DateTimeCreated,
+    DateTimeStamp,
+    LastModified,
+    Sequence,
+    RequestStatus,
+    #[allow(dead_code)]
+    Other,
+    UniqueIdentifier,
+    Classification,
+    Url,
+    RelatedTo,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

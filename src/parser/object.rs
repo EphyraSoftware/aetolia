@@ -323,7 +323,7 @@ mod tests {
     #[test]
     #[ignore = "Requires a real file"]
     fn real_file() {
-        let input = std::fs::read_to_string("sample.ics").unwrap();
+        let input = std::fs::read_to_string("test_data.ics").unwrap();
 
         let (input, first) = content_line_first_pass::<Error>(input.as_bytes()).unwrap();
         check_rem(input, 0);

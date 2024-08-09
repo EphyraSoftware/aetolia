@@ -14,8 +14,8 @@ impl ToModel for Vec<RecurRulePart> {
                     rule = rule.set_freq(f.clone());
                 }
                 RecurRulePart::Until(date_time) => {
-                    let (date, maybe_time, is_utc) = date_time.to_model()?;
-                    rule = rule.set_until(date, maybe_time, is_utc);
+                    let dt = date_time.to_model()?;
+                    rule = rule.set_until(dt);
                 }
                 RecurRulePart::Count(count) => {
                     rule = rule.set_count(*count);

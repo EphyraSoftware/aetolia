@@ -5,13 +5,15 @@ use crate::model::{
     AddComponentProperty, CalendarComponent, ComponentProperty, ICalObjectBuilder,
     IanaComponentPropertyBuilder, TimeZoneUrlPropertyBuilder, XComponentPropertyBuilder,
 };
-use crate::prelude::TimeZoneIdPropertyBuilder;
+use crate::prelude::{impl_component_access, TimeZoneIdPropertyBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) components: Vec<CalendarComponent>,
 }
+
+impl_component_access!(TimeZoneComponent);
 
 impl TimeZoneComponent {
     pub(crate) fn new() -> Self {
@@ -19,6 +21,10 @@ impl TimeZoneComponent {
             properties: Vec::new(),
             components: Vec::new(),
         }
+    }
+
+    pub fn nested_components(&self) -> &[CalendarComponent] {
+        &self.components
     }
 }
 

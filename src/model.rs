@@ -1,8 +1,10 @@
+mod access;
 mod component;
 mod object;
 mod param;
 mod property;
 
+pub use access::*;
 pub use component::*;
 pub use object::*;
 pub use param::*;
@@ -223,7 +225,8 @@ mod tests {
                 Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
                 None,
                 true,
-            )])
+            )
+                .into()])
             .add_tz_id("America/New_York", true)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
