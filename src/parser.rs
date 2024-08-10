@@ -18,8 +18,8 @@ mod object;
 pub(crate) mod param;
 mod pre;
 mod property;
+pub mod types;
 
-pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
 pub use object::{ical_object, ical_stream};
 pub use param::ParamValue;
 pub use pre::content_line_first_pass;
@@ -44,6 +44,7 @@ pub use property::{
     TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
     TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
 };
+pub use types::CalendarProperty;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {

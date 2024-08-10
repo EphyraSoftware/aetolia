@@ -1,10 +1,12 @@
 use crate::parser::component::{
     component_event, component_free_busy, component_journal, component_timezone, component_todo,
 };
-use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
 use crate::parser::property::{
     prop_calendar_scale, prop_iana, prop_method, prop_product_id, prop_version, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::CalendarProperty;
+use crate::parser::types::ICalendar;
 use crate::parser::{content_line, iana_token, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -15,8 +17,6 @@ use nom::multi::{many0, many1};
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
-
-pub mod types;
 
 pub fn ical_stream<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E>
 where

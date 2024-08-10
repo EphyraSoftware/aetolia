@@ -718,127 +718,127 @@ impl ToModel for crate::parser::RepeatCountProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ComponentProperty<'_> {
+impl ToModel for crate::parser::types::ComponentProperty<'_> {
     type Model = crate::model::ComponentProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match self {
-            crate::parser::ComponentProperty::DateTimeStamp(date_time_stamp) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeStamp(date_time_stamp) => Ok(
                 crate::model::ComponentProperty::DateTimeStamp(date_time_stamp.to_model()?),
             ),
-            crate::parser::ComponentProperty::UniqueIdentifier(unique_identifier) => Ok(
+            crate::parser::types::ComponentProperty::UniqueIdentifier(unique_identifier) => Ok(
                 crate::model::ComponentProperty::UniqueIdentifier(unique_identifier.to_model()?),
             ),
-            crate::parser::ComponentProperty::DateTimeStart(date_time_start) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeStart(date_time_start) => Ok(
                 crate::model::ComponentProperty::DateTimeStart(date_time_start.to_model()?),
             ),
-            crate::parser::ComponentProperty::Classification(classification) => Ok(
+            crate::parser::types::ComponentProperty::Classification(classification) => Ok(
                 crate::model::ComponentProperty::Classification(classification.to_model()?),
             ),
-            crate::parser::ComponentProperty::DateTimeCreated(created) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeCreated(created) => Ok(
                 crate::model::ComponentProperty::DateTimeCreated(created.to_model()?),
             ),
-            crate::parser::ComponentProperty::Description(description) => Ok(
+            crate::parser::types::ComponentProperty::Description(description) => Ok(
                 crate::model::ComponentProperty::Description(description.to_model()?),
             ),
-            crate::parser::ComponentProperty::GeographicPosition(geo_pos) => Ok(
+            crate::parser::types::ComponentProperty::GeographicPosition(geo_pos) => Ok(
                 crate::model::ComponentProperty::GeographicPosition(geo_pos.to_model()?),
             ),
-            crate::parser::ComponentProperty::LastModified(last_modified) => Ok(
+            crate::parser::types::ComponentProperty::LastModified(last_modified) => Ok(
                 crate::model::ComponentProperty::LastModified(last_modified.to_model()?),
             ),
-            crate::parser::ComponentProperty::Location(location) => Ok(
+            crate::parser::types::ComponentProperty::Location(location) => Ok(
                 crate::model::ComponentProperty::Location(location.to_model()?),
             ),
-            crate::parser::ComponentProperty::Organizer(organizer) => Ok(
+            crate::parser::types::ComponentProperty::Organizer(organizer) => Ok(
                 crate::model::ComponentProperty::Organizer(organizer.to_model()?),
             ),
-            crate::parser::ComponentProperty::Priority(priority) => Ok(
+            crate::parser::types::ComponentProperty::Priority(priority) => Ok(
                 crate::model::ComponentProperty::Priority(priority.to_model()?),
             ),
-            crate::parser::ComponentProperty::Sequence(sequence) => Ok(
+            crate::parser::types::ComponentProperty::Sequence(sequence) => Ok(
                 crate::model::ComponentProperty::Sequence(sequence.to_model()?),
             ),
-            crate::parser::ComponentProperty::Status(status) => {
+            crate::parser::types::ComponentProperty::Status(status) => {
                 Ok(crate::model::ComponentProperty::Status(status.to_model()?))
             }
-            crate::parser::ComponentProperty::Summary(summary) => Ok(
+            crate::parser::types::ComponentProperty::Summary(summary) => Ok(
                 crate::model::ComponentProperty::Summary(summary.to_model()?),
             ),
-            crate::parser::ComponentProperty::TimeTransparency(time_transparency) => Ok(
+            crate::parser::types::ComponentProperty::TimeTransparency(time_transparency) => Ok(
                 crate::model::ComponentProperty::TimeTransparency(time_transparency.to_model()?),
             ),
-            crate::parser::ComponentProperty::Url(url) => {
+            crate::parser::types::ComponentProperty::Url(url) => {
                 Ok(crate::model::ComponentProperty::Url(url.to_model()?))
             }
-            crate::parser::ComponentProperty::RecurrenceId(recurrence_id) => Ok(
+            crate::parser::types::ComponentProperty::RecurrenceId(recurrence_id) => Ok(
                 crate::model::ComponentProperty::RecurrenceId(recurrence_id.to_model()?),
             ),
-            crate::parser::ComponentProperty::RecurrenceRule(recurrence_rule) => Ok(
+            crate::parser::types::ComponentProperty::RecurrenceRule(recurrence_rule) => Ok(
                 crate::model::ComponentProperty::RecurrenceRule(recurrence_rule.to_model()?),
             ),
-            crate::parser::ComponentProperty::DateTimeEnd(date_time_end) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeEnd(date_time_end) => Ok(
                 crate::model::ComponentProperty::DateTimeEnd(date_time_end.to_model()?),
             ),
-            crate::parser::ComponentProperty::Duration(duration) => Ok(
+            crate::parser::types::ComponentProperty::Duration(duration) => Ok(
                 crate::model::ComponentProperty::Duration(duration.to_model()?),
             ),
-            crate::parser::ComponentProperty::Attach(attach) => {
+            crate::parser::types::ComponentProperty::Attach(attach) => {
                 Ok(crate::model::ComponentProperty::Attach(attach.to_model()?))
             }
-            crate::parser::ComponentProperty::Attendee(attendee) => Ok(
+            crate::parser::types::ComponentProperty::Attendee(attendee) => Ok(
                 crate::model::ComponentProperty::Attendee(attendee.to_model()?),
             ),
-            crate::parser::ComponentProperty::Categories(categories) => Ok(
+            crate::parser::types::ComponentProperty::Categories(categories) => Ok(
                 crate::model::ComponentProperty::Categories(categories.to_model()?),
             ),
-            crate::parser::ComponentProperty::Comment(comment) => Ok(
+            crate::parser::types::ComponentProperty::Comment(comment) => Ok(
                 crate::model::ComponentProperty::Comment(comment.to_model()?),
             ),
-            crate::parser::ComponentProperty::Contact(contact) => Ok(
+            crate::parser::types::ComponentProperty::Contact(contact) => Ok(
                 crate::model::ComponentProperty::Contact(contact.to_model()?),
             ),
-            crate::parser::ComponentProperty::ExceptionDateTimes(exception_date_times) => {
+            crate::parser::types::ComponentProperty::ExceptionDateTimes(exception_date_times) => {
                 Ok(crate::model::ComponentProperty::ExceptionDateTimes(
                     exception_date_times.to_model()?,
                 ))
             }
-            crate::parser::ComponentProperty::RequestStatus(request_status) => Ok(
+            crate::parser::types::ComponentProperty::RequestStatus(request_status) => Ok(
                 crate::model::ComponentProperty::RequestStatus(request_status.to_model()?),
             ),
-            crate::parser::ComponentProperty::RelatedTo(related_to) => Ok(
+            crate::parser::types::ComponentProperty::RelatedTo(related_to) => Ok(
                 crate::model::ComponentProperty::RelatedTo(related_to.to_model()?),
             ),
-            crate::parser::ComponentProperty::Resources(resources) => Ok(
+            crate::parser::types::ComponentProperty::Resources(resources) => Ok(
                 crate::model::ComponentProperty::Resources(resources.to_model()?),
             ),
-            crate::parser::ComponentProperty::RecurrenceDateTimes(recurrence_date_times) => {
+            crate::parser::types::ComponentProperty::RecurrenceDateTimes(recurrence_date_times) => {
                 Ok(crate::model::ComponentProperty::RecurrenceDateTimes(
                     recurrence_date_times.to_model()?,
                 ))
             }
-            crate::parser::ComponentProperty::DateTimeCompleted(date_time_completed) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeCompleted(date_time_completed) => Ok(
                 crate::model::ComponentProperty::DateTimeCompleted(date_time_completed.to_model()?),
             ),
-            crate::parser::ComponentProperty::PercentComplete(percent_complete) => Ok(
+            crate::parser::types::ComponentProperty::PercentComplete(percent_complete) => Ok(
                 crate::model::ComponentProperty::PercentComplete(percent_complete.to_model()?),
             ),
-            crate::parser::ComponentProperty::DateTimeDue(date_time_due) => Ok(
+            crate::parser::types::ComponentProperty::DateTimeDue(date_time_due) => Ok(
                 crate::model::ComponentProperty::DateTimeDue(date_time_due.to_model()?),
             ),
-            crate::parser::ComponentProperty::FreeBusyTime(free_busy_time) => Ok(
+            crate::parser::types::ComponentProperty::FreeBusyTime(free_busy_time) => Ok(
                 crate::model::ComponentProperty::FreeBusyTime(free_busy_time.to_model()?),
             ),
-            crate::parser::ComponentProperty::TimeZoneId(time_zone_id) => Ok(
+            crate::parser::types::ComponentProperty::TimeZoneId(time_zone_id) => Ok(
                 crate::model::ComponentProperty::TimeZoneId(time_zone_id.to_model()?),
             ),
-            crate::parser::ComponentProperty::TimeZoneUrl(time_zone_url) => Ok(
+            crate::parser::types::ComponentProperty::TimeZoneUrl(time_zone_url) => Ok(
                 crate::model::ComponentProperty::TimeZoneUrl(time_zone_url.to_model()?),
             ),
-            crate::parser::ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to) => Ok(
+            crate::parser::types::ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to) => Ok(
                 crate::model::ComponentProperty::TimeZoneOffsetTo(time_zone_offset_to.to_model()?),
             ),
-            crate::parser::ComponentProperty::TimeZoneOffsetFrom(time_zone_offset_from) => {
+            crate::parser::types::ComponentProperty::TimeZoneOffsetFrom(time_zone_offset_from) => {
                 let to = time_zone_offset_from.to_model()?;
                 Ok(crate::model::ComponentProperty::TimeZoneOffsetFrom(
                     crate::model::TimeZoneOffsetFromProperty {
@@ -847,22 +847,22 @@ impl ToModel for crate::parser::ComponentProperty<'_> {
                     },
                 ))
             }
-            crate::parser::ComponentProperty::TimeZoneName(time_zone_name) => Ok(
+            crate::parser::types::ComponentProperty::TimeZoneName(time_zone_name) => Ok(
                 crate::model::ComponentProperty::TimeZoneName(time_zone_name.to_model()?),
             ),
-            crate::parser::ComponentProperty::Action(action) => {
+            crate::parser::types::ComponentProperty::Action(action) => {
                 Ok(crate::model::ComponentProperty::Action(action.to_model()?))
             }
-            crate::parser::ComponentProperty::Trigger(trigger) => Ok(
+            crate::parser::types::ComponentProperty::Trigger(trigger) => Ok(
                 crate::model::ComponentProperty::Trigger(trigger.to_model()?),
             ),
-            crate::parser::ComponentProperty::RepeatCount(repeat_count) => Ok(
+            crate::parser::types::ComponentProperty::RepeatCount(repeat_count) => Ok(
                 crate::model::ComponentProperty::Repeat(repeat_count.to_model()?),
             ),
-            crate::parser::ComponentProperty::XProperty(x_prop) => Ok(
+            crate::parser::types::ComponentProperty::XProperty(x_prop) => Ok(
                 crate::model::ComponentProperty::XProperty(x_prop.to_model()?),
             ),
-            crate::parser::ComponentProperty::IanaProperty(iana_prop) => Ok(
+            crate::parser::types::ComponentProperty::IanaProperty(iana_prop) => Ok(
                 crate::model::ComponentProperty::IanaProperty(iana_prop.to_model()?),
             ),
         }

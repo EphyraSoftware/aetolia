@@ -1,3 +1,9 @@
+use crate::parser::property::{
+    prop_action, prop_attach, prop_attendee, prop_description, prop_duration, prop_iana,
+    prop_repeat_count, prop_summary, prop_trigger, prop_x,
+};
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -5,12 +11,6 @@ use nom::error::ParseError;
 use nom::multi::many0;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
-use crate::parser::property::{
-    prop_action, prop_attach, prop_attendee, prop_description, prop_duration, prop_iana,
-    prop_repeat_count, prop_summary, prop_trigger, prop_x,
-};
 
 pub fn component_alarm<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where

@@ -1,9 +1,10 @@
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_comment, prop_date_time_start, prop_iana, prop_last_modified, prop_recurrence_date_times,
     prop_recurrence_rule, prop_time_zone_id, prop_time_zone_name, prop_time_zone_offset_from,
     prop_time_zone_offset_to, prop_time_zone_url, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;

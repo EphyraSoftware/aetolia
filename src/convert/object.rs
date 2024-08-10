@@ -1,6 +1,6 @@
 use crate::convert::ToModel;
 
-impl ToModel for crate::parser::ICalendar<'_> {
+impl ToModel for crate::parser::types::ICalendar<'_> {
     type Model = crate::model::ICalObject;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
