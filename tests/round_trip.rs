@@ -1227,6 +1227,26 @@ fn round_trip() {
             .finish_property()
         })
         .finish_component()
+        .add_iana_component("other-comp", |c| {
+            c.add_iana_property("other", "some-value")
+                .add_iana_param("other-test", "test")
+                .add_x_param("x-other-test", "test")
+                .finish_property()
+                .add_x_property("x-other", "some-value")
+                .add_iana_param("other-test", "test")
+                .add_x_param("x-other-test", "test")
+                .finish_property()
+        })
+        .add_x_component("x-other-comp", |c| {
+            c.add_iana_property("other", "some-value")
+                .add_iana_param("other-test", "test")
+                .add_x_param("x-other-test", "test")
+                .finish_property()
+                .add_x_property("x-other", "some-value")
+                .add_iana_param("other-test", "test")
+                .add_x_param("x-other-test", "test")
+                .finish_property()
+        })
         .build();
 
     let validation_errors = validate_model(&object).unwrap();

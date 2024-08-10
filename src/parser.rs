@@ -312,7 +312,17 @@ where
         cut(separated_list1(char(','), param_value)),
     )(input)?;
 
-    Ok((input, ParamValue::Others { name, values }))
+    Ok((
+        input,
+        if values.len() == 1 {
+            ParamValue::Other {
+                name,
+                value: values[0],
+            }
+        } else {
+            ParamValue::Others { name, values }
+        },
+    ))
 }
 
 fn content_line<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E>

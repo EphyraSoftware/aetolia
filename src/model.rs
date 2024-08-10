@@ -58,14 +58,12 @@ mod tests {
                     .add_x_param("x-special-param", "my-value")
                     .add_iana_param("special-param", "my-value")
                     .finish_property()
-                    .finish_component()
             })
             .add_iana_component("IANA-SOME-COMPONENT", |b| {
                 b.add_iana_property("IANA-SOME-PROP", "IANA-SOME-VALUE")
                     .add_iana_param("special-param", "my-value")
                     .add_x_param("x-special-param", "my-value")
                     .finish_property()
-                    .finish_component()
             })
             .build();
 
