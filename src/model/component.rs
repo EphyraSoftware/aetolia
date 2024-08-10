@@ -33,8 +33,8 @@ pub enum CalendarComponent {
     XComponent(XComponent),
 }
 
-impl CalendarComponent {
-    pub(crate) fn properties(&self) -> &[ComponentProperty] {
+impl ComponentAccess for CalendarComponent {
+    fn properties(&self) -> &[ComponentProperty] {
         match self {
             CalendarComponent::Event(e) => &e.properties,
             CalendarComponent::ToDo(t) => &t.properties,
@@ -544,4 +544,5 @@ macro_rules! add_alarms {
 }
 
 use crate::model::ComponentProperty;
+use crate::prelude::ComponentAccess;
 pub(crate) use add_alarms;

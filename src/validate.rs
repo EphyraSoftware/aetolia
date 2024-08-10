@@ -7,7 +7,8 @@ mod value;
 
 use crate::common::{PropertyKind, Value};
 use crate::model::{
-    CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param, ValueTypeParam,
+    CalendarComponent, CalendarProperty, ComponentAccess, ComponentProperty, ICalObject, Param,
+    ValueTypeParam,
 };
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;

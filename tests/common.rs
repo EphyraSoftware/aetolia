@@ -1,12 +1,6 @@
 use aetolia::prelude::*;
 
-/// Create an ical object with as much coverage as possible, using the builder interface
-/// Then that is built, serialized, and parsed to be compared with the original object.
-///
-/// Just to check that the content should be expected to be processed correctly, the object is
-/// validated before being serialized and parsed.
-#[test]
-fn round_trip() {
+pub fn make_test_object() -> ICalObject {
     let fancy_language_tag = LanguageTag::new("en")
         .with_ext_lang("tst")
         .with_script("Test")
@@ -17,7 +11,7 @@ fn round_trip() {
         .add_extension("u-nu-latn")
         .with_private_use("x-TST");
 
-    let object = ICalObject::builder()
+    ICalObject::builder()
         // RFC 5545: 3.7.1
         .add_calendar_scale("gregorian")
         .add_iana_param("scale-test", "test")
@@ -51,8 +45,8 @@ fn round_trip() {
         .finish_property()
         // RFC 5545: 3.8.4.7
         .add_unique_identifier("test-id")
-        .add_iana_param("unique-id-test", "test")
-        .add_x_param("x-unique-id-test", "test")
+        .add_iana_param("unique-identifier-test", "test")
+        .add_x_param("x-unique-identifier-test", "test")
         .finish_property()
         // RFC 5545: 3.8.2.4
         .add_date_time_start(
@@ -65,8 +59,8 @@ fn round_trip() {
         .finish_property()
         // RFC 5545: 3.8.1.3
         .add_classification(Classification::Public)
-        .add_iana_param("class-test", "test")
-        .add_x_param("x-class-test", "test")
+        .add_iana_param("classification-test", "test")
+        .add_x_param("x-classification-test", "test")
         .finish_property()
         // RFC 5545: 3.8.7.1
         .add_date_time_created(
@@ -1247,28 +1241,5 @@ fn round_trip() {
                 .add_x_param("x-other-test", "test")
                 .finish_property()
         })
-        .build();
-
-    let validation_errors = validate_model(&object).unwrap();
-
-    if !validation_errors.is_empty() {
-        validation_errors.iter().for_each(|e| {
-            eprintln!("{}", e);
-        })
-    }
-
-    assert!(
-        validation_errors.is_empty(),
-        "Didn't expect any validation errors, see errors above"
-    );
-
-    let mut target = Vec::new();
-    object.write_model(&mut target).unwrap();
-
-    std::fs::write("tests/round_trip.ics", &target).unwrap();
-
-    let parsed = load_ical(&target[..]).unwrap();
-
-    assert_eq!(1, parsed.len());
-    similar_asserts::assert_eq!(object, parsed[0]);
+        .build()
 }

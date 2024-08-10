@@ -484,16 +484,12 @@ macro_rules! impl_component_property_inner {
     };
 }
 
-impl_component_property_inner!(AttachProperty, Attach);
-impl_component_property_inner!(CategoriesProperty, Categories);
 impl_component_property_inner!(ClassificationProperty, Classification);
-impl_component_property_inner!(CommentProperty, Comment);
 impl_component_property_inner!(DescriptionProperty, Description);
 impl_component_property_inner!(GeographicPositionProperty, GeographicPosition);
 impl_component_property_inner!(LocationProperty, Location);
 impl_component_property_inner!(PercentCompleteProperty, PercentComplete);
 impl_component_property_inner!(PriorityProperty, Priority);
-impl_component_property_inner!(ResourcesProperty, Resources);
 impl_component_property_inner!(StatusProperty, Status);
 impl_component_property_inner!(SummaryProperty, Summary);
 impl_component_property_inner!(DateTimeCompletedProperty, DateTimeCompleted);
@@ -501,22 +497,15 @@ impl_component_property_inner!(DateTimeEndProperty, DateTimeEnd);
 impl_component_property_inner!(DateTimeDueProperty, DateTimeDue);
 impl_component_property_inner!(DateTimeStartProperty, DateTimeStart);
 impl_component_property_inner!(DurationProperty, Duration);
-impl_component_property_inner!(FreeBusyTimeProperty, FreeBusyTime);
 impl_component_property_inner!(TimeTransparencyProperty, TimeTransparency);
 impl_component_property_inner!(TimeZoneIdProperty, TimeZoneId);
-impl_component_property_inner!(TimeZoneNameProperty, TimeZoneName);
 impl_component_property_inner!(TimeZoneOffsetFromProperty, TimeZoneOffsetFrom);
 impl_component_property_inner!(TimeZoneOffsetToProperty, TimeZoneOffsetTo);
 impl_component_property_inner!(TimeZoneUrlProperty, TimeZoneUrl);
-impl_component_property_inner!(AttendeeProperty, Attendee);
-impl_component_property_inner!(ContactProperty, Contact);
 impl_component_property_inner!(OrganizerProperty, Organizer);
 impl_component_property_inner!(RecurrenceIdProperty, RecurrenceId);
-impl_component_property_inner!(RelatedToProperty, RelatedTo);
 impl_component_property_inner!(UrlProperty, Url);
 impl_component_property_inner!(UniqueIdentifierProperty, UniqueIdentifier);
-impl_component_property_inner!(ExceptionDateTimesProperty, ExceptionDateTimes);
-impl_component_property_inner!(RecurrenceDateTimesProperty, RecurrenceDateTimes);
 impl_component_property_inner!(RecurrenceRuleProperty, RecurrenceRule);
 impl_component_property_inner!(ActionProperty, Action);
 impl_component_property_inner!(RepeatProperty, Repeat);
@@ -525,7 +514,42 @@ impl_component_property_inner!(CreatedProperty, DateTimeCreated);
 impl_component_property_inner!(DateTimeStampProperty, DateTimeStamp);
 impl_component_property_inner!(LastModifiedProperty, LastModified);
 impl_component_property_inner!(SequenceProperty, Sequence);
-impl_component_property_inner!(RequestStatusProperty, RequestStatus);
+impl_component_property_inner!(ContactProperty, Contact);
+impl_component_property_inner!(AttachProperty, Attach);
+
+pub trait ComponentPropertiesInner<T> {
+    fn many_property_inner(&self) -> Option<&T>;
+}
+
+macro_rules! impl_component_properties_inner {
+    ($for_type:ty, $variant:ident) => {
+        impl $crate::model::ComponentPropertiesInner<$for_type>
+            for $crate::model::ComponentProperty
+        {
+            fn many_property_inner(&self) -> Option<&$for_type> {
+                match self {
+                    $crate::model::ComponentProperty::$variant(p) => Some(p),
+                    _ => None,
+                }
+            }
+        }
+    };
+}
+
+impl_component_properties_inner!(AttachProperty, Attach);
+impl_component_properties_inner!(CategoriesProperty, Categories);
+impl_component_properties_inner!(AttendeeProperty, Attendee);
+impl_component_properties_inner!(RecurrenceRuleProperty, RecurrenceRule);
+impl_component_properties_inner!(CommentProperty, Comment);
+impl_component_properties_inner!(ContactProperty, Contact);
+impl_component_properties_inner!(ExceptionDateTimesProperty, ExceptionDateTimes);
+impl_component_properties_inner!(RecurrenceDateTimesProperty, RecurrenceDateTimes);
+impl_component_properties_inner!(RequestStatusProperty, RequestStatus);
+impl_component_properties_inner!(RelatedToProperty, RelatedTo);
+impl_component_properties_inner!(ResourcesProperty, Resources);
+impl_component_properties_inner!(DescriptionProperty, Description);
+impl_component_properties_inner!(FreeBusyTimeProperty, FreeBusyTime);
+impl_component_properties_inner!(TimeZoneNameProperty, TimeZoneName);
 
 #[derive(Debug, PartialEq)]
 pub struct TriggerProperty {
