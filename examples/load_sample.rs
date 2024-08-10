@@ -10,20 +10,20 @@ fn main() {
             CalendarComponent::TimeZone(tz) => {
                 println!(
                     "Found timezone with name: {}",
-                    tz.property_opt::<TimeZoneIdProperty>().unwrap().value().id
+                    tz.get_property::<TimeZoneIdProperty>().unwrap().value().id
                 );
             }
             CalendarComponent::Event(e) => {
                 println!(
                     "Found event with description: {}",
-                    e.property_opt::<DescriptionProperty>().unwrap().value()
+                    e.get_property::<DescriptionProperty>().unwrap().value()
                 );
 
-                let attendee = e.property_opt::<AttendeeProperty>().unwrap();
-                let role_param = attendee.param_opt::<RoleParam>().unwrap();
+                let attendees = e.get_properties::<AttendeeProperty>();
+                let role_param = attendees[0].get_param::<RoleParam>().unwrap();
                 println!(
                     "Found attendee {} with role: {:?}",
-                    attendee.value(),
+                    attendees[0].value(),
                     role_param.role
                 );
             }

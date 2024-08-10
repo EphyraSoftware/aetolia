@@ -1,27 +1,45 @@
-use crate::model::{ComponentProperty, ComponentPropertyInner, Param, ParamInner};
+use crate::model::{
+    ComponentPropertiesInner, ComponentProperty, ComponentPropertyInner, Param, ParamInner,
+};
 
 pub trait ComponentAccess {
     fn properties(&self) -> &[ComponentProperty];
 
-    fn property_opt<T>(&self) -> Option<&T>
+    fn get_property<T>(&self) -> Option<&T>
     where
         ComponentProperty: ComponentPropertyInner<T>,
     {
         self.properties().iter().find_map(|p| p.property_inner())
     }
 
-    fn iana_property_opt(&self, name: &str) -> Option<&str> {
-        self.properties().iter().find_map(|p| match p {
-            ComponentProperty::IanaProperty(p) if p.name == name => Some(p.value.as_str()),
-            _ => None,
-        })
+    fn get_properties<T>(&self) -> Vec<&T>
+    where
+        ComponentProperty: ComponentPropertiesInner<T>,
+    {
+        self.properties()
+            .iter()
+            .filter_map(|p| p.many_property_inner())
+            .collect()
     }
 
-    fn x_property_opt(&self, name: &str) -> Option<&str> {
-        self.properties().iter().find_map(|p| match p {
-            ComponentProperty::XProperty(p) if p.name == name => Some(p.value.as_str()),
-            _ => None,
-        })
+    fn get_iana_properties(&self, name: &str) -> Vec<&str> {
+        self.properties()
+            .iter()
+            .filter_map(|p| match p {
+                ComponentProperty::IanaProperty(p) if p.name == name => Some(p.value.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn get_x_properties(&self, name: &str) -> Vec<&str> {
+        self.properties()
+            .iter()
+            .filter_map(|p| match p {
+                ComponentProperty::XProperty(p) if p.name == name => Some(p.value.as_str()),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -42,11 +60,37 @@ pub trait PropertyAccess<V> {
 
     fn params(&self) -> &[Param];
 
-    fn param_opt<T>(&self) -> Option<&T>
+    fn get_param<T>(&self) -> Option<&T>
     where
         Param: ParamInner<T>,
     {
         self.params().iter().find_map(|p| p.param_inner())
+    }
+
+    fn get_iana_params(&self, name: &str) -> Vec<&str> {
+        self.params()
+            .iter()
+            .filter_map(|p| match p {
+                Param::Other {
+                    name: param_name,
+                    value,
+                } if param_name == name => Some(value.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn get_x_params(&self, name: &str) -> Vec<&str> {
+        self.params()
+            .iter()
+            .filter_map(|p| match p {
+                Param::Other {
+                    name: param_name,
+                    value,
+                } if param_name == name => Some(value.as_str()),
+                _ => None,
+            })
+            .collect()
     }
 }
 
