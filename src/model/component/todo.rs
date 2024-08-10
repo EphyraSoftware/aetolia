@@ -11,13 +11,15 @@ use crate::model::{
     XComponentPropertyBuilder,
 };
 use crate::prelude::alarm::AddAlarmComponent;
-use crate::prelude::DateTimeDuePropertyBuilder;
+use crate::prelude::{impl_component_access, DateTimeDuePropertyBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ToDoComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) alarms: Vec<CalendarComponent>,
 }
+
+impl_component_access!(ToDoComponent);
 
 impl ToDoComponent {
     pub(crate) fn new() -> Self {
@@ -25,6 +27,10 @@ impl ToDoComponent {
             properties: Vec::new(),
             alarms: Vec::new(),
         }
+    }
+
+    pub fn alarms(&self) -> &[CalendarComponent] {
+        &self.alarms
     }
 }
 
@@ -56,7 +62,7 @@ impl ToDoComponentBuilder {
 
     add_class!();
 
-    pub fn add_completed(
+    pub fn add_date_time_completed(
         self,
         date: time::Date,
         time: time::Time,
@@ -112,9 +118,9 @@ impl ToDoComponentBuilder {
 
     pub fn add_attendee(
         self,
-        value: String,
+        value: &str,
     ) -> AttendeePropertyBuilder<Self, ParticipationStatusToDo> {
-        AttendeePropertyBuilder::new(self, value)
+        AttendeePropertyBuilder::new(self, value.to_string())
     }
 
     add_categories!();

@@ -1,8 +1,13 @@
 mod recur;
 
+use crate::common::CalendarDateTime;
 use crate::convert::{convert_string, ToModel};
-use crate::model::Period;
+use crate::model::{
+    GeographicPositionPropertyValue, Period, RecurrenceDateTimesPropertyValue,
+    TimeZoneIdPropertyValue,
+};
 use crate::parser::{ContentLine, DateOrDateTime, DateOrDateTimeOrPeriod};
+use crate::prelude::{RequestStatusPropertyValue, TriggerValue};
 use anyhow::Context;
 
 impl ToModel for crate::parser::DateTimeStampProperty<'_> {
@@ -10,7 +15,7 @@ impl ToModel for crate::parser::DateTimeStampProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::DateTimeStampProperty {
-            date_time: (
+            value: (
                 time::Date::from_calendar_date(
                     self.value.date.year as i32,
                     time::Month::try_from(self.value.date.month).context("Invalid month")?,
@@ -46,10 +51,10 @@ impl ToModel for crate::parser::DateTimeStartProperty<'_> {
     type Model = crate::model::DateTimeStartProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time, is_utc) = self.value.to_model()?;
+        let dt = self.value.to_model()?;
 
         Ok(crate::model::DateTimeStartProperty {
-            date_time: (date, maybe_time, is_utc).into(),
+            value: dt,
             params: self.params.to_model()?,
         })
     }
@@ -93,7 +98,7 @@ impl ToModel for crate::parser::CreatedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::CreatedProperty {
-            date_time: (date, time, is_utc).into(),
+            value: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -115,8 +120,10 @@ impl ToModel for crate::parser::GeographicPositionProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::GeographicPositionProperty {
-            latitude: self.latitude,
-            longitude: self.longitude,
+            value: GeographicPositionPropertyValue {
+                latitude: self.latitude,
+                longitude: self.longitude,
+            },
             params: self.other_params.to_model()?,
         })
     }
@@ -129,7 +136,7 @@ impl ToModel for crate::parser::LastModifiedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::LastModifiedProperty {
-            date_time: (date, time, is_utc).into(),
+            value: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -227,10 +234,10 @@ impl ToModel for crate::parser::RecurrenceIdProperty<'_> {
     type Model = crate::model::RecurrenceIdProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time, is_utc) = self.value.to_model()?;
+        let dt = self.value.to_model()?;
 
         Ok(crate::model::RecurrenceIdProperty {
-            date_time: (date, maybe_time, is_utc).into(),
+            value: dt,
             params: self.params.to_model()?,
         })
     }
@@ -241,7 +248,7 @@ impl ToModel for crate::parser::RecurrenceRuleProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::RecurrenceRuleProperty {
-            rule: self.value.to_model()?,
+            value: self.value.to_model()?,
             params: self.other_params.to_model()?,
         })
     }
@@ -251,10 +258,10 @@ impl ToModel for crate::parser::DateTimeEndProperty<'_> {
     type Model = crate::model::DateTimeEndProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time, is_utc) = self.value.to_model()?;
+        let dt = self.value.to_model()?;
 
         Ok(crate::model::DateTimeEndProperty {
-            date_time: (date, maybe_time, is_utc).into(),
+            value: dt,
             params: self.params.to_model()?,
         })
     }
@@ -265,7 +272,7 @@ impl ToModel for crate::parser::DurationProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::DurationProperty {
-            duration: self.value.to_model()?,
+            value: self.value.to_model()?,
             params: self.other_params.to_model()?,
         })
     }
@@ -336,7 +343,7 @@ impl ToModel for crate::parser::ExceptionDateTimesProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::ExceptionDateTimesProperty {
-            date_times: self
+            value: self
                 .value
                 .iter()
                 .map(|v| v.to_model())
@@ -351,9 +358,11 @@ impl ToModel for crate::parser::RequestStatusProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::RequestStatusProperty {
-            status_code: self.status_code.clone(),
-            description: convert_string(&self.status_description),
-            exception_data: self.exception_data.as_ref().map(|v| convert_string(v)),
+            value: RequestStatusPropertyValue {
+                status_code: self.status_code.clone(),
+                description: convert_string(&self.status_description),
+                exception_data: self.exception_data.as_ref().map(|v| convert_string(v)),
+            },
             params: self.params.to_model()?,
         })
     }
@@ -413,7 +422,7 @@ impl ToModel for crate::parser::RecurrenceDateTimesProperty<'_> {
 
         let (date_times, periods) = if date_times.iter().all(|dt| dt.0.is_some()) {
             (
-                date_times.iter().map(|dt| dt.0.unwrap()).collect(),
+                date_times.iter().map(|dt| dt.0.unwrap().into()).collect(),
                 Vec::with_capacity(0),
             )
         } else if date_times.iter().all(|dt| dt.1.is_some()) {
@@ -426,8 +435,11 @@ impl ToModel for crate::parser::RecurrenceDateTimesProperty<'_> {
         };
 
         Ok(crate::model::RecurrenceDateTimesProperty {
-            date_times,
-            periods,
+            value: if !periods.is_empty() {
+                RecurrenceDateTimesPropertyValue::Periods(periods)
+            } else {
+                RecurrenceDateTimesPropertyValue::DateTimes(date_times)
+            },
             params: self.params.to_model()?,
         })
     }
@@ -545,7 +557,7 @@ impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::DateTimeCompletedProperty {
-            date_time: (date, time, is_utc).into(),
+            value: (date, time, is_utc).into(),
             params: self.other_params.to_model()?,
         })
     }
@@ -566,10 +578,10 @@ impl ToModel for crate::parser::DateTimeDueProperty<'_> {
     type Model = crate::model::DateTimeDueProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let (date, maybe_time, is_utc) = self.value.to_model()?;
+        let dt = self.value.to_model()?;
 
         Ok(crate::model::DateTimeDueProperty {
-            date_time: (date, maybe_time, is_utc).into(),
+            value: dt,
             params: self.params.to_model()?,
         })
     }
@@ -591,8 +603,10 @@ impl ToModel for crate::parser::TimeZoneIdProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::TimeZoneIdProperty {
-            value: convert_string(&self.value),
-            unique_registry_id: self.unique_registry_id,
+            value: TimeZoneIdPropertyValue {
+                id: convert_string(&self.value),
+                unique_registry_id: self.unique_registry_id,
+            },
             params: self.other_params.to_model()?,
         })
     }
@@ -614,7 +628,7 @@ impl ToModel for crate::parser::TimeZoneOffsetProperty<'_> {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(crate::model::TimeZoneOffsetToProperty {
-            offset: self.value.to_model()?,
+            value: self.value.to_model()?,
             params: self.other_params.to_model()?,
         })
     }
@@ -672,25 +686,23 @@ impl ToModel for crate::parser::Action<'_> {
 }
 
 impl ToModel for crate::parser::TriggerProperty<'_> {
-    type Model = crate::model::Trigger;
+    type Model = crate::model::TriggerProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match &self.value {
             crate::parser::DurationOrDateTime::DateTime(date_time) => {
                 let (date, time, is_utc) = date_time.try_into()?;
-                Ok(crate::model::Trigger::Absolute(
-                    crate::model::AbsoluteTriggerProperty {
-                        date_time: (date, time, is_utc).into(),
-                        params: self.params.to_model()?,
-                    },
-                ))
-            }
-            crate::parser::DurationOrDateTime::Duration(duration) => Ok(
-                crate::model::Trigger::Relative(crate::model::RelativeTriggerProperty {
-                    value: duration.to_model()?,
+                Ok(crate::model::TriggerProperty {
+                    value: TriggerValue::Absolute((date, time, is_utc).into()),
                     params: self.params.to_model()?,
-                }),
-            ),
+                })
+            }
+            crate::parser::DurationOrDateTime::Duration(duration) => {
+                Ok(crate::model::TriggerProperty {
+                    value: TriggerValue::Relative(duration.to_model()?),
+                    params: self.params.to_model()?,
+                })
+            }
         }
     }
 }
@@ -830,7 +842,7 @@ impl ToModel for crate::parser::ComponentProperty<'_> {
                 let to = time_zone_offset_from.to_model()?;
                 Ok(crate::model::ComponentProperty::TimeZoneOffsetFrom(
                     crate::model::TimeZoneOffsetFromProperty {
-                        offset: to.offset,
+                        value: to.value,
                         params: to.params,
                     },
                 ))
@@ -888,14 +900,14 @@ impl ToModel for crate::parser::Period {
 }
 
 impl ToModel for DateOrDateTime {
-    type Model = (time::Date, Option<time::Time>, bool);
+    type Model = CalendarDateTime;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(match self {
-            DateOrDateTime::Date(date) => (date.try_into()?, None, false),
+            DateOrDateTime::Date(date) => (date.try_into()?, None, false).into(),
             DateOrDateTime::DateTime(datetime) => {
                 let (date, time, is_utc) = datetime.try_into()?;
-                (date, Some(time), is_utc)
+                (date, Some(time), is_utc).into()
             }
         })
     }

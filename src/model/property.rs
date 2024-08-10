@@ -6,7 +6,9 @@ use crate::model::param::Param;
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
 use crate::model::{
     add_is_utc, altrep_param, common_name_param, directory_entry_reference_param, language_param,
-    sent_by_param, tz_id_param,
+    sent_by_param, tz_id_param, CalendarUserTypeParam, DelegatedFromParam, DelegatedToParam,
+    EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, MembersParam, ParticipationStatusParam,
+    RangeParam, RelatedParam, RelationshipTypeParam, RoleParam, RsvpParam, ValueTypeParam,
 };
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -15,6 +17,7 @@ use crate::common::{
     CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
     Range, Related, RelationshipType, Role, Status, TimeTransparency, Value,
 };
+use crate::prelude::impl_property_access;
 pub use duration::*;
 pub use recur::*;
 
@@ -33,13 +36,13 @@ macro_rules! impl_date_time_query {
     ($for_type:ty) => {
         impl DateTimeQuery for $for_type {
             fn is_date(&self) -> bool {
-                self.date_time.is_date()
+                self.value.is_date()
             }
 
             // Form 1, local date-time
             fn is_local_time(&self) -> bool {
-                self.date_time.is_date_time()
-                    && !self.date_time.is_utc()
+                self.value.is_date_time()
+                    && !self.value.is_utc()
                     && !self
                         .params
                         .iter()
@@ -48,12 +51,12 @@ macro_rules! impl_date_time_query {
 
             // Form 2, UTC date-time
             fn is_utc(&self) -> bool {
-                self.date_time.is_date_time() && self.date_time.is_utc()
+                self.value.is_date_time() && self.value.is_utc()
             }
 
             // Form 3, date-time in a specific time zone
             fn is_local_time_with_timezone(&self) -> bool {
-                self.date_time.is_date_time()
+                self.value.is_date_time()
                     && self
                         .params
                         .iter()
@@ -153,6 +156,7 @@ macro_rules! impl_finish_component_property_build {
     };
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CalendarProperty {
     ProductId(ProductIdProperty),
     Version(VersionProperty),
@@ -162,6 +166,7 @@ pub enum CalendarProperty {
     IanaProperty(IanaProperty),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ProductIdProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -188,6 +193,7 @@ impl ProductIdPropertyBuilder {
 
 impl_other_params_builder!(ProductIdPropertyBuilder);
 
+#[derive(Debug, PartialEq)]
 pub struct VersionProperty {
     pub(crate) min_version: Option<String>,
     pub(crate) max_version: String,
@@ -220,6 +226,7 @@ impl VersionPropertyBuilder {
 
 impl_other_params_builder!(VersionPropertyBuilder);
 
+#[derive(Debug, PartialEq)]
 pub struct CalendarScaleProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -246,6 +253,7 @@ impl CalendarScalePropertyBuilder {
 
 impl_other_params_builder!(CalendarScalePropertyBuilder);
 
+#[derive(Debug, PartialEq)]
 pub struct MethodProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
@@ -272,7 +280,7 @@ impl MethodPropertyBuilder {
 
 impl_other_params_builder!(MethodPropertyBuilder);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ComponentProperty {
     /// RFC 5545, 3.8.1.1
     /// Value type: URI or BINARY
@@ -384,7 +392,7 @@ pub enum ComponentProperty {
     Repeat(RepeatProperty),
     /// RFC 5545, 3.8.6.3
     /// Value type: DURATION or DATE-TIME
-    Trigger(Trigger),
+    Trigger(TriggerProperty),
     /// RFC 5545, 3.8.7.1
     /// Value type: DATE-TIME
     DateTimeCreated(CreatedProperty),
@@ -451,10 +459,7 @@ impl ComponentProperty {
             ComponentProperty::TimeZoneOffsetFrom(p) => &p.params,
             ComponentProperty::TimeZoneName(p) => &p.params,
             ComponentProperty::Action(p) => &p.params,
-            ComponentProperty::Trigger(p) => match p {
-                Trigger::Relative(p) => &p.params,
-                Trigger::Absolute(p) => &p.params,
-            },
+            ComponentProperty::Trigger(p) => &p.params,
             ComponentProperty::Repeat(p) => &p.params,
             ComponentProperty::IanaProperty(p) => &p.params,
             ComponentProperty::XProperty(p) => &p.params,
@@ -462,27 +467,88 @@ impl ComponentProperty {
     }
 }
 
-#[derive(Debug)]
-pub enum Trigger {
-    Relative(RelativeTriggerProperty),
-    Absolute(AbsoluteTriggerProperty),
+pub trait ComponentPropertyInner<T> {
+    fn property_inner(&self) -> Option<&T>;
 }
 
-impl Trigger {
-    pub fn params(&self) -> &[Param] {
-        match self {
-            Trigger::Relative(p) => &p.params,
-            Trigger::Absolute(p) => &p.params,
+macro_rules! impl_component_property_inner {
+    ($for_type:ty, $variant:ident) => {
+        impl $crate::model::ComponentPropertyInner<$for_type> for $crate::model::ComponentProperty {
+            fn property_inner(&self) -> Option<&$for_type> {
+                match self {
+                    $crate::model::ComponentProperty::$variant(p) => Some(p),
+                    _ => None,
+                }
+            }
         }
-    }
+    };
 }
 
-#[derive(Debug)]
+impl_component_property_inner!(AttachProperty, Attach);
+impl_component_property_inner!(CategoriesProperty, Categories);
+impl_component_property_inner!(ClassificationProperty, Classification);
+impl_component_property_inner!(CommentProperty, Comment);
+impl_component_property_inner!(DescriptionProperty, Description);
+impl_component_property_inner!(GeographicPositionProperty, GeographicPosition);
+impl_component_property_inner!(LocationProperty, Location);
+impl_component_property_inner!(PercentCompleteProperty, PercentComplete);
+impl_component_property_inner!(PriorityProperty, Priority);
+impl_component_property_inner!(ResourcesProperty, Resources);
+impl_component_property_inner!(StatusProperty, Status);
+impl_component_property_inner!(SummaryProperty, Summary);
+impl_component_property_inner!(DateTimeCompletedProperty, DateTimeCompleted);
+impl_component_property_inner!(DateTimeEndProperty, DateTimeEnd);
+impl_component_property_inner!(DateTimeDueProperty, DateTimeDue);
+impl_component_property_inner!(DateTimeStartProperty, DateTimeStart);
+impl_component_property_inner!(DurationProperty, Duration);
+impl_component_property_inner!(FreeBusyTimeProperty, FreeBusyTime);
+impl_component_property_inner!(TimeTransparencyProperty, TimeTransparency);
+impl_component_property_inner!(TimeZoneIdProperty, TimeZoneId);
+impl_component_property_inner!(TimeZoneNameProperty, TimeZoneName);
+impl_component_property_inner!(TimeZoneOffsetFromProperty, TimeZoneOffsetFrom);
+impl_component_property_inner!(TimeZoneOffsetToProperty, TimeZoneOffsetTo);
+impl_component_property_inner!(TimeZoneUrlProperty, TimeZoneUrl);
+impl_component_property_inner!(AttendeeProperty, Attendee);
+impl_component_property_inner!(ContactProperty, Contact);
+impl_component_property_inner!(OrganizerProperty, Organizer);
+impl_component_property_inner!(RecurrenceIdProperty, RecurrenceId);
+impl_component_property_inner!(RelatedToProperty, RelatedTo);
+impl_component_property_inner!(UrlProperty, Url);
+impl_component_property_inner!(UniqueIdentifierProperty, UniqueIdentifier);
+impl_component_property_inner!(ExceptionDateTimesProperty, ExceptionDateTimes);
+impl_component_property_inner!(RecurrenceDateTimesProperty, RecurrenceDateTimes);
+impl_component_property_inner!(RecurrenceRuleProperty, RecurrenceRule);
+impl_component_property_inner!(ActionProperty, Action);
+impl_component_property_inner!(RepeatProperty, Repeat);
+impl_component_property_inner!(TriggerProperty, Trigger);
+impl_component_property_inner!(CreatedProperty, DateTimeCreated);
+impl_component_property_inner!(DateTimeStampProperty, DateTimeStamp);
+impl_component_property_inner!(LastModifiedProperty, LastModified);
+impl_component_property_inner!(SequenceProperty, Sequence);
+impl_component_property_inner!(RequestStatusProperty, RequestStatus);
+
+#[derive(Debug, PartialEq)]
+pub struct TriggerProperty {
+    pub(crate) value: TriggerValue,
+    pub(crate) params: Vec<Param>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TriggerValue {
+    Relative(Duration),
+    Absolute(CalendarDateTime),
+}
+
+impl_property_access!(TriggerProperty, TriggerValue);
+
+#[derive(Debug, PartialEq)]
 pub struct XProperty {
     pub(crate) name: String,
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(XProperty, String);
 
 pub struct XPropertyBuilder {
     owner: ICalObjectBuilder,
@@ -506,12 +572,14 @@ impl XPropertyBuilder {
 
 impl_other_params_builder!(XPropertyBuilder);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IanaProperty {
     pub(crate) name: String,
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(IanaProperty, String);
 
 pub struct IanaPropertyBuilder {
     owner: ICalObjectBuilder,
@@ -589,11 +657,13 @@ where
 
 impl_other_component_params_builder!(IanaComponentPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DateTimeStampProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DateTimeStampProperty, CalendarDateTime);
 
 pub struct DateTimeStampPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -612,7 +682,7 @@ where
         DateTimeStampPropertyBuilder {
             owner,
             inner: DateTimeStampProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -625,11 +695,13 @@ where
 
 impl_other_component_params_builder!(DateTimeStampPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct UniqueIdentifierProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(UniqueIdentifierProperty, String);
 
 pub struct UniqueIdentifierPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -655,11 +727,13 @@ where
 
 impl_other_component_params_builder!(UniqueIdentifierPropertyBuilder<P>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DateTimeStartProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DateTimeStartProperty, CalendarDateTime);
 
 pub struct DateTimeStartPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -680,13 +754,13 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::ValueType { value: Value::Date })
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }))
         }
 
         DateTimeStartPropertyBuilder {
             owner,
             inner: DateTimeStartProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params,
             },
         }
@@ -703,11 +777,13 @@ impl_other_component_params_builder!(DateTimeStartPropertyBuilder<P>);
 
 impl_date_time_query!(DateTimeStartProperty);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ClassificationProperty {
     pub(crate) value: Classification,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(ClassificationProperty, Classification);
 
 pub struct ClassificationPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -733,11 +809,13 @@ where
 
 impl_other_component_params_builder!(ClassificationPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CreatedProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(CreatedProperty, CalendarDateTime);
 
 pub struct CreatedPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -752,7 +830,7 @@ where
         CreatedPropertyBuilder {
             owner,
             inner: CreatedProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -765,11 +843,13 @@ where
 
 impl_other_component_params_builder!(CreatedPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DescriptionProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DescriptionProperty, String);
 
 pub struct DescriptionPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -798,12 +878,19 @@ where
 
 impl_other_component_params_builder!(DescriptionPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct GeographicPositionProperty {
-    pub(crate) latitude: f64,
-    pub(crate) longitude: f64,
+    pub(crate) value: GeographicPositionPropertyValue,
     pub(crate) params: Vec<Param>,
 }
+
+#[derive(Debug, PartialEq)]
+pub struct GeographicPositionPropertyValue {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+impl_property_access!(GeographicPositionProperty, GeographicPositionPropertyValue);
 
 pub struct GeographicPositionPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -822,8 +909,10 @@ where
         GeographicPositionPropertyBuilder {
             owner,
             inner: GeographicPositionProperty {
-                latitude,
-                longitude,
+                value: GeographicPositionPropertyValue {
+                    latitude,
+                    longitude,
+                },
                 params: Vec::new(),
             },
         }
@@ -834,11 +923,13 @@ where
 
 impl_other_component_params_builder!(GeographicPositionPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LastModifiedProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(LastModifiedProperty, CalendarDateTime);
 
 pub struct LastModifiedPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -857,7 +948,7 @@ where
         LastModifiedPropertyBuilder {
             owner,
             inner: LastModifiedProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -870,11 +961,13 @@ where
 
 impl_other_component_params_builder!(LastModifiedPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct LocationProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(LocationProperty, String);
 
 pub struct LocationPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -903,11 +996,13 @@ where
 
 impl_other_component_params_builder!(LocationPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct OrganizerProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(OrganizerProperty, String);
 
 pub struct OrganizerPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -941,11 +1036,13 @@ where
 
 impl_other_component_params_builder!(OrganizerPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PriorityProperty {
     pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(PriorityProperty, u8);
 
 pub struct PriorityPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -971,11 +1068,13 @@ where
 
 impl_other_component_params_builder!(PriorityPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SequenceProperty {
     pub(crate) value: u32,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(SequenceProperty, u32);
 
 pub struct SequencePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1001,13 +1100,20 @@ where
 
 impl_other_component_params_builder!(SequencePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RequestStatusProperty {
+    pub(crate) value: RequestStatusPropertyValue,
+    pub(crate) params: Vec<Param>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct RequestStatusPropertyValue {
     pub(crate) status_code: Vec<u32>,
     pub(crate) description: String,
     pub(crate) exception_data: Option<String>,
-    pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(RequestStatusProperty, RequestStatusPropertyValue);
 
 pub struct RequestStatusPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1027,9 +1133,11 @@ where
         RequestStatusPropertyBuilder {
             owner,
             inner: RequestStatusProperty {
-                status_code,
-                description,
-                exception_data,
+                value: RequestStatusPropertyValue {
+                    status_code,
+                    description,
+                    exception_data,
+                },
                 params: Vec::new(),
             },
         }
@@ -1042,11 +1150,13 @@ where
 
 impl_other_component_params_builder!(RequestStatusPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SummaryProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(SummaryProperty, String);
 
 pub struct SummaryPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1075,11 +1185,13 @@ where
 
 impl_other_component_params_builder!(SummaryPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeTransparencyProperty {
     pub(crate) value: TimeTransparency,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(TimeTransparencyProperty, TimeTransparency);
 
 pub struct TimeTransparencyPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1105,12 +1217,14 @@ where
 
 impl_other_component_params_builder!(TimeTransparencyPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct UrlProperty {
     // TODO should be a URI
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(UrlProperty, String);
 
 pub struct UrlPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1136,11 +1250,13 @@ where
 
 impl_other_component_params_builder!(UrlPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RecurrenceIdProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(RecurrenceIdProperty, CalendarDateTime);
 
 pub struct RecurrenceIdPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1161,13 +1277,13 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::ValueType { value: Value::Date })
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }))
         }
 
         RecurrenceIdPropertyBuilder {
             owner,
             inner: RecurrenceIdProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params,
             },
         }
@@ -1178,7 +1294,7 @@ where
     add_is_utc!();
 
     pub fn add_range(mut self, range: Range) -> Self {
-        self.inner.params.push(Param::Range { range });
+        self.inner.params.push(Param::Range(RangeParam { range }));
         self
     }
 
@@ -1187,11 +1303,13 @@ where
 
 impl_other_component_params_builder!(RecurrenceIdPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RecurrenceRuleProperty {
-    pub(crate) rule: RecurrenceRule,
+    pub(crate) value: RecurrenceRule,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(RecurrenceRuleProperty, RecurrenceRule);
 
 pub struct RecurrenceRulePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1206,7 +1324,7 @@ where
         RecurrenceRulePropertyBuilder {
             owner,
             inner: RecurrenceRuleProperty {
-                rule,
+                value: rule,
                 params: Vec::new(),
             },
         }
@@ -1217,11 +1335,13 @@ where
 
 impl_other_component_params_builder!(RecurrenceRulePropertyBuilder<P>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DateTimeEndProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DateTimeEndProperty, CalendarDateTime);
 
 pub struct DateTimeEndPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1242,17 +1362,19 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::ValueType { value: Value::Date })
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }))
         }
 
         DateTimeEndPropertyBuilder {
             owner,
             inner: DateTimeEndProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params,
             },
         }
     }
+
+    add_is_utc!();
 
     tz_id_param!();
 
@@ -1261,11 +1383,13 @@ where
 
 impl_other_component_params_builder!(DateTimeEndPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DurationProperty {
-    pub(crate) duration: Duration,
+    pub(crate) value: Duration,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DurationProperty, Duration);
 
 pub struct DurationPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1280,7 +1404,7 @@ where
         DurationPropertyBuilder {
             owner,
             inner: DurationProperty {
-                duration,
+                value: duration,
                 params: Vec::new(),
             },
         }
@@ -1291,11 +1415,13 @@ where
 
 impl_other_component_params_builder!(DurationPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AttachProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(AttachProperty, String);
 
 pub struct AttachPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1322,12 +1448,12 @@ where
             inner: AttachProperty {
                 value: binary,
                 params: vec![
-                    Param::Encoding {
+                    Param::Encoding(EncodingParam {
                         encoding: Encoding::Base64,
-                    },
-                    Param::ValueType {
+                    }),
+                    Param::ValueType(ValueTypeParam {
                         value: Value::Binary,
-                    },
+                    }),
                 ],
             },
         }
@@ -1338,10 +1464,10 @@ where
         type_name: U,
         sub_type_name: V,
     ) -> Self {
-        self.inner.params.push(Param::FormatType {
+        self.inner.params.push(Param::FormatType(FormatTypeParam {
             type_name: type_name.to_string(),
             sub_type_name: sub_type_name.to_string(),
-        });
+        }));
         self
     }
 
@@ -1350,11 +1476,13 @@ where
 
 impl_other_component_params_builder!(AttachPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct AttendeeProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(AttendeeProperty, String);
 
 pub struct AttendeePropertyBuilder<P: AddComponentProperty, PS> {
     owner: P,
@@ -1379,40 +1507,54 @@ where
     }
 
     pub fn add_calendar_user_type(mut self, cu_type: CalendarUserType) -> Self {
-        self.inner.params.push(Param::CalendarUserType { cu_type });
+        self.inner
+            .params
+            .push(Param::CalendarUserType(CalendarUserTypeParam { cu_type }));
         self
     }
 
-    pub fn add_members(mut self, members: Vec<String>) -> Self {
-        self.inner.params.push(Param::Members { members });
+    pub fn add_members(mut self, members: Vec<&str>) -> Self {
+        self.inner.params.push(Param::Members(MembersParam {
+            members: members.into_iter().map(|m| m.to_string()).collect(),
+        }));
         self
     }
 
     pub fn add_role(mut self, role: Role) -> Self {
-        self.inner.params.push(Param::Role { role });
+        self.inner.params.push(Param::Role(RoleParam { role }));
         self
     }
 
     pub fn add_participation_status(mut self, status: PS) -> Self {
-        self.inner.params.push(Param::ParticipationStatus {
-            status: status.into(),
-        });
+        self.inner
+            .params
+            .push(Param::ParticipationStatus(ParticipationStatusParam {
+                status: status.into(),
+            }));
         self
     }
 
     pub fn add_rsvp(mut self) -> Self {
         // Default is false, add to set true
-        self.inner.params.push(Param::Rsvp { rsvp: true });
+        self.inner
+            .params
+            .push(Param::Rsvp(RsvpParam { rsvp: true }));
         self
     }
 
-    pub fn add_delegated_to(mut self, delegates: Vec<String>) -> Self {
-        self.inner.params.push(Param::DelegatedTo { delegates });
+    pub fn add_delegated_to(mut self, delegates: Vec<&str>) -> Self {
+        self.inner.params.push(Param::DelegatedTo(DelegatedToParam {
+            delegates: delegates.into_iter().map(|d| d.to_string()).collect(),
+        }));
         self
     }
 
-    pub fn add_delegated_from(mut self, delegators: Vec<String>) -> Self {
-        self.inner.params.push(Param::DelegatedFrom { delegators });
+    pub fn add_delegated_from(mut self, delegators: Vec<&str>) -> Self {
+        self.inner
+            .params
+            .push(Param::DelegatedFrom(DelegatedFromParam {
+                delegators: delegators.into_iter().map(|d| d.to_string()).collect(),
+            }));
         self
     }
 
@@ -1426,11 +1568,13 @@ where
 
 impl_other_component_params_builder!(AttendeePropertyBuilder<P, PS>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CategoriesProperty {
     pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(CategoriesProperty, Vec<String>);
 
 pub struct CategoriesPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1458,11 +1602,13 @@ where
 
 impl_other_component_params_builder!(CategoriesPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CommentProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(CommentProperty, String);
 
 pub struct CommentPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1491,11 +1637,13 @@ where
 
 impl_other_component_params_builder!(CommentPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ContactProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(ContactProperty, String);
 
 pub struct ContactPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1524,11 +1672,13 @@ where
 
 impl_other_component_params_builder!(ContactPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ExceptionDateTimesProperty {
-    pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
+    pub(crate) value: Vec<CalendarDateTime>,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(ExceptionDateTimesProperty, Vec<CalendarDateTime>);
 
 pub struct ExceptionDateTimesPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1539,15 +1689,18 @@ impl<P> ExceptionDateTimesPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub(crate) fn new(owner: P, date_times: Vec<(time::Date, Option<time::Time>, bool)>) -> Self {
+    pub(crate) fn new(owner: P, date_times: Vec<CalendarDateTime>) -> Self {
         let mut params = Vec::new();
-        if let Some((_, None, _)) = date_times.first() {
-            params.push(Param::ValueType { value: Value::Date });
+        if date_times.first().map(|dt| dt.is_date()).unwrap_or(false) {
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }));
         }
 
         ExceptionDateTimesPropertyBuilder {
             owner,
-            inner: ExceptionDateTimesProperty { date_times, params },
+            inner: ExceptionDateTimesProperty {
+                value: date_times,
+                params,
+            },
         }
     }
 
@@ -1558,11 +1711,13 @@ where
 
 impl_other_component_params_builder!(ExceptionDateTimesPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StatusProperty {
     pub(crate) value: Status,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(StatusProperty, Status);
 
 pub struct StatusPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1588,11 +1743,13 @@ where
 
 impl_other_component_params_builder!(StatusPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RelatedToProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(RelatedToProperty, String);
 
 pub struct RelatedToPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1614,9 +1771,11 @@ where
     }
 
     pub fn add_relationship_type(mut self, relationship_type: RelationshipType) -> Self {
-        self.inner.params.push(Param::RelationshipType {
-            relationship: relationship_type,
-        });
+        self.inner
+            .params
+            .push(Param::RelationshipType(RelationshipTypeParam {
+                relationship: relationship_type,
+            }));
         self
     }
 
@@ -1625,11 +1784,13 @@ where
 
 impl_other_component_params_builder!(RelatedToPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ResourcesProperty {
     pub(crate) value: Vec<String>,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(ResourcesProperty, Vec<String>);
 
 pub struct ResourcesPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1658,7 +1819,7 @@ where
 
 impl_other_component_params_builder!(ResourcesPropertyBuilder<P>);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Period {
     pub start: (time::Date, time::Time, bool),
     pub end: PeriodEnd,
@@ -1708,18 +1869,28 @@ impl Period {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PeriodEnd {
     DateTime((time::Date, time::Time, bool)),
     Duration(Duration),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RecurrenceDateTimesProperty {
-    pub(crate) date_times: Vec<(time::Date, Option<time::Time>, bool)>,
-    pub(crate) periods: Vec<Period>,
+    pub(crate) value: RecurrenceDateTimesPropertyValue,
     pub(crate) params: Vec<Param>,
 }
+
+#[derive(Debug, PartialEq)]
+pub enum RecurrenceDateTimesPropertyValue {
+    DateTimes(Vec<CalendarDateTime>),
+    Periods(Vec<Period>),
+}
+
+impl_property_access!(
+    RecurrenceDateTimesProperty,
+    RecurrenceDateTimesPropertyValue
+);
 
 pub struct RecurrenceDateTimesPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1730,20 +1901,16 @@ impl<P> RecurrenceDateTimesPropertyBuilder<P>
 where
     P: AddComponentProperty,
 {
-    pub fn new_date_times(
-        owner: P,
-        date_times: Vec<(time::Date, Option<time::Time>, bool)>,
-    ) -> Self {
+    pub fn new_date_times(owner: P, date_times: Vec<CalendarDateTime>) -> Self {
         let mut params = Vec::new();
-        if let Some((_, None, _)) = date_times.first() {
-            params.push(Param::ValueType { value: Value::Date });
+        if date_times.first().map(|dt| dt.is_date()).unwrap_or(false) {
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }));
         }
 
         RecurrenceDateTimesPropertyBuilder {
             owner,
             inner: RecurrenceDateTimesProperty {
-                date_times,
-                periods: Vec::with_capacity(0),
+                value: RecurrenceDateTimesPropertyValue::DateTimes(date_times),
                 params,
             },
         }
@@ -1753,11 +1920,10 @@ where
         RecurrenceDateTimesPropertyBuilder {
             owner,
             inner: RecurrenceDateTimesProperty {
-                date_times: Vec::with_capacity(0),
-                periods,
-                params: vec![Param::ValueType {
+                value: RecurrenceDateTimesPropertyValue::Periods(periods),
+                params: vec![Param::ValueType(ValueTypeParam {
                     value: Value::Period,
-                }],
+                })],
             },
         }
     }
@@ -1769,11 +1935,13 @@ where
 
 impl_other_component_params_builder!(RecurrenceDateTimesPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DateTimeCompletedProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DateTimeCompletedProperty, CalendarDateTime);
 
 pub struct CompletedPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1788,7 +1956,7 @@ where
         CompletedPropertyBuilder {
             owner,
             inner: DateTimeCompletedProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params: Vec::new(),
             },
         }
@@ -1801,11 +1969,13 @@ where
 
 impl_other_component_params_builder!(CompletedPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PercentCompleteProperty {
     pub(crate) value: u8,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(PercentCompleteProperty, u8);
 
 pub struct PercentCompletePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1831,11 +2001,13 @@ where
 
 impl_other_component_params_builder!(PercentCompletePropertyBuilder<P>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DateTimeDueProperty {
-    pub(crate) date_time: CalendarDateTime,
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(DateTimeDueProperty, CalendarDateTime);
 
 pub struct DateTimeDuePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1856,13 +2028,13 @@ where
         // The default is DATE-TIME. If the time is None, then it is a DATE and although it's
         // optional, this will default to setting the value here.
         if time.is_none() {
-            params.push(Param::ValueType { value: Value::Date })
+            params.push(Param::ValueType(ValueTypeParam { value: Value::Date }))
         }
 
         DateTimeDuePropertyBuilder {
             owner,
             inner: DateTimeDueProperty {
-                date_time: (date, time, false).into(),
+                value: (date, time, false).into(),
                 params,
             },
         }
@@ -1877,11 +2049,13 @@ where
 
 impl_other_component_params_builder!(DateTimeDuePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FreeBusyTimeProperty {
     pub(crate) value: Vec<Period>,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(FreeBusyTimeProperty, Vec<Period>);
 
 pub struct FreeBusyTimePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1901,9 +2075,9 @@ where
             owner,
             inner: FreeBusyTimeProperty {
                 value,
-                params: vec![Param::FreeBusyTimeType {
+                params: vec![Param::FreeBusyTimeType(FreeBusyTimeTypeParam {
                     fb_type: free_busy_time_type,
-                }],
+                })],
             },
         }
     }
@@ -1913,12 +2087,19 @@ where
 
 impl_other_component_params_builder!(FreeBusyTimePropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneIdProperty {
-    pub(crate) value: String,
-    pub(crate) unique_registry_id: bool,
+    pub(crate) value: TimeZoneIdPropertyValue,
     pub(crate) params: Vec<Param>,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TimeZoneIdPropertyValue {
+    pub id: String,
+    pub unique_registry_id: bool,
+}
+
+impl_property_access!(TimeZoneIdProperty, TimeZoneIdPropertyValue);
 
 pub struct TimeZoneIdPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1937,8 +2118,10 @@ where
         TimeZoneIdPropertyBuilder {
             owner,
             inner: TimeZoneIdProperty {
-                value,
-                unique_registry_id,
+                value: TimeZoneIdPropertyValue {
+                    id: value,
+                    unique_registry_id,
+                },
                 params: Vec::new(),
             },
         }
@@ -1949,11 +2132,13 @@ where
 
 impl_other_component_params_builder!(TimeZoneIdPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneUrlProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(TimeZoneUrlProperty, String);
 
 pub struct TimeZoneUrlPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -1979,7 +2164,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneUrlPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneOffset {
     pub(crate) sign: i8,
     pub(crate) hours: u8,
@@ -1998,11 +2183,13 @@ impl TimeZoneOffset {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneOffsetToProperty {
-    pub(crate) offset: TimeZoneOffset,
+    pub(crate) value: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(TimeZoneOffsetToProperty, TimeZoneOffset);
 
 pub struct TimeZoneOffsetToPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -2017,7 +2204,7 @@ where
         TimeZoneOffsetToPropertyBuilder {
             owner,
             inner: TimeZoneOffsetToProperty {
-                offset,
+                value: offset,
                 params: Vec::new(),
             },
         }
@@ -2028,11 +2215,13 @@ where
 
 impl_other_component_params_builder!(TimeZoneOffsetToPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneOffsetFromProperty {
-    pub(crate) offset: TimeZoneOffset,
+    pub(crate) value: TimeZoneOffset,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(TimeZoneOffsetFromProperty, TimeZoneOffset);
 
 pub struct TimeZoneOffsetFromPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -2047,7 +2236,7 @@ where
         TimeZoneOffsetFromPropertyBuilder {
             owner,
             inner: TimeZoneOffsetFromProperty {
-                offset,
+                value: offset,
                 params: Vec::new(),
             },
         }
@@ -2058,11 +2247,13 @@ where
 
 impl_other_component_params_builder!(TimeZoneOffsetFromPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneNameProperty {
     pub(crate) value: String,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(TimeZoneNameProperty, String);
 
 pub struct TimeZoneNamePropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -2090,7 +2281,7 @@ where
 
 impl_other_component_params_builder!(TimeZoneNamePropertyBuilder<P>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Action {
     Audio,
     Display,
@@ -2099,11 +2290,13 @@ pub enum Action {
     IanaToken(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ActionProperty {
     pub(crate) value: Action,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(ActionProperty, Action);
 
 pub struct ActionPropertyBuilder<P: AddComponentProperty> {
     owner: P,
@@ -2149,21 +2342,24 @@ where
             owner,
             inner: RelativeTriggerProperty {
                 value,
-                params: vec![Param::ValueType {
-                    value: Value::Duration,
-                }],
+                params: Vec::new(),
             },
         }
     }
 
-    pub fn add_related(mut self, related: Related) -> Self {
-        self.inner.params.push(Param::Related { related });
+    pub fn add_trigger_relationship(mut self, related: Related) -> Self {
+        self.inner
+            .params
+            .push(Param::Related(RelatedParam { related }));
         self
     }
 
     pub fn finish_property(mut self) -> P {
         self.owner
-            .add_property(ComponentProperty::Trigger(Trigger::Relative(self.inner)));
+            .add_property(ComponentProperty::Trigger(TriggerProperty {
+                value: TriggerValue::Relative(self.inner.value),
+                params: self.inner.params,
+            }));
         self.owner
     }
 }
@@ -2171,8 +2367,8 @@ where
 impl_other_component_params_builder!(RelativeTriggerPropertyBuilder<P>);
 
 #[derive(Debug)]
-pub struct AbsoluteTriggerProperty {
-    pub(crate) date_time: CalendarDateTime,
+pub(crate) struct AbsoluteTriggerProperty {
+    pub(crate) value: CalendarDateTime,
     pub(crate) params: Vec<Param>,
 }
 
@@ -2193,10 +2389,10 @@ where
         AbsoluteTriggerPropertyBuilder {
             owner,
             inner: AbsoluteTriggerProperty {
-                date_time: (date, time, false).into(),
-                params: vec![Param::ValueType {
+                value: (date, time, false).into(),
+                params: vec![Param::ValueType(ValueTypeParam {
                     value: Value::DateTime,
-                }],
+                })],
             },
         }
     }
@@ -2205,18 +2401,23 @@ where
 
     pub fn finish_property(mut self) -> P {
         self.owner
-            .add_property(ComponentProperty::Trigger(Trigger::Absolute(self.inner)));
+            .add_property(ComponentProperty::Trigger(TriggerProperty {
+                value: TriggerValue::Absolute(self.inner.value),
+                params: self.inner.params,
+            }));
         self.owner
     }
 }
 
 impl_other_component_params_builder!(AbsoluteTriggerPropertyBuilder<P>);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RepeatProperty {
     pub(crate) value: u32,
     pub(crate) params: Vec<Param>,
 }
+
+impl_property_access!(RepeatProperty, u32);
 
 pub struct RepeatPropertyBuilder<P: AddComponentProperty> {
     owner: P,

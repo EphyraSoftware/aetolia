@@ -3,16 +3,18 @@ use crate::model::{
     add_date_time_stamp, add_date_time_start, add_description, add_exception_date_times,
     add_last_modified, add_organizer, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
     add_related, add_request_status, add_sequence, add_summary, add_unique_identifier, add_url,
-    impl_finish_component_build, impl_other_component_properties, AddComponentProperty,
-    AttendeePropertyBuilder, CalendarComponent, ComponentProperty, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusJournal, StatusJournal, StatusPropertyBuilder,
-    XComponentPropertyBuilder,
+    impl_component_access, impl_finish_component_build, impl_other_component_properties,
+    AddComponentProperty, AttendeePropertyBuilder, CalendarComponent, ComponentProperty,
+    ICalObjectBuilder, IanaComponentPropertyBuilder, ParticipationStatusJournal, StatusJournal,
+    StatusPropertyBuilder, XComponentPropertyBuilder,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct JournalComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
+
+impl_component_access!(JournalComponent);
 
 impl JournalComponent {
     pub(crate) fn new() -> Self {
@@ -75,9 +77,9 @@ impl JournalComponentBuilder {
 
     pub fn add_attendee(
         self,
-        value: String,
+        value: &str,
     ) -> AttendeePropertyBuilder<Self, ParticipationStatusJournal> {
-        AttendeePropertyBuilder::new(self, value)
+        AttendeePropertyBuilder::new(self, value.to_string())
     }
 
     add_categories!();

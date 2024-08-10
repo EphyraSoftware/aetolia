@@ -5,13 +5,15 @@ use crate::model::{
     AddComponentProperty, CalendarComponent, ComponentProperty, ICalObjectBuilder,
     IanaComponentPropertyBuilder, TimeZoneUrlPropertyBuilder, XComponentPropertyBuilder,
 };
-use crate::prelude::TimeZoneIdPropertyBuilder;
+use crate::prelude::{impl_component_access, TimeZoneIdPropertyBuilder};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct TimeZoneComponent {
     pub(crate) properties: Vec<ComponentProperty>,
     pub(crate) components: Vec<CalendarComponent>,
 }
+
+impl_component_access!(TimeZoneComponent);
 
 impl TimeZoneComponent {
     pub(crate) fn new() -> Self {
@@ -19,6 +21,10 @@ impl TimeZoneComponent {
             properties: Vec::new(),
             components: Vec::new(),
         }
+    }
+
+    pub fn nested_components(&self) -> &[CalendarComponent] {
+        &self.components
     }
 }
 
@@ -46,16 +52,16 @@ impl TimeZoneComponentBuilder {
 
     pub fn add_time_zone_id(
         self,
-        value: String,
+        value: &str,
         unique_registry_id: bool,
     ) -> TimeZoneIdPropertyBuilder<Self> {
-        TimeZoneIdPropertyBuilder::new(self, value, unique_registry_id)
+        TimeZoneIdPropertyBuilder::new(self, value.to_string(), unique_registry_id)
     }
 
     add_last_modified!();
 
-    pub fn add_time_zone_url(self, value: String) -> TimeZoneUrlPropertyBuilder<Self> {
-        TimeZoneUrlPropertyBuilder::new(self, value)
+    pub fn add_time_zone_url(self, value: &str) -> TimeZoneUrlPropertyBuilder<Self> {
+        TimeZoneUrlPropertyBuilder::new(self, value.to_string())
     }
 
     pub fn add_standard_time(

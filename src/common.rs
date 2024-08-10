@@ -56,6 +56,45 @@ impl Default for LanguageTag {
     }
 }
 
+impl LanguageTag {
+    pub fn new(language: &str) -> Self {
+        Self {
+            language: language.to_string(),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_ext_lang(mut self, ext_lang: &str) -> Self {
+        self.ext_lang = Some(ext_lang.to_string());
+        self
+    }
+
+    pub fn with_script(mut self, script: &str) -> Self {
+        self.script = Some(script.to_string());
+        self
+    }
+
+    pub fn with_region(mut self, region: &str) -> Self {
+        self.region = Some(region.to_string());
+        self
+    }
+
+    pub fn add_variant(mut self, variant: &str) -> Self {
+        self.variants.push(variant.to_string());
+        self
+    }
+
+    pub fn add_extension(mut self, extension: &str) -> Self {
+        self.extensions.push(extension.to_string());
+        self
+    }
+
+    pub fn with_private_use(mut self, private_use: &str) -> Self {
+        self.private_use = Some(private_use.to_string());
+        self
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Range {
     ThisAndFuture,
@@ -388,6 +427,56 @@ impl Ord for CalendarDateTime {
 
         self.utc.cmp(&other.utc)
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PropertyKind {
+    Attach,
+    Version,
+    DateTimeStart,
+    Description,
+    Organizer,
+    TimeZoneId,
+    Attendee,
+    Categories,
+    Comment,
+    GeographicPosition,
+    Location,
+    PercentComplete,
+    Priority,
+    Resources,
+    Status,
+    Summary,
+    DateTimeCompleted,
+    DateTimeEnd,
+    DateTimeDue,
+    Duration,
+    FreeBusyTime,
+    TimeTransparency,
+    TimeZoneName,
+    TimeZoneOffsetTo,
+    TimeZoneOffsetFrom,
+    TimeZoneUrl,
+    Contact,
+    RecurrenceId,
+    Related,
+    ExceptionDateTimes,
+    RecurrenceDateTimes,
+    RecurrenceRule,
+    Action,
+    Repeat,
+    Trigger,
+    DateTimeCreated,
+    DateTimeStamp,
+    LastModified,
+    Sequence,
+    RequestStatus,
+    #[allow(dead_code)]
+    Other,
+    UniqueIdentifier,
+    Classification,
+    Url,
+    RelatedTo,
 }
 
 #[cfg(test)]

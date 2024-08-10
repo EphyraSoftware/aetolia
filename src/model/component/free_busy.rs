@@ -6,12 +6,14 @@ use crate::model::{
     CalendarComponent, ComponentProperty, FreeBusyTimePropertyBuilder, ICalObjectBuilder,
     IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
 };
-use crate::prelude::Period;
+use crate::prelude::{impl_component_access, Period};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FreeBusyComponent {
     pub(crate) properties: Vec<ComponentProperty>,
 }
+
+impl_component_access!(FreeBusyComponent);
 
 impl FreeBusyComponent {
     pub(crate) fn new() -> Self {
@@ -58,9 +60,9 @@ impl FreeBusyComponentBuilder {
 
     pub fn add_attendee(
         self,
-        value: String,
+        value: &str,
     ) -> AttendeePropertyBuilder<Self, ParticipationStatusEvent> {
-        AttendeePropertyBuilder::new(self, value)
+        AttendeePropertyBuilder::new(self, value.to_string())
     }
 
     add_comment!();

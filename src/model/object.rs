@@ -8,9 +8,10 @@ use crate::model::property::{
 };
 use crate::model::*;
 
+#[derive(Debug, PartialEq)]
 pub struct ICalObject {
-    pub(crate) properties: Vec<CalendarProperty>,
-    pub(crate) components: Vec<CalendarComponent>,
+    pub properties: Vec<CalendarProperty>,
+    pub components: Vec<CalendarComponent>,
 }
 
 impl ICalObject {
@@ -92,17 +93,17 @@ impl ICalObjectBuilder {
     pub fn add_iana_component<N: ToString>(
         self,
         name: N,
-        builder: fn(IanaComponentBuilder) -> ICalObjectBuilder,
+        builder: fn(IanaComponentBuilder) -> IanaComponentBuilder,
     ) -> Self {
-        builder(IanaComponentBuilder::new(self, name.to_string()))
+        builder(IanaComponentBuilder::new(self, name.to_string())).finish_component()
     }
 
     pub fn add_x_component<N: ToString>(
         self,
         name: N,
-        builder: fn(XComponentBuilder) -> ICalObjectBuilder,
+        builder: fn(XComponentBuilder) -> XComponentBuilder,
     ) -> Self {
-        builder(XComponentBuilder::new(self, name.to_string()))
+        builder(XComponentBuilder::new(self, name.to_string())).finish_component()
     }
 
     pub fn build(self) -> ICalObject {

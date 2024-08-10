@@ -1,10 +1,10 @@
-use crate::common::ParticipationStatusUnknown;
-use crate::model::Param;
+use crate::common::{ParticipationStatusUnknown, PropertyKind};
+use crate::model::{Param, ParticipationStatusParam, SentByParam, TimeZoneIdParam};
 use crate::parser::param::param_value_participation_status;
 use crate::parser::Error;
 use crate::validate::error::ParamError;
 use crate::validate::{
-    param_name, OccurrenceExpectation, PropertyInfo, PropertyKind, PropertyLocation, ValueType,
+    param_name, OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType,
 };
 use std::collections::HashMap;
 
@@ -124,7 +124,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } | Param::Others { name, .. } if name == "MEMBER" => {
                 validate_member_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            Param::ParticipationStatus { status } => {
+            Param::ParticipationStatus(ParticipationStatusParam { status }) => {
                 validate_part_stat_param(
                     &mut errors,
                     &mut seen,
@@ -202,7 +202,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } if name == "RSVP" => {
                 validate_rsvp_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            Param::SentBy { address } => {
+            Param::SentBy(SentByParam { address }) => {
                 validate_sent_by_param(
                     &mut errors,
                     &mut seen,
@@ -215,7 +215,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, value } if name == "SENT-BY" => {
                 validate_sent_by_param(&mut errors, &mut seen, param, value, index, &property_info);
             }
-            Param::TimeZoneId { tz_id, unique } => {
+            Param::TimeZoneId(TimeZoneIdParam { tz_id, unique }) => {
                 validate_time_zone_id_param(
                     &mut errors,
                     &mut seen,
@@ -248,8 +248,8 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } | Param::Others { name, .. } if name == "ALTREP" => {
                 validate_alt_rep_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            e => {
-                panic!("Param not yet implemented: {:?}", e);
+            Param::Other { .. } | Param::Others { .. } => {
+                // Permit unknown parameters
             }
         }
     }
@@ -567,12 +567,8 @@ fn validate_part_stat_param(
         PropertyLocation::Other => {
             // Permit in "other", we don't know how it's being used.
         }
-        location => {
-            errors.push(ParamError {
-                index,
-                name: param_name(param).to_string(),
-                message: format!("Participation status (PARTSTAT) parameter is not expected in a [{location:?}] component context"),
-            });
+        _ => {
+            // Expect other validation for occurrences to catch this if it's wrong
         }
     }
 
@@ -639,7 +635,7 @@ fn validate_relationship_type_param(
     index: usize,
     property_info: &PropertyInfo,
 ) {
-    if !property_info.is_other && property_info.value_type != ValueType::Duration {
+    if !property_info.is_other && property_info.value_type != ValueType::Text {
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),

@@ -4,12 +4,15 @@ use crate::model::component::{
 use crate::model::object::ICalObjectBuilder;
 use crate::model::property::{AddComponentProperty, ComponentProperty, XComponentPropertyBuilder};
 use crate::model::IanaComponentPropertyBuilder;
+use crate::prelude::impl_component_access;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct XComponent {
     pub(crate) name: String,
     pub(crate) properties: Vec<ComponentProperty>,
 }
+
+impl_component_access!(XComponent);
 
 impl XComponent {
     pub(crate) fn new(name: String) -> Self {
@@ -17,6 +20,10 @@ impl XComponent {
             name,
             properties: Vec::new(),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

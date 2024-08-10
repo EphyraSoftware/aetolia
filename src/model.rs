@@ -1,8 +1,10 @@
+mod access;
 mod component;
 mod object;
 mod param;
 mod property;
 
+pub use access::*;
 pub use component::*;
 pub use object::*;
 pub use param::*;
@@ -56,14 +58,12 @@ mod tests {
                     .add_x_param("x-special-param", "my-value")
                     .add_iana_param("special-param", "my-value")
                     .finish_property()
-                    .finish_component()
             })
             .add_iana_component("IANA-SOME-COMPONENT", |b| {
                 b.add_iana_property("IANA-SOME-PROP", "IANA-SOME-VALUE")
                     .add_iana_param("special-param", "my-value")
                     .add_x_param("x-special-param", "my-value")
                     .finish_property()
-                    .finish_component()
             })
             .build();
 
@@ -117,17 +117,17 @@ mod tests {
             )
             .add_tz_id("America/New_York", true)
             .finish_property()
-            .add_class(Classification::Private)
+            .add_classification(Classification::Private)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_created(
+            .add_date_time_created(
                 time::Date::from_calendar_date(1997, time::Month::September, 1).unwrap(),
                 time::Time::from_hms(13, 0, 0).unwrap(),
             )
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_description("Event description")
-            .add_alternate_representation("CID:evt.desc".to_string())
+            .add_alternate_representation("CID:evt.desc")
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
@@ -138,10 +138,10 @@ mod tests {
             .add_geographic_position(37.386013, -122.082932)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_organizer("mailto:john@local.net".to_string())
+            .add_organizer("mailto:john@local.net")
             .add_common_name("John")
-            .add_directory_entry_reference("ldap://local.net/john".to_string())
-            .add_sent_by("mailto:lilith@local.net".to_string())
+            .add_directory_entry_reference("ldap://local.net/john")
+            .add_sent_by("mailto:lilith@local.net")
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
@@ -155,13 +155,13 @@ mod tests {
             .add_sequence(10)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_request_status(&[200, 4], "Success".to_string(), None)
+            .add_request_status(&[200, 4], "Success", None)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_time_transparency(TimeTransparency::Transparent)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_url("http://local.net/john".to_string())
+            .add_url("http://local.net/john")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_recurrence_id(
@@ -184,16 +184,16 @@ mod tests {
             .add_duration(|| Duration::days_and_time(-1, 10).hours(3).build())
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_attach_uri("http://local.net/john".to_string())
+            .add_attach_uri("http://local.net/john")
             .add_fmt_type("text", "plain")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_attendee("mailto:horace@local.net".to_string())
-            .add_members(vec!["mailto:dev-group@local.net".to_string()])
+            .add_attendee("mailto:horace@local.net")
+            .add_members(vec!["mailto:dev-group@local.net"])
             .add_participation_status(ParticipationStatusEvent::Accepted)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_categories(vec!["MEETING".to_string(), "PROJECT".to_string()])
+            .add_categories(vec!["MEETING", "PROJECT"])
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
@@ -202,7 +202,7 @@ mod tests {
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_comment("Event comment")
-            .add_alternate_representation("CID:evt.comment".to_string())
+            .add_alternate_representation("CID:evt.comment")
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
@@ -211,7 +211,7 @@ mod tests {
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_contact("mailto:kevin@local.net")
-            .add_alternate_representation("CID:evt.contact".to_string())
+            .add_alternate_representation("CID:evt.contact")
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
@@ -223,24 +223,25 @@ mod tests {
                 Date::from_calendar_date(1997, time::Month::September, 2).unwrap(),
                 None,
                 true,
-            )])
+            )
+                .into()])
             .add_tz_id("America/New_York", true)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_status(StatusEvent::Tentative)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_related("CID:evt.related".to_string())
+            .add_related_to("CID:evt.related")
             .add_relationship_type(RelationshipType::Parent)
             .add_x_param("x-special-param", "my-value")
             .finish_property()
-            .add_resources(vec!["EQUIPMENT".to_string(), "ROOM".to_string()])
+            .add_resources(vec!["EQUIPMENT", "ROOM"])
             .add_language(LanguageTag {
                 language: "en".to_string(),
                 region: Some("US".to_string()),
                 ..Default::default()
             })
-            .add_alternate_representation("CID:evt.resources".to_string())
+            .add_alternate_representation("CID:evt.resources")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_recurrence_date_periods(vec![Period::new_start(
@@ -264,7 +265,7 @@ mod tests {
                 region: Some("US".to_string()),
                 ..Default::default()
             })
-            .add_alternate_representation("CID:evt.summary".to_string())
+            .add_alternate_representation("CID:evt.summary")
             .add_x_param("x-special-param", "my-value")
             .finish_property()
             .add_x_property("X-SOME-PROP", "X-SOME-VALUE")

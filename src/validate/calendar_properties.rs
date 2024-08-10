@@ -1,9 +1,10 @@
+use crate::common::PropertyKind;
 use crate::model::{CalendarProperty, ICalObject};
 use crate::validate::error::CalendarPropertyError;
 use crate::validate::params::validate_params;
 use crate::validate::{
     calendar_property_name, check_occurrence, CalendarInfo, CalendarPropertyLocation,
-    OccurrenceExpectation, PropertyInfo, PropertyKind, PropertyLocation, ValueType,
+    OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType,
 };
 use std::collections::HashMap;
 

@@ -5,8 +5,10 @@ mod params;
 mod recur;
 mod value;
 
-use crate::common::Value;
-use crate::model::{CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param};
+use crate::common::{PropertyKind, Value};
+use crate::model::{
+    CalendarComponent, CalendarProperty, ComponentProperty, ICalObject, Param, ValueTypeParam,
+};
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
 use crate::validate::error::ICalendarError;
@@ -14,7 +16,7 @@ use crate::validate::params::validate_params;
 pub use error::*;
 use std::collections::{HashMap, HashSet};
 
-pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
+pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
 
     let time_zone_ids = ical_object
@@ -24,7 +26,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
             if let CalendarComponent::TimeZone(time_zone) = component {
                 for property in &time_zone.properties {
                     if let ComponentProperty::TimeZoneId(tz_id) = property {
-                        return Some(tz_id.value.clone());
+                        return Some(tz_id.value.id.clone());
                     }
                 }
             }
@@ -37,7 +39,7 @@ pub fn validate_model(ical_object: ICalObject) -> anyhow::Result<Vec<ICalendarEr
 
     errors.extend_from_slice(
         ICalendarError::many_from_calendar_property_errors(validate_calendar_properties(
-            &ical_object,
+            ical_object,
             &mut calendar_info,
         ))
         .as_slice(),
@@ -309,52 +311,6 @@ struct PropertyInfo<'a> {
     calendar_info: &'a CalendarInfo,
 }
 
-#[derive(Debug)]
-enum PropertyKind {
-    Attach,
-    Version,
-    DateTimeStart,
-    Description,
-    Organizer,
-    TimeZoneId,
-    Attendee,
-    Categories,
-    Comment,
-    GeographicPosition,
-    Location,
-    PercentComplete,
-    Priority,
-    Resources,
-    Status,
-    Summary,
-    DateTimeCompleted,
-    DateTimeEnd,
-    DateTimeDue,
-    Duration,
-    FreeBusyTime,
-    TimeTransparency,
-    TimeZoneName,
-    TimeZoneOffsetTo,
-    TimeZoneOffsetFrom,
-    TimeZoneUrl,
-    Contact,
-    RecurrenceId,
-    Related,
-    ExceptionDateTimes,
-    RecurrenceDateTimes,
-    RecurrenceRule,
-    Action,
-    Repeat,
-    Trigger,
-    DateTimeCreated,
-    DateTimeStamp,
-    LastModified,
-    Sequence,
-    RequestStatus,
-    #[allow(dead_code)]
-    Other,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 enum PropertyLocation {
     Calendar,
@@ -449,7 +405,7 @@ fn get_declared_value_type(property: &ComponentProperty) -> Option<(Value, usize
         .iter()
         .enumerate()
         .find_map(|(index, param)| {
-            if let Param::ValueType { value } = param {
+            if let Param::ValueType(ValueTypeParam { value }) = param {
                 return Some((value.clone(), index));
             }
 
@@ -637,7 +593,7 @@ END:VCALENDAR\r\n";
             .finish_property()
             .build();
 
-        let errors = validate_model(object).unwrap();
+        let errors = validate_model(&object).unwrap();
 
         assert_errors!(
             errors,
@@ -656,7 +612,7 @@ END:VCALENDAR\r\n";
             .finish_component()
             .build();
 
-        let errors = validate_model(object).unwrap();
+        let errors = validate_model(&object).unwrap();
 
         assert_errors!(errors, "In component \"VJOURNAL\" at index 0: No properties found in component, required at least one");
     }
@@ -1167,13 +1123,13 @@ METHOD:send\r\n\
 BEGIN:VEVENT\r\n\
 DTSTAMP:19900101T000000Z\r\n\
 UID:123\r\n\
-DESCRIPTION;RELTYPE=SIBLING:some text\r\n\
+DTSTART;RELTYPE=SIBLING:19920101T000010Z\r\n\
 END:VEVENT\r\n\
 END:VCALENDAR\r\n";
 
         let errors = validate_content(content);
 
-        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DESCRIPTION\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
+        assert_errors!(errors, "In component \"VEVENT\" at index 0, in component property \"DTSTART\" at index 2: Relationship type (RELTYPE) is not allowed for this property type");
     }
 
     #[test]
@@ -2513,6 +2469,111 @@ END:VCALENDAR\r\n";
     }
 
     #[test]
+    fn recur_value_violations() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:1\r\n\
+DTSTART:19900101T001000\r\n\
+RRULE:FREQ=WEEKLY;BYSECOND=1,65,5\r\n\
+RRULE:FREQ=WEEKLY;BYSECOND=1,0,60,5\r\n\
+RRULE:FREQ=WEEKLY;BYMINUTE=1,60,5\r\n\
+RRULE:FREQ=WEEKLY;BYMINUTE=1,0,59,5\r\n\
+RRULE:FREQ=WEEKLY;BYHOUR=1,24,5\r\n\
+RRULE:FREQ=WEEKLY;BYHOUR=1,0,23,5\r\n\
+RRULE:FREQ=MONTHLY;BYMONTHDAY=1,32,5\r\n\
+RRULE:FREQ=MONTHLY;BYMONTHDAY=1,-32,5\r\n\
+RRULE:FREQ=MONTHLY;BYMONTHDAY=-31,-1,1,31\r\n\
+RRULE:FREQ=YEARLY;BYYEARDAY=5,367,1\r\n\
+RRULE:FREQ=YEARLY;BYYEARDAY=-5,-367,-1\r\n\
+RRULE:FREQ=YEARLY;BYYEARDAY=-366,-1,1,366\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=1,54,5\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=-1,-54,-5\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=-53,-1,1,53\r\n\
+RRULE:FREQ=WEEKLY;BYSETPOS=1,367,5;BYDAY=MO\r\n\
+RRULE:FREQ=WEEKLY;BYSETPOS=1,-367,5;BYDAY=MO\r\n\
+RRULE:FREQ=WEEKLY;BYSETPOS=1,0,5;BYDAY=MO\r\n\
+RRULE:FREQ=WEEKLY;BYSETPOS=-366,-1,1,366;BYDAY=MO\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: Invalid BYSECOND part at index 1, seconds must be between 0 and 60",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: Invalid BYMINUTE part at index 1, minutes must be between 0 and 59",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 7: Invalid BYHOUR part at index 1, hours must be between 0 and 23",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 9: Invalid BYMONTHDAY part at index 1, days must be between 1 and 31, or -31 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 10: Invalid BYMONTHDAY part at index 1, days must be between 1 and 31, or -31 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 12: Invalid BYYEARDAY part at index 1, days must be between 1 and 366, or -366 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 13: Invalid BYYEARDAY part at index 1, days must be between 1 and 366, or -366 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 15: Invalid BYWEEKNO part at index 1, weeks must be between 1 and 53, or -53 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 16: Invalid BYWEEKNO part at index 1, weeks must be between 1 and 53, or -53 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 18: Invalid BYSETPOS part at index 1, set positions must be between 1 and 366, or -366 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 19: Invalid BYSETPOS part at index 1, set positions must be between 1 and 366, or -366 and -1",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 20: Invalid BYSETPOS part at index 1, set positions must be between 1 and 366, or -366 and -1",
+        );
+    }
+
+    #[test]
+    fn recur_logical_violations() {
+        let content = "BEGIN:VCALENDAR\r\n\
+PRODID:test\r\n\
+VERSION:2.0\r\n\
+BEGIN:VEVENT\r\n\
+DTSTAMP:19900101T000000Z\r\n\
+UID:1\r\n\
+DTSTART:19900101T001000\r\n\
+RRULE:FREQ=WEEKLY;BYDAY=1MO\r\n\
+RRULE:FREQ=DAILY;BYDAY=1MO\r\n\
+RRULE:FREQ=HOURLY;BYDAY=1MO\r\n\
+RRULE:FREQ=MINUTELY;BYDAY=1MO\r\n\
+RRULE:FREQ=SECONDLY;BYDAY=1MO\r\n\
+RRULE:FREQ=MONTHLY;BYDAY=1MO\r\n\
+RRULE:FREQ=YEARLY;BYDAY=1MO\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=3;BYDAY=1MO\r\n\
+RRULE:FREQ=WEEKLY;BYMONTHDAY=1\r\n\
+RRULE:FREQ=MONTHLY;BYYEARDAY=1\r\n\
+RRULE:FREQ=WEEKLY;BYYEARDAY=1\r\n\
+RRULE:FREQ=DAILY;BYYEARDAY=1\r\n\
+RRULE:FREQ=MONTHLY;BYWEEKNO=1\r\n\
+RRULE:FREQ=WEEKLY;INTERVAL=2;WKST=TU\r\n\
+RRULE:FREQ=WEEKLY;BYDAY=SU;WKST=TU\r\n\
+RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=SU;WKST=TU\r\n\
+RRULE:FREQ=YEARLY;WKST=TU\r\n\
+RRULE:FREQ=YEARLY;BYWEEKNO=5;WKST=TU\r\n\
+RRULE:FREQ=DAILY;WKST=TU\r\n\
+RRULE:FREQ=WEEKLY;BYSETPOS=-366,-1,1,366\r\n\
+END:VEVENT\r\n\
+END:VCALENDAR\r\n";
+
+        let errors = validate_content(content);
+
+        assert_errors!(
+            errors,
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 3: BYDAY part at index 1 has a day with an offset, but the frequency is not MONTHLY or YEARLY",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 4: BYDAY part at index 1 has a day with an offset, but the frequency is not MONTHLY or YEARLY",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 5: BYDAY part at index 1 has a day with an offset, but the frequency is not MONTHLY or YEARLY",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 6: BYDAY part at index 1 has a day with an offset, but the frequency is not MONTHLY or YEARLY",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 7: BYDAY part at index 1 has a day with an offset, but the frequency is not MONTHLY or YEARLY",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 10: BYDAY part at index 2 has a day with an offset, but the frequency is YEARLY and a BYWEEKNO part is specified",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 11: BYMONTHDAY part at index 1 is not valid for a WEEKLY frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 12: BYYEARDAY part at index 1 is not valid for a DAILY, WEEKLY or MONTHLY frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 13: BYYEARDAY part at index 1 is not valid for a DAILY, WEEKLY or MONTHLY frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 14: BYYEARDAY part at index 1 is not valid for a DAILY, WEEKLY or MONTHLY frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 15: BYWEEKNO part at index 1 is only valid for a YEARLY frequency",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 16: WKST part at index 2 is redundant",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 17: WKST part at index 2 is redundant",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 19: WKST part at index 1 is redundant",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 21: WKST part at index 1 is redundant",
+            "In component \"VEVENT\" at index 0, in component property \"RRULE\" at index 22: BYSETPOS part at index 1 is not valid without another BYxxx rule part",
+        );
+    }
+
+    #[test]
     fn x_prop_declares_boolean_but_is_not_boolean() {
         let content = "BEGIN:VCALENDAR\r\n\
 PRODID:test\r\n\
@@ -2651,6 +2712,6 @@ END:VCALENDAR\r\n";
         let (rem, object) = crate::parser::ical_object::<Error>(content.as_bytes()).unwrap();
         check_rem(rem, 0);
 
-        validate_model(object.to_model().unwrap()).unwrap()
+        validate_model(&object.to_model().unwrap()).unwrap()
     }
 }
