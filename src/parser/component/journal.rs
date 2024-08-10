@@ -75,7 +75,13 @@ mod tests {
 
     #[test]
     fn test_component_journal() {
-        let input = b"BEGIN:VJOURNAL\r\nUID:19970901T130000Z-123405@example.com\r\nDTSTAMP:19970901T130000Z\r\nDTSTART;VALUE=DATE:19970317\r\nSUMMARY:Staff meeting minutes\r\nDESCRIPTION:1. Staff meeting: Participants include Joe\\,\r\n  Lisa\\, and Bob. Aurora project plans were reviewed.\r\n  There is currently no budget reserves for this project.\r\n  Lisa will escalate to management. Next meeting on Tuesday.\\n\r\n 2. Telephone Conference: ABC Corp. sales representative\r\n  called to discuss new printer. Promised to get us a demo by\r\n  Friday.\\n3. Henry Miller (Handsoff Insurance): Car was\r\n  totaled by tree. Is looking into a loaner car. 555-2323\r\n  (tel).\r\nEND:VJOURNAL\r\n";
+        let input = b"BEGIN:VJOURNAL\r\n\
+UID:19970901T130000Z-123405@example.com\r\n\
+DTSTAMP:19970901T130000Z\r\n\
+DTSTART;VALUE=DATE:19970317\r\n\
+SUMMARY:Staff meeting minutes\r\n\
+DESCRIPTION:1. Staff meeting: Participants include Joe\\,\r\n  Lisa\\, and Bob. Aurora project plans were reviewed.\r\n  There is currently no budget reserves for this project.\r\n  Lisa will escalate to management. Next meeting on Tuesday.\\n\r\n 2. Telephone Conference: ABC Corp. sales representative\r\n  called to discuss new printer. Promised to get us a demo by\r\n  Friday.\\n3. Henry Miller (Handsoff Insurance): Car was\r\n  totaled by tree. Is looking into a loaner car. 555-2323\r\n  (tel).\r\nEND:VJOURNAL\r\n";
+
         let (rem, component) = component_journal::<Error>(input).unwrap();
         check_rem(rem, 0);
 

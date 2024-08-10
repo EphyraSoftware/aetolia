@@ -58,7 +58,15 @@ mod tests {
 
     #[test]
     fn test_component_free_busy() {
-        let input = b"BEGIN:VFREEBUSY\r\nUID:19970901T082949Z-FA43EF@example.com\r\nORGANIZER:mailto:jane_doe@example.com\r\nATTENDEE:mailto:john_public@example.com\r\nDTSTART:19971015T050000Z\r\nDTEND:19971016T050000Z\r\nDTSTAMP:19970901T083000Z\r\nEND:VFREEBUSY\r\n";
+        let input = b"BEGIN:VFREEBUSY\r\n\
+UID:19970901T082949Z-FA43EF@example.com\r\n\
+ORGANIZER:mailto:jane_doe@example.com\r\n\
+ATTENDEE:mailto:john_public@example.com\r\n\
+DTSTART:19971015T050000Z\r\n\
+DTEND:19971016T050000Z\r\n\
+DTSTAMP:19970901T083000Z\r\n\
+END:VFREEBUSY\r\n";
+
         let (rem, component) = component_free_busy::<Error>(input).unwrap();
         check_rem(rem, 0);
         match component {

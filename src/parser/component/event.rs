@@ -84,7 +84,16 @@ mod tests {
 
     #[test]
     fn test_component_event() {
-        let input = b"BEGIN:VEVENT\r\nUID:19970901T130000Z-123401@example.com\r\nDTSTAMP:19970901T130000Z\r\nDTSTART:19970903T163000Z\r\nDTEND:19970903T190000Z\r\nSUMMARY:Annual Employee Review\r\nCLASS:PRIVATE\r\nCATEGORIES:BUSINESS,HUMAN RESOURCES\r\nEND:VEVENT\r\n";
+        let input = b"BEGIN:VEVENT\r\n\
+UID:19970901T130000Z-123401@example.com\r\n\
+DTSTAMP:19970901T130000Z\r\n\
+DTSTART:19970903T163000Z\r\n\
+DTEND:19970903T190000Z\r\n\
+SUMMARY:Annual Employee Review\r\n\
+CLASS:PRIVATE\r\n\
+CATEGORIES:BUSINESS,HUMAN RESOURCES\r\n\
+END:VEVENT\r\n";
+
         let (rem, component) = component_event::<Error>(input).unwrap();
         check_rem(rem, 0);
 

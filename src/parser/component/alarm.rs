@@ -54,7 +54,14 @@ mod tests {
 
     #[test]
     fn test_component_alarm() {
-        let input = b"BEGIN:VALARM\r\nTRIGGER;VALUE=DATE-TIME:19970317T133000Z\r\nREPEAT:4\r\nDURATION:PT15M\r\nACTION:AUDIO\r\nATTACH;FMTTYPE=audio/basic:ftp://example.com/pub/sounds/bell-01.aud\r\nEND:VALARM\r\n";
+        let input = b"BEGIN:VALARM\r\n\
+TRIGGER;VALUE=DATE-TIME:19970317T133000Z\r\n\
+REPEAT:4\r\n\
+DURATION:PT15M\r\n\
+ACTION:AUDIO\r\n\
+ATTACH;FMTTYPE=audio/basic:ftp://example.com/pub/sounds/bell-01.aud\r\n\
+END:VALARM\r\n";
+
         let (rem, component) = component_alarm::<Error>(input).unwrap();
         check_rem(rem, 0);
         match component {

@@ -88,7 +88,16 @@ mod tests {
 
     #[test]
     fn test_component_todo() {
-        let input = b"BEGIN:VTODO\r\nUID:20070313T123432Z-456553@example.com\r\nDTSTAMP:20070313T123432Z\r\nDUE;VALUE=DATE:20070501\r\nSUMMARY:Submit Quebec Income Tax Return for 2006\r\nCLASS:CONFIDENTIAL\r\nCATEGORIES:FAMILY,FINANCE\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\n";
+        let input = b"BEGIN:VTODO\r\n\
+UID:20070313T123432Z-456553@example.com\r\n\
+DTSTAMP:20070313T123432Z\r\n\
+DUE;VALUE=DATE:20070501\r\n\
+SUMMARY:Submit Quebec Income Tax Return for 2006\r\n\
+CLASS:CONFIDENTIAL\r\n\
+CATEGORIES:FAMILY,FINANCE\r\n\
+STATUS:NEEDS-ACTION\r\n\
+END:VTODO\r\n";
+
         let (rem, component) = component_todo::<Error>(input).unwrap();
         check_rem(rem, 0);
 
