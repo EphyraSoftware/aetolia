@@ -65,8 +65,8 @@ impl StandardComponentBuilder {
 
     add_recurrence_date!();
 
-    pub fn add_time_zone_name(self, value: String) -> TimeZoneNamePropertyBuilder<Self> {
-        TimeZoneNamePropertyBuilder::new(self, value)
+    pub fn add_time_zone_name(self, value: &str) -> TimeZoneNamePropertyBuilder<Self> {
+        TimeZoneNamePropertyBuilder::new(self, value.to_string())
     }
 
     impl_other_component_properties!(

@@ -52,16 +52,16 @@ impl TimeZoneComponentBuilder {
 
     pub fn add_time_zone_id(
         self,
-        value: String,
+        value: &str,
         unique_registry_id: bool,
     ) -> TimeZoneIdPropertyBuilder<Self> {
-        TimeZoneIdPropertyBuilder::new(self, value, unique_registry_id)
+        TimeZoneIdPropertyBuilder::new(self, value.to_string(), unique_registry_id)
     }
 
     add_last_modified!();
 
-    pub fn add_time_zone_url(self, value: String) -> TimeZoneUrlPropertyBuilder<Self> {
-        TimeZoneUrlPropertyBuilder::new(self, value)
+    pub fn add_time_zone_url(self, value: &str) -> TimeZoneUrlPropertyBuilder<Self> {
+        TimeZoneUrlPropertyBuilder::new(self, value.to_string())
     }
 
     pub fn add_standard_time(

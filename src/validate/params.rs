@@ -567,12 +567,8 @@ fn validate_part_stat_param(
         PropertyLocation::Other => {
             // Permit in "other", we don't know how it's being used.
         }
-        location => {
-            errors.push(ParamError {
-                index,
-                name: param_name(param).to_string(),
-                message: format!("Participation status (PARTSTAT) parameter is not expected in a [{location:?}] component context"),
-            });
+        _ => {
+            // Expect other validation for occurrences to catch this if it's wrong
         }
     }
 

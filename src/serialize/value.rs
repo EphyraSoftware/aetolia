@@ -715,6 +715,8 @@ impl WriteModel for crate::model::TimeZoneOffset {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         if self.sign < 0 {
             writer.write_all(b"-")?;
+        } else {
+            writer.write_all(b"+")?;
         }
 
         write!(writer, "{:02}{:02}", self.hours, self.minutes)?;
