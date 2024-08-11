@@ -1,5 +1,4 @@
 use aetolia::prelude::*;
-use aetolia::validate::ICalendarErrorSeverity;
 
 fn main() {
     let file_path = std::env::args()
