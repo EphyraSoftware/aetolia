@@ -34,4 +34,4 @@ jobs:
       - name: Run examples
         run: |
           cargo run --example load_sample
-          cargo run --example validate_sample -- sample.ics
+          cargo run --example validate_file -- sample.ics
