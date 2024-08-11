@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/EphyraSoftware/aetolia/actions/workflows/build.yaml/badge.svg)](https://github.com/EphyraSoftware/aetolia/actions/workflows/build.yaml)
 [![coverage](https://shields.io/endpoint?url=https://ephyrasoftware.github.io/aetolia/coverage.json)](https://ephyrasoftware.github.io/aetolia/index.html)
+![Crates.io Version](https://img.shields.io/crates/v/aetolia)
 
 Calendar tools based on the open iCalendar standard format.
 
