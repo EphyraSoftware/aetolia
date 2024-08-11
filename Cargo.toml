@@ -2,6 +2,9 @@
 name = "aetolia"
 version = "0.1.0"
 edition = "2021"
+description = "Parsing, creation, validation and serialisation of iCalendar data"
+license = "MPL-2.0"
+repository = "https://github.com/EphyraSoftware/aetolia"
 
 [dependencies]
 nom = "7.1"
