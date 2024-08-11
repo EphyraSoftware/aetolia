@@ -13,10 +13,10 @@ use crate::model::property::{CalendarProperty, ComponentProperty};
 use crate::model::ComponentAccess;
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
-use crate::validate::error::ICalendarError;
 use crate::validate::params::validate_params;
-pub use error::*;
 use std::collections::{HashMap, HashSet};
+
+pub use error::*;
 
 pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
