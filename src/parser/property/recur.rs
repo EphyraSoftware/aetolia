@@ -1,6 +1,7 @@
 use crate::common::{OffsetWeekday, RecurFreq, Weekday};
-use crate::parser::property::{prop_value_date, prop_value_time, DateTime};
-use crate::parser::{DateOrDateTime, Error, InnerError};
+use crate::parser::types::{DateOrDateTime, DateTime, RecurRulePart};
+use crate::parser::{prop_value_date, prop_value_time};
+use crate::parser::{Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::complete::{take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
@@ -11,24 +12,6 @@ use nom::error::ParseError;
 use nom::multi::separated_list1;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RecurRulePart {
-    Freq(RecurFreq),
-    Until(DateOrDateTime),
-    Count(u64),
-    Interval(u64),
-    BySecList(Vec<u8>),
-    ByMinute(Vec<u8>),
-    ByHour(Vec<u8>),
-    ByDay(Vec<OffsetWeekday>),
-    ByMonthDay(Vec<i8>),
-    ByYearDay(Vec<i16>),
-    ByWeek(Vec<i8>),
-    ByMonth(Vec<u8>),
-    BySetPos(Vec<i16>),
-    WeekStart(Weekday),
-}
 
 pub fn recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
 where

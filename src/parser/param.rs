@@ -1,4 +1,4 @@
-mod values;
+pub(crate) mod value;
 
 use crate::common::Range;
 use crate::parser::language_tag::language_tag;
@@ -14,18 +14,20 @@ use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
-pub use values::*;
+pub use value::*;
 
-pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
+/// Recognize a list of parameters.
+pub fn property_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    many0(tuple((char(';'), cut(param))).map(|(_, p)| p)).parse(input)
+    many0(tuple((char(';'), cut(property_param))).map(|(_, p)| p)).parse(input)
 }
 
-pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+/// Recognize a single parameter.
+pub fn property_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>

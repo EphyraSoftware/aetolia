@@ -1,10 +1,8 @@
 use crate::common::{Status, TimeTransparency};
-use crate::parser::types::{IanaProperty, XProperty};
-use crate::parser::uri::Uri;
-use crate::parser::{
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, ParamValue, Period, RecurRulePart,
-    UtcOffset,
+use crate::parser::types::{
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, IanaProperty, RecurRulePart, Uri, XProperty,
 };
+use crate::parser::{Duration, ParamValue, Period, UtcOffset};
 
 #[derive(Debug, PartialEq)]
 pub enum ComponentProperty<'a> {

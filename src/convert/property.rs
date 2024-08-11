@@ -6,7 +6,7 @@ use crate::model::{
     GeographicPositionPropertyValue, Period, RecurrenceDateTimesPropertyValue,
     TimeZoneIdPropertyValue,
 };
-use crate::parser::{ContentLine, DateOrDateTime, DateOrDateTimeOrPeriod};
+use crate::parser::ContentLine;
 use crate::prelude::{RequestStatusPropertyValue, TriggerValue};
 use anyhow::Context;
 
@@ -460,7 +460,7 @@ impl ToModel for crate::parser::Duration {
     }
 }
 
-impl ToModel for DateOrDateTimeOrPeriod {
+impl ToModel for crate::parser::types::DateOrDateTimeOrPeriod {
     type Model = (
         Option<(time::Date, Option<time::Time>, bool)>,
         Option<Period>,
@@ -468,12 +468,16 @@ impl ToModel for DateOrDateTimeOrPeriod {
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match self {
-            DateOrDateTimeOrPeriod::Date(date) => Ok((Some((date.try_into()?, None, false)), None)),
-            DateOrDateTimeOrPeriod::DateTime(date_time) => {
+            crate::parser::types::DateOrDateTimeOrPeriod::Date(date) => {
+                Ok((Some((date.try_into()?, None, false)), None))
+            }
+            crate::parser::types::DateOrDateTimeOrPeriod::DateTime(date_time) => {
                 let (date, time, is_utc) = date_time.try_into()?;
                 Ok((Some((date, Some(time), is_utc)), None))
             }
-            DateOrDateTimeOrPeriod::Period(period) => Ok((None, Some(period.to_model()?))),
+            crate::parser::types::DateOrDateTimeOrPeriod::Period(period) => {
+                Ok((None, Some(period.to_model()?)))
+            }
         }
     }
 }
@@ -901,13 +905,15 @@ impl ToModel for crate::parser::Period {
     }
 }
 
-impl ToModel for DateOrDateTime {
+impl ToModel for crate::parser::types::DateOrDateTime {
     type Model = CalendarDateTime;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(match self {
-            DateOrDateTime::Date(date) => (date.try_into()?, None, false).into(),
-            DateOrDateTime::DateTime(datetime) => {
+            crate::parser::types::DateOrDateTime::Date(date) => {
+                (date.try_into()?, None, false).into()
+            }
+            crate::parser::types::DateOrDateTime::DateTime(datetime) => {
                 let (date, time, is_utc) = datetime.try_into()?;
                 (date, Some(time), is_utc).into()
             }
@@ -915,10 +921,10 @@ impl ToModel for DateOrDateTime {
     }
 }
 
-impl TryFrom<&crate::parser::Date> for time::Date {
+impl TryFrom<&crate::parser::types::Date> for time::Date {
     type Error = anyhow::Error;
 
-    fn try_from(value: &crate::parser::Date) -> Result<Self, Self::Error> {
+    fn try_from(value: &crate::parser::types::Date) -> Result<Self, Self::Error> {
         time::Date::from_calendar_date(
             value.year as i32,
             time::Month::try_from(value.month).context("Invalid month")?,
@@ -928,10 +934,10 @@ impl TryFrom<&crate::parser::Date> for time::Date {
     }
 }
 
-impl TryFrom<&crate::parser::DateTime> for (time::Date, time::Time, bool) {
+impl TryFrom<&crate::parser::types::DateTime> for (time::Date, time::Time, bool) {
     type Error = anyhow::Error;
 
-    fn try_from(value: &crate::parser::DateTime) -> Result<Self, Self::Error> {
+    fn try_from(value: &crate::parser::types::DateTime) -> Result<Self, Self::Error> {
         Ok((
             time::Date::try_from(&value.date)?,
             time::Time::from_hms(value.time.hour, value.time.minute, value.time.second)

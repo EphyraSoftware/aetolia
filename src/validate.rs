@@ -246,7 +246,7 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
     Ok(errors)
 }
 
-fn validate_time(time: &crate::parser::Time) -> anyhow::Result<()> {
+fn validate_time(time: &crate::parser::types::Time) -> anyhow::Result<()> {
     if time.hour > 23 {
         anyhow::bail!("Hour must be between 0 and 23");
     }

@@ -45,10 +45,10 @@ mod tests {
     use super::*;
     use crate::common::Value;
     use crate::parser::types::{
-        Action, ActionProperty, AttachProperty, AttachValue, DurationOrDateTime, DurationProperty,
-        ParamValue, RepeatProperty, TriggerProperty,
+        Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, DurationOrDateTime,
+        DurationProperty, ParamValue, RepeatProperty, Time, TriggerProperty,
     };
-    use crate::parser::{Date, DateTime, Duration, Error, Time};
+    use crate::parser::{Duration, Error};
     use crate::test_utils::check_rem;
 
     #[test]

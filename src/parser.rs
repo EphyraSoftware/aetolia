@@ -16,7 +16,7 @@ mod component;
 mod first_pass;
 mod language_tag;
 mod object;
-pub(crate) mod param;
+mod param;
 mod property;
 
 /// Types produced by the parser.
@@ -26,11 +26,15 @@ pub mod types;
 
 pub use first_pass::content_line_first_pass;
 pub use object::{ical_object, ical_stream};
-pub use property::recur::RecurRulePart;
-pub use property::value_types::{Duration, Period, PeriodEnd, UtcOffset};
-pub(crate) use property::*;
+pub use param::value::*;
+pub use param::{property_param, property_params};
+pub use property::component::*;
+pub use property::recur::recur;
+pub use property::uri::param_value_uri;
+pub use property::value::*;
 pub use types::CalendarProperty;
 pub use types::ParamValue;
+pub use types::{Duration, Period, PeriodEnd, UtcOffset};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {

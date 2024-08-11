@@ -49,10 +49,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::property::{Date, DateOrDateTime, DateTime, Time};
     use crate::parser::types::{
-        AttendeeProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
-        OrganizerProperty, UniqueIdentifierProperty,
+        AttendeeProperty, Date, DateOrDateTime, DateTime, DateTimeEndProperty,
+        DateTimeStampProperty, DateTimeStartProperty, OrganizerProperty, Time,
+        UniqueIdentifierProperty,
     };
     use crate::parser::Error;
     use crate::test_utils::check_rem;

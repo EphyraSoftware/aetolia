@@ -1,26 +1,26 @@
 use crate::common::{Encoding, Status, TimeTransparency, Value};
-use crate::parser::param::{other_params, params};
+use crate::parser::param::{other_params, property_params};
 use crate::parser::property::recur::recur;
 use crate::parser::property::uri::param_value_uri;
-use crate::parser::property::{
-    prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
-    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
-    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod,
-};
 use crate::parser::types::{
     Action, ActionProperty, AttachProperty, AttachValue, AttendeeProperty, CategoriesProperty,
     Classification, ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty,
-    DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty,
-    DateTimeStartProperty, DescriptionProperty, DurationOrDateTime, DurationProperty,
-    ExceptionDateTimesProperty, FreeBusyTimeProperty, GeographicPositionProperty,
-    LastModifiedProperty, LocationProperty, OrganizerProperty, ParamValue, PercentCompleteProperty,
-    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
-    RelatedToProperty, RepeatProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty,
-    StatusProperty, SummaryProperty, TimeTransparencyProperty, TimeZoneIdProperty,
-    TimeZoneNameProperty, TimeZoneOffsetProperty, TimeZoneUrlProperty, TriggerProperty,
-    UniqueIdentifierProperty, UrlProperty,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTimeCompletedProperty, DateTimeDueProperty,
+    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
+    DurationOrDateTime, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
+    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
+    ParamValue, PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty,
+    RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty, RepeatProperty,
+    RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty,
+    TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
+    TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
 };
 use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
+use crate::parser::{
+    prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
+    prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
+    prop_value_utc_offset,
+};
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case, take_while1};
 use nom::bytes::streaming::tag;
@@ -41,7 +41,8 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, params, _)) = tuple((tag_no_case("ATTACH"), cut(params), char(':')))(input)?;
+    let (input, (_, params, _)) =
+        tuple((tag_no_case("ATTACH"), cut(property_params), char(':')))(input)?;
 
     let is_base_64 = params.iter().any(|p| {
         matches!(
@@ -98,7 +99,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("CATEGORIES"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             separated_list1(char(','), prop_value_text),
             tag("\r\n"),
@@ -153,7 +154,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("COMMENT"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, CommentProperty { params, value }))
@@ -171,7 +177,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DESCRIPTION"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             prop_value_text.map(|v| v),
             tag("\r\n"),
@@ -221,7 +227,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("LOCATION"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, LocationProperty { params, value }))
@@ -293,7 +304,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RESOURCES"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             separated_list1(char(','), prop_value_text),
             tag("\r\n"),
@@ -349,7 +360,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("SUMMARY"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, SummaryProperty { params, value }))
@@ -395,7 +411,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DTEND"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             alt((
                 prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -420,7 +436,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DUE"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             alt((
                 prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -447,7 +463,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("DTSTART"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             alt((
                 prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -498,7 +514,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("FREEBUSY"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             separated_list1(char(','), prop_value_period),
             tag("\r\n"),
@@ -577,7 +593,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("TZNAME"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, TimeZoneNameProperty { params, value }))
@@ -679,7 +700,7 @@ where
     let (input, (_, (params, _, uri, _))) = tuple((
         tag_no_case("ATTENDEE"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             cut(recognize(prop_value_calendar_user_address)),
             tag("\r\n"),
@@ -700,7 +721,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("CONTACT"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, ContactProperty { params, value }))
@@ -718,7 +744,7 @@ where
     let (input, (_, (params, _, uri, _))) = tuple((
         tag_no_case("ORGANIZER"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             recognize(prop_value_calendar_user_address),
             tag("\r\n"),
@@ -740,7 +766,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RECURRENCE-ID"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             alt((
                 prop_value_date_time.map(DateOrDateTime::DateTime),
@@ -764,7 +790,12 @@ where
 {
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RELATED-TO"),
-        cut(tuple((params, char(':'), prop_value_text, tag("\r\n")))),
+        cut(tuple((
+            property_params,
+            char(':'),
+            prop_value_text,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((input, RelatedToProperty { params, value }))
@@ -840,7 +871,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("EXDATE"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             separated_list1(
                 char(','),
@@ -870,7 +901,7 @@ where
     let (input, (_, (params, _, value, _))) = tuple((
         tag_no_case("RDATE"),
         cut(tuple((
-            params,
+            property_params,
             char(':'),
             separated_list1(
                 char(','),
@@ -979,8 +1010,10 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, (params, _))) =
-        tuple((tag_no_case("TRIGGER"), cut(tuple((params, char(':'))))))(input)?;
+    let (input, (_, (params, _))) = tuple((
+        tag_no_case("TRIGGER"),
+        cut(tuple((property_params, char(':')))),
+    ))(input)?;
 
     let value_choice = params
         .iter()
@@ -1164,7 +1197,7 @@ where
         tuple((
             tag_no_case("REQUEST-STATUS"),
             cut(tuple((
-                params,
+                property_params,
                 char(':'),
                 status_code,
                 char(';'),
@@ -1191,11 +1224,10 @@ mod tests {
     use crate::common::FreeBusyTimeType;
     use crate::common::RecurFreq;
     use crate::common::{LanguageTag, ParticipationStatusUnknown, Range, Related, Role, Value};
-    use crate::parser::property::uri::{Authority, Host};
-    use crate::parser::property::{Date, Period, PeriodEnd, Time};
     use crate::parser::types::ParamValue;
-    use crate::parser::uri::Uri;
-    use crate::parser::{DateTime, Duration, RecurRulePart, UtcOffset};
+    use crate::parser::types::RecurRulePart;
+    use crate::parser::types::{Authority, Host, Uri};
+    use crate::parser::types::{Date, DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
     use crate::test_utils::check_rem;
     use base64::Engine;
 

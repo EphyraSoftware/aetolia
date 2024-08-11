@@ -5,8 +5,8 @@ use crate::model::{
     DateTimeStartProperty, EncodingParam, ExceptionDateTimesProperty, OrganizerProperty, Param,
     RecurrenceDateTimesProperty, RecurrenceDateTimesPropertyValue, RecurrenceIdProperty,
 };
-use crate::parser::recur::recur;
-use crate::parser::uri::param_value_uri;
+use crate::parser::param_value_uri;
+use crate::parser::recur;
 use crate::parser::{
     prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
@@ -1035,7 +1035,9 @@ fn is_period_valued(property_value: &String) -> bool {
     }
 }
 
-fn is_recur_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::RecurRulePart>> {
+fn is_recur_valued(
+    property_value: &String,
+) -> anyhow::Result<Vec<crate::parser::types::RecurRulePart>> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b'`');
 
@@ -1058,7 +1060,7 @@ fn is_text_valued(property_value: &String) -> bool {
     }
 }
 
-fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::Time>> {
+fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::types::Time>> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 

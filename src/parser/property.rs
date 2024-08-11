@@ -1,15 +1,14 @@
 pub(crate) mod component;
 pub(crate) mod recur;
 pub(crate) mod uri;
-mod value;
-pub(crate) mod value_types;
+pub(crate) mod value;
 
-use crate::parser::param::{other_params, params};
+use crate::parser::param::{other_params, property_params};
 use crate::parser::types::{
     CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
     XProperty,
 };
-use crate::parser::{iana_token, value, x_name, Error};
+use crate::parser::{iana_token, prop_value_text, value, x_name, Error};
 use crate::single;
 pub use component::*;
 use nom::branch::alt;
@@ -21,8 +20,6 @@ use nom::combinator::{cut, recognize, verify};
 use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-pub use value::*;
-pub use value_types::*;
 
 pub fn prop_product_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ProductIdProperty<'a>, E>
 where
@@ -127,7 +124,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (name, params, _, value, _)) =
-        tuple((x_name, cut(params), char(':'), value, tag("\r\n")))(input)?;
+        tuple((x_name, cut(property_params), char(':'), value, tag("\r\n")))(input)?;
 
     Ok((
         input,
@@ -150,7 +147,7 @@ where
             // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out
             t != b"BEGIN" && t != b"END"
         }),
-        cut(params),
+        cut(property_params),
         char(':'),
         value,
         tag("\r\n"),

@@ -1,6 +1,5 @@
-use crate::parser::property::uri::{param_value_uri, Uri};
-use crate::parser::property::value_types::Date;
-use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
+use crate::parser::property::uri::param_value_uri;
+use crate::parser::types::{Date, DateTime, Duration, Period, PeriodEnd, Time, Uri, UtcOffset};
 use crate::parser::{read_int, Error, InnerError};
 use crate::utf8_seq;
 use nom::branch::alt;

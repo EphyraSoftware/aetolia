@@ -1,6 +1,6 @@
 use crate::common::{ParticipationStatusUnknown, PropertyKind};
 use crate::model::{Param, ParticipationStatusParam, SentByParam, TimeZoneIdParam};
-use crate::parser::param::param_value_participation_status;
+use crate::parser::param_value_participation_status;
 use crate::parser::Error;
 use crate::validate::error::ParamError;
 use crate::validate::{
