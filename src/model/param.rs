@@ -30,10 +30,10 @@ pub trait ParamInner<T> {
 
 macro_rules! impl_param_inner {
     ($for_type:ty, $variant:ident) => {
-        impl $crate::model::ParamInner<$for_type> for Param {
+        impl $crate::model::param::ParamInner<$for_type> for Param {
             fn param_inner(&self) -> Option<&$for_type> {
                 match self {
-                    $crate::model::Param::$variant(p) => Some(p),
+                    $crate::model::param::Param::$variant(p) => Some(p),
                     _ => None,
                 }
             }
@@ -372,11 +372,11 @@ macro_rules! altrep_param {
         // TODO no generic URI representation for Rust? Maybe extract the URI parser in this crate and
         //      make that into a URI crate.
         pub fn add_alternate_representation(mut self, value: &str) -> Self {
-            self.inner
-                .params
-                .push(Param::AltRep($crate::model::AlternateRepresentationParam {
+            self.inner.params.push(Param::AltRep(
+                $crate::model::param::AlternateRepresentationParam {
                     uri: value.to_string(),
-                }));
+                },
+            ));
             self
         }
     };
@@ -389,7 +389,9 @@ macro_rules! language_param {
         pub fn add_language(mut self, language: $crate::common::LanguageTag) -> Self {
             self.inner
                 .params
-                .push(Param::Language($crate::model::LanguageParam { language }));
+                .push(Param::Language($crate::model::param::LanguageParam {
+                    language,
+                }));
             self
         }
     };
@@ -402,7 +404,7 @@ macro_rules! tz_id_param {
         pub fn add_tz_id<V: ToString>(mut self, tz_id: V, unique: bool) -> Self {
             self.inner
                 .params
-                .push(Param::TimeZoneId($crate::model::TimeZoneIdParam {
+                .push(Param::TimeZoneId($crate::model::param::TimeZoneIdParam {
                     tz_id: tz_id.to_string(),
                     unique,
                 }));
@@ -419,7 +421,7 @@ macro_rules! sent_by_param {
         pub fn add_sent_by(mut self, value: &str) -> Self {
             self.inner
                 .params
-                .push(Param::SentBy($crate::model::SentByParam {
+                .push(Param::SentBy($crate::model::param::SentByParam {
                     address: value.to_string(),
                 }));
             self
@@ -434,7 +436,7 @@ macro_rules! common_name_param {
         pub fn add_common_name<V: ToString>(mut self, value: V) -> Self {
             self.inner
                 .params
-                .push(Param::CommonName($crate::model::CommonNameParam {
+                .push(Param::CommonName($crate::model::param::CommonNameParam {
                     name: value.to_string(),
                 }));
             self
@@ -449,7 +451,7 @@ macro_rules! directory_entry_reference_param {
         // TODO should be a URI
         pub fn add_directory_entry_reference(mut self, value: &str) -> Self {
             self.inner.params.push(Param::DirectoryEntryReference(
-                $crate::model::DirectoryEntryReferenceParam {
+                $crate::model::param::DirectoryEntryReferenceParam {
                     uri: value.to_string(),
                 },
             ));

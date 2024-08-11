@@ -1,7 +1,7 @@
 use crate::serialize::WriteModel;
 use std::io::Write;
 
-impl WriteModel for crate::model::ICalObject {
+impl WriteModel for crate::model::object::ICalObject {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         writer.write_all(b"BEGIN:VCALENDAR")?;
         for property in &self.properties {
@@ -18,9 +18,9 @@ impl WriteModel for crate::model::ICalObject {
     }
 }
 
-impl WriteModel for crate::model::CalendarProperty {
+impl WriteModel for crate::model::property::CalendarProperty {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::CalendarProperty;
+        use crate::model::property::CalendarProperty;
 
         match self {
             CalendarProperty::ProductId(property) => {

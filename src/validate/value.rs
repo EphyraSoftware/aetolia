@@ -1,9 +1,11 @@
 use crate::common::{Encoding, Value};
 use crate::convert::ToModel;
-use crate::model::{
+use crate::model::param::{EncodingParam, Param};
+use crate::model::property::{
     AttendeeProperty, ComponentProperty, DateTimeDueProperty, DateTimeEndProperty,
-    DateTimeStartProperty, EncodingParam, ExceptionDateTimesProperty, OrganizerProperty, Param,
+    DateTimeStartProperty, ExceptionDateTimesProperty, OrganizerProperty,
     RecurrenceDateTimesProperty, RecurrenceDateTimesPropertyValue, RecurrenceIdProperty,
+    TriggerValue,
 };
 use crate::parser::param_value_uri;
 use crate::parser::prop_value_recur;
@@ -12,7 +14,6 @@ use crate::parser::{
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
     prop_value_utc_offset, Error,
 };
-use crate::prelude::TriggerValue;
 use crate::serialize::WriteModel;
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::{

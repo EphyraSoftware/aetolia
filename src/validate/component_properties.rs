@@ -1,8 +1,9 @@
 use crate::common::{PropertyKind, Status, Value};
-use crate::model::{
+use crate::model::param::Param;
+use crate::model::property::{
     Action, ComponentProperty, DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty,
     DateTimeStampProperty, DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty,
-    LastModifiedProperty, Param, PeriodEnd, StatusProperty,
+    LastModifiedProperty, PeriodEnd, StatusProperty,
 };
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::value::check_declared_value;

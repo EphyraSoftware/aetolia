@@ -1,5 +1,6 @@
 use crate::common::PropertyKind;
-use crate::model::{CalendarProperty, ICalObject};
+use crate::model::object::ICalObject;
+use crate::model::property::CalendarProperty;
 use crate::validate::error::CalendarPropertyError;
 use crate::validate::params::validate_params;
 use crate::validate::{

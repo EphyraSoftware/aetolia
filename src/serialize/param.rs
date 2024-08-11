@@ -1,4 +1,4 @@
-use crate::model::{
+use crate::model::param::{
     AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedFromParam,
     DelegatedToParam, DirectoryEntryReferenceParam, EncodingParam, FormatTypeParam,
     FreeBusyTimeTypeParam, LanguageParam, MembersParam, ParticipationStatusParam, RangeParam,
@@ -8,9 +8,9 @@ use crate::model::{
 use crate::serialize::WriteModel;
 use std::io::Write;
 
-impl WriteModel for crate::model::Param {
+impl WriteModel for crate::model::param::Param {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::Param;
+        use crate::model::param::Param;
 
         match self {
             Param::AltRep(AlternateRepresentationParam { uri }) => {

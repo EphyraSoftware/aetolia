@@ -1,10 +1,10 @@
-use crate::model::RecurrenceDateTimesPropertyValue;
+use crate::model::property::RecurrenceDateTimesPropertyValue;
 use crate::serialize::WriteModel;
 use std::io::Write;
 
-impl WriteModel for crate::model::ComponentProperty {
+impl WriteModel for crate::model::property::ComponentProperty {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::ComponentProperty;
+        use crate::model::property::ComponentProperty;
 
         match self {
             ComponentProperty::DateTimeStamp(property) => {
@@ -308,12 +308,12 @@ impl WriteModel for crate::model::ComponentProperty {
             ComponentProperty::Trigger(property) => {
                 writer.write_all(b"TRIGGER")?;
                 match &property.value {
-                    crate::model::TriggerValue::Relative(duration) => {
+                    crate::model::property::TriggerValue::Relative(duration) => {
                         property.params.as_slice().write_model(writer)?;
                         writer.write_all(b":")?;
                         duration.write_model(writer)?;
                     }
-                    crate::model::TriggerValue::Absolute(date_time) => {
+                    crate::model::property::TriggerValue::Absolute(date_time) => {
                         property.params.as_slice().write_model(writer)?;
                         writer.write_all(b":")?;
                         date_time.write_model(writer)?;
@@ -344,7 +344,7 @@ impl WriteModel for crate::model::ComponentProperty {
     }
 }
 
-impl WriteModel for &[crate::model::Param] {
+impl WriteModel for &[crate::model::param::Param] {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         for param in self.iter() {
             writer.write_all(b";")?;

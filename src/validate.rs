@@ -6,10 +6,11 @@ mod recur;
 mod value;
 
 use crate::common::{PropertyKind, Value};
-use crate::model::{
-    CalendarComponent, CalendarProperty, ComponentAccess, ComponentProperty, ICalObject, Param,
-    ValueTypeParam,
-};
+use crate::model::component::CalendarComponent;
+use crate::model::object::ICalObject;
+use crate::model::param::{Param, ValueTypeParam};
+use crate::model::property::{CalendarProperty, ComponentProperty};
+use crate::model::ComponentAccess;
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
 use crate::validate::error::ICalendarError;

@@ -1,4 +1,4 @@
-use crate::model::Duration;
+use crate::model::property::Duration;
 use std::cmp::Ordering;
 use std::ops::{Add, Sub};
 

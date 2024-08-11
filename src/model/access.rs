@@ -1,6 +1,5 @@
-use crate::model::{
-    ComponentPropertiesInner, ComponentProperty, ComponentPropertyInner, Param, ParamInner,
-};
+use crate::model::param::{Param, ParamInner};
+use crate::model::property::{ComponentPropertiesInner, ComponentProperty, ComponentPropertyInner};
 
 pub trait ComponentAccess {
     fn properties(&self) -> &[ComponentProperty];
@@ -45,8 +44,8 @@ pub trait ComponentAccess {
 
 macro_rules! impl_component_access {
     ($for_type:ty) => {
-        impl $crate::model::ComponentAccess for $for_type {
-            fn properties(&self) -> &[$crate::model::ComponentProperty] {
+        impl $crate::model::access::ComponentAccess for $for_type {
+            fn properties(&self) -> &[$crate::model::property::ComponentProperty] {
                 &self.properties
             }
         }
@@ -96,12 +95,12 @@ pub trait PropertyAccess<V> {
 
 macro_rules! impl_property_access {
     ($for_type:ty, $value_type:ty) => {
-        impl $crate::model::PropertyAccess<$value_type> for $for_type {
+        impl $crate::model::access::PropertyAccess<$value_type> for $for_type {
             fn value(&self) -> &$value_type {
                 &self.value
             }
 
-            fn params(&self) -> &[$crate::model::Param] {
+            fn params(&self) -> &[$crate::model::param::Param] {
                 &self.params
             }
         }

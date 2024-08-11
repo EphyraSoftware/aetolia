@@ -1,12 +1,14 @@
-use crate::model::component::event::EventComponentBuilder;
-use crate::model::component::iana_component::IanaComponentBuilder;
-use crate::model::component::x_component::XComponentBuilder;
 use crate::model::component::CalendarComponent;
+use crate::model::component::IanaComponentBuilder;
+use crate::model::component::XComponentBuilder;
+use crate::model::component::{
+    EventComponentBuilder, FreeBusyComponentBuilder, JournalComponentBuilder,
+    TimeZoneComponentBuilder, ToDoComponentBuilder,
+};
 use crate::model::property::{
     CalendarProperty, CalendarScalePropertyBuilder, IanaPropertyBuilder, MethodPropertyBuilder,
     ProductIdPropertyBuilder, VersionPropertyBuilder, XPropertyBuilder,
 };
-use crate::model::*;
 
 #[derive(Debug, PartialEq)]
 pub struct ICalObject {

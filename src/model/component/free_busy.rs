@@ -1,12 +1,16 @@
 use crate::common::FreeBusyTimeType;
-use crate::model::{
+use crate::model::component::{
     add_comment, add_contact, add_date_time_end, add_date_time_stamp, add_date_time_start,
     add_organizer, add_request_status, add_unique_identifier, add_url, impl_finish_component_build,
-    impl_other_component_properties, AddComponentProperty, AttendeePropertyBuilder,
-    CalendarComponent, ComponentProperty, FreeBusyTimePropertyBuilder, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
+    impl_other_component_properties, CalendarComponent, ComponentProperty,
 };
-use crate::prelude::{impl_component_access, Period};
+use crate::model::impl_component_access;
+use crate::model::object::ICalObjectBuilder;
+use crate::model::param::ParticipationStatusEvent;
+use crate::model::property::{
+    AddComponentProperty, AttendeePropertyBuilder, FreeBusyTimePropertyBuilder,
+    IanaComponentPropertyBuilder, Period, XComponentPropertyBuilder,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct FreeBusyComponent {

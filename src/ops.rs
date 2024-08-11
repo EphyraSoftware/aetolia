@@ -1,5 +1,5 @@
 use crate::convert::ToModel;
-use crate::model::ICalObject;
+use crate::model::object::ICalObject;
 use crate::parser::{content_line_first_pass, ical_stream, Error};
 use std::io::Read;
 

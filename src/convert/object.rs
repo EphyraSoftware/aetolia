@@ -1,10 +1,10 @@
 use crate::convert::ToModel;
 
 impl ToModel for crate::parser::types::ICalendar<'_> {
-    type Model = crate::model::ICalObject;
+    type Model = crate::model::object::ICalObject;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
-        let mut calendar = crate::model::ICalObject::new();
+        let mut calendar = crate::model::object::ICalObject::new();
 
         calendar.properties.reserve(self.properties.len());
         for property in &self.properties {

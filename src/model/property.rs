@@ -1,23 +1,22 @@
-pub mod duration;
-pub mod recur;
-
+use crate::common::{
+    CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
+    Range, RelationshipType, Role, Status, TimeTransparency, TriggerRelationship, Value,
+};
 use crate::model::object::ICalObjectBuilder;
-use crate::model::param::Param;
-use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder};
-use crate::model::{
+use crate::model::param::{
     add_is_utc, altrep_param, common_name_param, directory_entry_reference_param, language_param,
     sent_by_param, tz_id_param, CalendarUserTypeParam, DelegatedFromParam, DelegatedToParam,
     EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, MembersParam, ParticipationStatusParam,
     RangeParam, RelatedParam, RelationshipTypeParam, RoleParam, RsvpParam, ValueTypeParam,
 };
+use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder, Param};
 use std::fmt::Display;
 use std::marker::PhantomData;
 
-use crate::common::{
-    CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
-    Range, RelationshipType, Role, Status, TimeTransparency, TriggerRelationship, Value,
-};
-use crate::prelude::impl_property_access;
+mod duration;
+mod recur;
+
+use crate::model::impl_property_access;
 pub use duration::*;
 pub use recur::*;
 
@@ -473,10 +472,12 @@ pub trait ComponentPropertyInner<T> {
 
 macro_rules! impl_component_property_inner {
     ($for_type:ty, $variant:ident) => {
-        impl $crate::model::ComponentPropertyInner<$for_type> for $crate::model::ComponentProperty {
+        impl $crate::model::property::ComponentPropertyInner<$for_type>
+            for $crate::model::property::ComponentProperty
+        {
             fn property_inner(&self) -> Option<&$for_type> {
                 match self {
-                    $crate::model::ComponentProperty::$variant(p) => Some(p),
+                    $crate::model::property::ComponentProperty::$variant(p) => Some(p),
                     _ => None,
                 }
             }
@@ -523,12 +524,12 @@ pub trait ComponentPropertiesInner<T> {
 
 macro_rules! impl_component_properties_inner {
     ($for_type:ty, $variant:ident) => {
-        impl $crate::model::ComponentPropertiesInner<$for_type>
-            for $crate::model::ComponentProperty
+        impl $crate::model::property::ComponentPropertiesInner<$for_type>
+            for $crate::model::property::ComponentProperty
         {
             fn many_property_inner(&self) -> Option<&$for_type> {
                 match self {
-                    $crate::model::ComponentProperty::$variant(p) => Some(p),
+                    $crate::model::property::ComponentProperty::$variant(p) => Some(p),
                     _ => None,
                 }
             }

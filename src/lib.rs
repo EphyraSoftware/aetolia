@@ -11,7 +11,7 @@ use std::num::NonZeroUsize;
 mod common;
 /// Conversion from the parser model to the core representation.
 pub mod convert;
-mod model;
+pub mod model;
 /// The iCalendar parser.
 pub mod parser;
 
@@ -24,7 +24,11 @@ mod validate;
 pub mod prelude {
     pub use crate::common::PropertyKind;
     pub use crate::common::*;
-    pub use crate::model::*;
+    pub use crate::model::access::*;
+    pub use crate::model::component::*;
+    pub use crate::model::object::*;
+    pub use crate::model::param::*;
+    pub use crate::model::property::*;
     pub use crate::ops::load_ical;
     pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};
     pub use crate::serialize::WriteModel;

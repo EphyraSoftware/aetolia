@@ -385,9 +385,9 @@ impl WriteModel for crate::common::TriggerRelationship {
     }
 }
 
-impl WriteModel for crate::model::Classification {
+impl WriteModel for crate::model::property::Classification {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::Classification;
+        use crate::model::property::Classification;
 
         match self {
             Classification::Public => {
@@ -428,9 +428,9 @@ impl WriteModel for crate::common::TimeTransparency {
     }
 }
 
-impl WriteModel for crate::model::RecurrenceRule {
+impl WriteModel for crate::model::property::RecurrenceRule {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::RecurRulePart;
+        use crate::model::property::RecurRulePart;
 
         for part in &self.parts {
             match part {
@@ -604,9 +604,9 @@ impl WriteModel for time::Month {
     }
 }
 
-impl WriteModel for crate::model::Duration {
+impl WriteModel for crate::model::property::Duration {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        let write_time: fn(&mut W, &crate::model::Duration) -> anyhow::Result<()> =
+        let write_time: fn(&mut W, &crate::model::property::Duration) -> anyhow::Result<()> =
             |writer, duration| {
                 if duration.hours.is_some()
                     || duration.minutes.is_some()
@@ -694,15 +694,15 @@ impl WriteModel for crate::common::Status {
     }
 }
 
-impl WriteModel for crate::model::Period {
+impl WriteModel for crate::model::property::Period {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         self.start.write_model(writer)?;
         writer.write_all(b"/")?;
         match &self.end {
-            crate::model::PeriodEnd::Duration(duration) => {
+            crate::model::property::PeriodEnd::Duration(duration) => {
                 duration.write_model(writer)?;
             }
-            crate::model::PeriodEnd::DateTime(date_time) => {
+            crate::model::property::PeriodEnd::DateTime(date_time) => {
                 date_time.write_model(writer)?;
             }
         }
@@ -711,7 +711,7 @@ impl WriteModel for crate::model::Period {
     }
 }
 
-impl WriteModel for crate::model::TimeZoneOffset {
+impl WriteModel for crate::model::property::TimeZoneOffset {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         if self.sign < 0 {
             writer.write_all(b"-")?;
@@ -729,9 +729,9 @@ impl WriteModel for crate::model::TimeZoneOffset {
     }
 }
 
-impl WriteModel for crate::model::Action {
+impl WriteModel for crate::model::property::Action {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::Action;
+        use crate::model::property::Action;
 
         match self {
             Action::Audio => {

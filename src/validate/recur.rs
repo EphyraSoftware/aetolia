@@ -1,5 +1,5 @@
 use crate::common::RecurFreq;
-use crate::model::{
+use crate::model::property::{
     ComponentProperty, DateTimeQuery, DateTimeStartProperty, RecurRulePart, RecurrenceRule,
 };
 use crate::validate::{

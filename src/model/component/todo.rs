@@ -1,17 +1,20 @@
-use crate::model::{
+use crate::model::component::{
     add_alarms, add_attach, add_categories, add_class, add_comment, add_contact, add_created,
     add_date_time_stamp, add_date_time_start, add_description, add_duration,
     add_exception_date_times, add_geographic_position, add_last_modified, add_location,
     add_organizer, add_priority, add_recurrence_date, add_recurrence_id, add_recurrence_rule,
     add_related, add_request_status, add_resources, add_sequence, add_summary,
     add_unique_identifier, add_url, impl_finish_component_build, impl_other_component_properties,
-    AddComponentProperty, AlarmComponent, AttendeePropertyBuilder, CalendarComponent,
-    CompletedPropertyBuilder, ComponentProperty, ICalObjectBuilder, IanaComponentPropertyBuilder,
-    ParticipationStatusToDo, PercentCompletePropertyBuilder, StatusPropertyBuilder, StatusToDo,
-    XComponentPropertyBuilder,
+    AddAlarmComponent, AlarmComponent, CalendarComponent, ComponentProperty,
 };
-use crate::prelude::alarm::AddAlarmComponent;
-use crate::prelude::{impl_component_access, DateTimeDuePropertyBuilder};
+use crate::model::impl_component_access;
+use crate::model::object::ICalObjectBuilder;
+use crate::model::param::ParticipationStatusToDo;
+use crate::model::property::{
+    AddComponentProperty, AttendeePropertyBuilder, CompletedPropertyBuilder,
+    DateTimeDuePropertyBuilder, IanaComponentPropertyBuilder, PercentCompletePropertyBuilder,
+    StatusPropertyBuilder, StatusToDo, XComponentPropertyBuilder,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct ToDoComponent {
