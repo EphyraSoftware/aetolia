@@ -3,6 +3,7 @@ mod object;
 mod param;
 mod property;
 
+/// Conversion trait for converting parser model types to model types.
 pub trait ToModel {
     type Model;
 

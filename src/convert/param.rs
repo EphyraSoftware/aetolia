@@ -1,5 +1,4 @@
 use crate::convert::{convert_string, ToModel};
-
 use crate::model::{
     AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedToParam,
     EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, Param as ModelParam,

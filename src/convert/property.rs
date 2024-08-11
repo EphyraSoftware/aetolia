@@ -1,5 +1,3 @@
-mod recur;
-
 use crate::common::CalendarDateTime;
 use crate::convert::{convert_string, ToModel};
 use crate::model::{
@@ -9,6 +7,8 @@ use crate::model::{
 use crate::parser::types::ContentLine;
 use crate::prelude::{RequestStatusPropertyValue, TriggerValue};
 use anyhow::Context;
+
+mod recur;
 
 impl ToModel for crate::parser::types::DateTimeStampProperty<'_> {
     type Model = crate::model::DateTimeStampProperty;

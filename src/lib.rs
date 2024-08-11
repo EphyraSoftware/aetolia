@@ -9,8 +9,10 @@ use nom::{IResult, InputIter, InputLength, InputTake};
 use std::num::NonZeroUsize;
 
 mod common;
-mod convert;
+/// Conversion from the parser model to the core representation.
+pub mod convert;
 mod model;
+/// The iCalendar parser.
 pub mod parser;
 
 mod ops;
