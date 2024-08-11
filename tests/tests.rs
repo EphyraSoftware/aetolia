@@ -82,8 +82,11 @@ fn accessors() {
                 assert_eq!(3, alarms.len());
 
                 let trigger = alarms[0].get_property::<TriggerProperty>().unwrap();
-                let trigger_relationship = trigger.get_param::<RelatedParam>().unwrap();
-                assert_eq!(Related::Start, trigger_relationship.related);
+                let trigger_relationship = trigger.get_param::<TriggerRelationshipParam>().unwrap();
+                assert_eq!(
+                    TriggerRelationship::Start,
+                    trigger_relationship.trigger_relationship
+                );
                 assert_eq!(1, trigger.get_iana_params("trigger-test").len());
                 assert_eq!(1, trigger.get_x_params("x-trigger-test").len());
                 match trigger.value() {

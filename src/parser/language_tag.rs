@@ -1,4 +1,4 @@
-//! https://www.rfc-editor.org/rfc/rfc5646.txt
+//! <https://www.rfc-editor.org/rfc/rfc5646.txt>
 
 use crate::common::LanguageTag;
 use crate::parser::Error;

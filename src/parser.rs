@@ -13,37 +13,26 @@ use std::str::FromStr;
 use std::sync::Mutex;
 
 mod component;
+mod first_pass;
 mod language_tag;
 mod object;
-pub(crate) mod param;
-mod pre;
+mod param;
 mod property;
 
-pub use object::types::{CalendarComponent, CalendarProperty, ComponentProperty, ICalendar};
+/// Types produced by the parser.
+///
+/// These types represent the structure of the iCalendar format.
+pub mod types;
+
+use crate::parser::types::{ContentLine, ParamValue};
+pub use first_pass::content_line_first_pass;
 pub use object::{ical_object, ical_stream};
-pub use param::ParamValue;
-pub use pre::content_line_first_pass;
-pub use property::component::{Action, AttachValue, DurationOrDateTime};
-pub use property::recur::RecurRulePart;
-pub use property::types::{
-    CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
-    XProperty,
-};
-pub use property::value_types::{Duration, Period, PeriodEnd, UtcOffset};
-pub(crate) use property::*;
-pub use property::{
-    ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, Classification,
-    ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty, Date,
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, DateTimeCompletedProperty,
-    DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
-    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
-    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
-    PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty,
-    RecurrenceRuleProperty, RelatedToProperty, RepeatCountProperty, RequestStatusProperty,
-    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, Time,
-    TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
-    TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
-};
+pub use param::value::*;
+pub use param::{property_param, property_params};
+pub use property::component::*;
+pub use property::recur::prop_value_recur;
+pub use property::uri::param_value_uri;
+pub use property::value::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
@@ -124,7 +113,7 @@ lazy_static! {
 }
 
 #[cfg(test)]
-pub unsafe fn clear_errors() {
+pub(crate) unsafe fn clear_errors() {
     for (ptr, len) in ERROR_HOLD.lock().unwrap().drain(..) {
         unsafe { String::from_raw_parts(ptr as *mut u8, len, len) };
     }
@@ -143,13 +132,6 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
             errors: vec![(value.input, VerboseErrorKind::Context(ctx))],
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct ContentLine<'a> {
-    pub(crate) property_name: &'a [u8],
-    pub(crate) params: Vec<ParamValue<'a>>,
-    pub(crate) value: Vec<u8>,
 }
 
 /// All ASCII control characters except tab (%x09).
@@ -292,7 +274,7 @@ where
     ))(input)
 }
 
-pub fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -302,7 +284,7 @@ where
     })(input)
 }
 
-fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], param::ParamValue<'a>, E>
+fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {

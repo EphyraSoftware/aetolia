@@ -1,14 +1,15 @@
 use crate::parser::component::alarm::component_alarm;
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_attach, prop_attendee, prop_categories, prop_classification, prop_comment, prop_contact,
-    prop_created, prop_date_time_end, prop_date_time_stamp, prop_date_time_start, prop_description,
-    prop_duration, prop_exception_date_times, prop_geographic_position, prop_iana,
-    prop_last_modified, prop_location, prop_organizer, prop_priority, prop_recurrence_date_times,
-    prop_recurrence_id, prop_recurrence_rule, prop_related_to, prop_request_status, prop_resources,
-    prop_sequence, prop_status, prop_summary, prop_time_transparency, prop_unique_identifier,
-    prop_url, prop_x,
+    prop_date_time_created, prop_date_time_end, prop_date_time_stamp, prop_date_time_start,
+    prop_description, prop_duration, prop_exception_date_times, prop_geographic_position,
+    prop_iana, prop_last_modified, prop_location, prop_organizer, prop_priority,
+    prop_recurrence_date_times, prop_recurrence_id, prop_recurrence_rule, prop_related_to,
+    prop_request_status, prop_resources, prop_sequence, prop_status, prop_summary,
+    prop_time_transparency, prop_unique_identifier, prop_url, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -32,7 +33,7 @@ where
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
                 prop_date_time_start.map(ComponentProperty::DateTimeStart),
                 prop_classification.map(ComponentProperty::Classification),
-                prop_created.map(ComponentProperty::DateTimeCreated),
+                prop_date_time_created.map(ComponentProperty::DateTimeCreated),
                 prop_description.map(ComponentProperty::Description),
                 prop_geographic_position.map(ComponentProperty::GeographicPosition),
                 prop_last_modified.map(ComponentProperty::LastModified),
@@ -74,7 +75,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::property::{
+    use crate::parser::types::{
         CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
         DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, SummaryProperty, Time,
         UniqueIdentifierProperty,
@@ -84,7 +85,16 @@ mod tests {
 
     #[test]
     fn test_component_event() {
-        let input = b"BEGIN:VEVENT\r\nUID:19970901T130000Z-123401@example.com\r\nDTSTAMP:19970901T130000Z\r\nDTSTART:19970903T163000Z\r\nDTEND:19970903T190000Z\r\nSUMMARY:Annual Employee Review\r\nCLASS:PRIVATE\r\nCATEGORIES:BUSINESS,HUMAN RESOURCES\r\nEND:VEVENT\r\n";
+        let input = b"BEGIN:VEVENT\r\n\
+UID:19970901T130000Z-123401@example.com\r\n\
+DTSTAMP:19970901T130000Z\r\n\
+DTSTART:19970903T163000Z\r\n\
+DTEND:19970903T190000Z\r\n\
+SUMMARY:Annual Employee Review\r\n\
+CLASS:PRIVATE\r\n\
+CATEGORIES:BUSINESS,HUMAN RESOURCES\r\n\
+END:VEVENT\r\n";
+
         let (rem, component) = component_event::<Error>(input).unwrap();
         check_rem(rem, 0);
 

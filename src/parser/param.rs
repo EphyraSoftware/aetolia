@@ -1,9 +1,9 @@
-mod types;
-mod values;
+pub(crate) mod value;
 
 use crate::common::Range;
 use crate::parser::language_tag::language_tag;
 use crate::parser::property::uri::param_value_uri;
+use crate::parser::types::ParamValue;
 use crate::parser::{param_name, param_value, read_string, reg_name, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
@@ -14,19 +14,20 @@ use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
-pub use types::*;
-pub use values::*;
+pub use value::*;
 
-pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
+/// Recognize a list of parameters.
+pub fn property_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    many0(tuple((char(';'), cut(param))).map(|(_, p)| p)).parse(input)
+    many0(tuple((char(';'), cut(property_param))).map(|(_, p)| p)).parse(input)
 }
 
-pub fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
+/// Recognize a single parameter.
+pub fn property_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
@@ -308,8 +309,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, related)) =
-        tuple((tag_no_case("RELATED"), char('='), cut(param_value_related)))(input)?;
+    let (input, (_, _, related)) = tuple((
+        tag_no_case("RELATED"),
+        char('='),
+        cut(param_value_trigger_relationship),
+    ))(input)?;
 
     Ok((input, ParamValue::Related { related }))
 }
@@ -389,8 +393,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, (tz_id, unique))) =
-        tuple((tag_no_case("TZID"), char('='), cut(param_value_tz_id)))(input)?;
+    let (input, (_, _, (tz_id, unique))) = tuple((
+        tag_no_case("TZID"),
+        char('='),
+        cut(param_value_time_zone_id),
+    ))(input)?;
 
     Ok((input, ParamValue::TimeZoneId { tz_id, unique }))
 }
@@ -502,8 +509,8 @@ mod tests {
     use super::*;
     use crate::common::LanguageTag;
     use crate::common::{
-        CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Related,
-        RelationshipType, Role, Value,
+        CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, RelationshipType,
+        Role, TriggerRelationship, Value,
     };
     use crate::test_utils::check_rem;
 
@@ -861,7 +868,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             ParamValue::Related {
-                related: Related::Start
+                related: TriggerRelationship::Start
             },
             param
         );
@@ -873,7 +880,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             ParamValue::Related {
-                related: Related::End
+                related: TriggerRelationship::End
             },
             param
         );

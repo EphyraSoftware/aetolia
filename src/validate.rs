@@ -6,16 +6,17 @@ mod recur;
 mod value;
 
 use crate::common::{PropertyKind, Value};
-use crate::model::{
-    CalendarComponent, CalendarProperty, ComponentAccess, ComponentProperty, ICalObject, Param,
-    ValueTypeParam,
-};
+use crate::model::component::CalendarComponent;
+use crate::model::object::ICalObject;
+use crate::model::param::{Param, ValueTypeParam};
+use crate::model::property::{CalendarProperty, ComponentProperty};
+use crate::model::ComponentAccess;
 use crate::validate::calendar_properties::validate_calendar_properties;
 use crate::validate::component_properties::validate_component_properties;
-use crate::validate::error::ICalendarError;
 use crate::validate::params::validate_params;
-pub use error::*;
 use std::collections::{HashMap, HashSet};
+
+pub use error::*;
 
 pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
     let mut errors = Vec::new();
@@ -49,6 +50,7 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
     if ical_object.components.is_empty() {
         errors.push(ICalendarError {
             message: "No components found in calendar object, required at least one".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: None,
         });
     }
@@ -158,6 +160,7 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
                     errors.push(ICalendarError {
                         message: "No standard or daylight components found in time zone, required at least one"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ICalendarLocation::Component(ComponentLocation {
                             index,
                             name: component_name(component).to_string(),
@@ -246,7 +249,7 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
     Ok(errors)
 }
 
-fn validate_time(time: &crate::parser::Time) -> anyhow::Result<()> {
+fn validate_time(time: &crate::parser::types::Time) -> anyhow::Result<()> {
     if time.hour > 23 {
         anyhow::bail!("Hour must be between 0 and 23");
     }
@@ -262,7 +265,7 @@ fn validate_time(time: &crate::parser::Time) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn validate_utc_offset(offset: &crate::parser::UtcOffset) -> anyhow::Result<()> {
+fn validate_utc_offset(offset: &crate::parser::types::UtcOffset) -> anyhow::Result<()> {
     if offset.sign < 0
         && (offset.hours == 0
             && offset.minutes == 0
@@ -504,7 +507,7 @@ fn param_name(param: &Param) -> &str {
         Param::Members { .. } => "MEMBER",
         Param::ParticipationStatus { .. } => "PARTSTAT",
         Param::Range { .. } => "RANGE",
-        Param::Related { .. } => "RELATED",
+        Param::TriggerRelationship { .. } => "RELATED",
         Param::RelationshipType { .. } => "RELTYPE",
         Param::Role { .. } => "ROLE",
         Param::Rsvp { .. } => "RSVP",
@@ -2220,8 +2223,7 @@ END:VCALENDAR\r\n";
             "In component \"VEVENT\" at index 0, in component property \"X-BASE-64\" at index 9: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64",
             "In component \"VEVENT\" at index 0, in component property \"X-BASE-64\" at index 10: Property is declared to have a binary value but the value is not base64",
             "In component \"VEVENT\" at index 0, in component property \"X-BOOLEAN\" at index 11: Property is declared to have a boolean value but the value is not a boolean",
-            "In component \"VEVENT\" at index 0, in component property \"X-CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but that is not valid for this property",
-            "In component \"VEVENT\" at index 0, in component property \"X-CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is a mailto: URI",
+            "In component \"VEVENT\" at index 0, in component property \"X-CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is not a mailto: URI",
             "In component \"VEVENT\" at index 0, in component property \"X-DATE\" at index 14: Property is declared to have a date value but the value is not a date",
             "In component \"VEVENT\" at index 0, in component property \"X-DATE-TIME\" at index 15: Property is declared to have a date-time value but the value is not a date-time",
             "In component \"VEVENT\" at index 0, in component property \"X-DURATION\" at index 16: Property is declared to have a duration value but the value is not a duration",
@@ -2279,8 +2281,7 @@ END:VCALENDAR\r\n";
             "In component \"VEVENT\" at index 0, in component property \"BASE-64\" at index 9: Property is declared to have a binary value but the encoding is set to 8BIT, instead of BASE64",
             "In component \"VEVENT\" at index 0, in component property \"BASE-64\" at index 10: Property is declared to have a binary value but the value is not base64",
             "In component \"VEVENT\" at index 0, in component property \"BOOLEAN\" at index 11: Property is declared to have a boolean value but the value is not a boolean",
-            "In component \"VEVENT\" at index 0, in component property \"CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but that is not valid for this property",
-            "In component \"VEVENT\" at index 0, in component property \"CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is a mailto: URI",
+            "In component \"VEVENT\" at index 0, in component property \"CAL-ADDRESS-NOT-URL\" at index 12: Property is declared to have a calendar address value but the value is not a mailto: URI",
             "In component \"VEVENT\" at index 0, in component property \"DATE\" at index 14: Property is declared to have a date value but the value is not a date",
             "In component \"VEVENT\" at index 0, in component property \"DATE-TIME\" at index 15: Property is declared to have a date-time value but the value is not a date-time",
             "In component \"VEVENT\" at index 0, in component property \"OTHER-DURATION\" at index 16: Property is declared to have a duration value but the value is not a duration",

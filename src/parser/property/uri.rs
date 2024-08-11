@@ -1,3 +1,4 @@
+use crate::parser::types::{Authority, Host, IpAddr, Uri};
 use crate::parser::{Error, InnerError};
 use crate::single;
 use nom::branch::alt;
@@ -9,37 +10,8 @@ use nom::error::ParseError;
 use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-use std::fmt::{Debug, Display, Formatter, Write};
+use std::fmt::{Display, Formatter, Write};
 use std::net::{Ipv4Addr, Ipv6Addr};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IpAddr {
-    V4(Ipv4Addr),
-    V6(Ipv6Addr),
-    VFuture(Vec<u8>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Host {
-    IpAddr(IpAddr),
-    RegName(Vec<u8>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Authority {
-    pub user_info: Option<Vec<u8>>,
-    pub host: Host,
-    pub port: Option<u16>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Uri<'a> {
-    pub scheme: &'a [u8],
-    pub authority: Option<Authority>,
-    pub path: Vec<u8>,
-    pub query: Option<&'a [u8]>,
-    pub fragment: Option<&'a [u8]>,
-}
 
 // TODO can be a property or a param value, rename
 pub fn param_value_uri<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Uri<'a>, E>
@@ -502,6 +474,7 @@ impl Display for Uri<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::types::{Host, IpAddr, Uri};
     use crate::test_utils::check_rem;
 
     #[test]

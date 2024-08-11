@@ -1,9 +1,10 @@
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_comment, prop_date_time_start, prop_iana, prop_last_modified, prop_recurrence_date_times,
     prop_recurrence_rule, prop_time_zone_id, prop_time_zone_name, prop_time_zone_offset_from,
     prop_time_zone_offset_to, prop_time_zone_url, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -131,7 +132,7 @@ where
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::parser::property::{
+    use crate::parser::types::{
         Date, DateOrDateTime, DateTime, DateTimeStartProperty, LastModifiedProperty, Time,
         TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty, UtcOffset,
     };
@@ -140,7 +141,23 @@ pub mod tests {
 
     #[test]
     fn test_component_timezone() {
-        let input = b"BEGIN:VTIMEZONE\r\nTZID:America/New_York\r\nLAST-MODIFIED:20050809T050000Z\r\nBEGIN:STANDARD\r\nDTSTART:20071104T020000\r\nTZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500\r\nTZNAME:EST\r\nEND:STANDARD\r\nBEGIN:DAYLIGHT\r\nDTSTART:20070311T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400\r\nTZNAME:EDT\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n";
+        let input = b"BEGIN:VTIMEZONE\r\n\
+TZID:America/New_York\r\n\
+LAST-MODIFIED:20050809T050000Z\r\n\
+BEGIN:STANDARD\r\n\
+DTSTART:20071104T020000\r\n\
+TZOFFSETFROM:-0400\r\n\
+TZOFFSETTO:-0500\r\n\
+TZNAME:EST\r\n\
+END:STANDARD\r\n\
+BEGIN:DAYLIGHT\r\n\
+DTSTART:20070311T020000\r\n\
+TZOFFSETFROM:-0500\r\n\
+TZOFFSETTO:-0400\r\n\
+TZNAME:EDT\r\n\
+END:DAYLIGHT\r\n\
+END:VTIMEZONE\r\n";
+
         let (rem, component) = component_timezone::<Error>(input).unwrap();
         check_rem(rem, 0);
 

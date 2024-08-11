@@ -1,11 +1,15 @@
 use crate::model::component::daylight::DaylightComponentBuilder;
 use crate::model::component::standard::StandardComponentBuilder;
-use crate::model::{
+use crate::model::component::{
     add_last_modified, impl_finish_component_build, impl_other_component_properties,
-    AddComponentProperty, CalendarComponent, ComponentProperty, ICalObjectBuilder,
-    IanaComponentPropertyBuilder, TimeZoneUrlPropertyBuilder, XComponentPropertyBuilder,
+    CalendarComponent, ComponentProperty,
 };
-use crate::prelude::{impl_component_access, TimeZoneIdPropertyBuilder};
+use crate::model::impl_component_access;
+use crate::model::object::ICalObjectBuilder;
+use crate::model::property::{
+    AddComponentProperty, IanaComponentPropertyBuilder, TimeZoneIdPropertyBuilder,
+    TimeZoneUrlPropertyBuilder, XComponentPropertyBuilder,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct TimeZoneComponent {

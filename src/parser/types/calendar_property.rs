@@ -1,4 +1,14 @@
-use crate::parser::param::ParamValue;
+use crate::parser::types::ParamValue;
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum CalendarProperty<'a> {
+    ProductId(ProductIdProperty<'a>),
+    Version(VersionProperty<'a>),
+    CalendarScale(CalendarScaleProperty<'a>),
+    Method(MethodProperty<'a>),
+    XProperty(XProperty<'a>),
+    IanaProperty(IanaProperty<'a>),
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ProductIdProperty<'a> {

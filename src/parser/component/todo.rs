@@ -1,14 +1,15 @@
 use crate::parser::component::alarm::component_alarm;
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_attach, prop_attendee, prop_categories, prop_classification, prop_comment, prop_contact,
-    prop_created, prop_date_time_completed, prop_date_time_due, prop_date_time_stamp,
+    prop_date_time_completed, prop_date_time_created, prop_date_time_due, prop_date_time_stamp,
     prop_date_time_start, prop_description, prop_duration, prop_exception_date_times,
     prop_geographic_position, prop_iana, prop_last_modified, prop_location, prop_organizer,
     prop_percent_complete, prop_priority, prop_recurrence_date_times, prop_recurrence_id,
     prop_recurrence_rule, prop_related_to, prop_request_status, prop_resources, prop_sequence,
     prop_status, prop_summary, prop_unique_identifier, prop_url, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -33,7 +34,7 @@ where
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
                 prop_classification.map(ComponentProperty::Classification),
                 prop_date_time_completed.map(ComponentProperty::DateTimeCompleted),
-                prop_created.map(ComponentProperty::DateTimeCreated),
+                prop_date_time_created.map(ComponentProperty::DateTimeCreated),
                 prop_description.map(ComponentProperty::Description),
                 prop_date_time_start.map(ComponentProperty::DateTimeStart),
                 prop_geographic_position.map(ComponentProperty::GeographicPosition),
@@ -77,18 +78,26 @@ where
 mod tests {
     use super::*;
     use crate::common::{Status, Value};
-    use crate::parser::param::ParamValue;
-    use crate::parser::property::{
+    use crate::parser::types::{
         CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
-        DateTimeDueProperty, DateTimeStampProperty, StatusProperty, SummaryProperty, Time,
-        UniqueIdentifierProperty,
+        DateTimeDueProperty, DateTimeStampProperty, ParamValue, StatusProperty, SummaryProperty,
+        Time, UniqueIdentifierProperty,
     };
     use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]
     fn test_component_todo() {
-        let input = b"BEGIN:VTODO\r\nUID:20070313T123432Z-456553@example.com\r\nDTSTAMP:20070313T123432Z\r\nDUE;VALUE=DATE:20070501\r\nSUMMARY:Submit Quebec Income Tax Return for 2006\r\nCLASS:CONFIDENTIAL\r\nCATEGORIES:FAMILY,FINANCE\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\n";
+        let input = b"BEGIN:VTODO\r\n\
+UID:20070313T123432Z-456553@example.com\r\n\
+DTSTAMP:20070313T123432Z\r\n\
+DUE;VALUE=DATE:20070501\r\n\
+SUMMARY:Submit Quebec Income Tax Return for 2006\r\n\
+CLASS:CONFIDENTIAL\r\n\
+CATEGORIES:FAMILY,FINANCE\r\n\
+STATUS:NEEDS-ACTION\r\n\
+END:VTODO\r\n";
+
         let (rem, component) = component_todo::<Error>(input).unwrap();
         check_rem(rem, 0);
 

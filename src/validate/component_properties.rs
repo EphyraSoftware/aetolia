@@ -1,15 +1,16 @@
 use crate::common::{PropertyKind, Status, Value};
-use crate::model::{
+use crate::model::param::Param;
+use crate::model::property::{
     Action, ComponentProperty, DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty,
     DateTimeStampProperty, DateTimeStartProperty, DurationProperty, FreeBusyTimeProperty,
-    LastModifiedProperty, Param, PeriodEnd, StatusProperty,
+    LastModifiedProperty, PeriodEnd, StatusProperty,
 };
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::value::check_declared_value;
 use crate::validate::{
     check_occurrence, component_property_name, get_declared_value_type, validate_params,
-    CalendarInfo, ComponentPropertyError, ComponentPropertyLocation, OccurrenceExpectation,
-    PropertyInfo, PropertyLocation, ValueType, WithinPropertyLocation,
+    CalendarInfo, ComponentPropertyError, ComponentPropertyLocation, ICalendarErrorSeverity,
+    OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType, WithinPropertyLocation,
 };
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -21,6 +22,7 @@ macro_rules! check_component_property_occurrence {
         if let Some(message) = $crate::validate::check_occurrence(&$seen, name, $occur.clone()) {
             $errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: Some($crate::validate::ComponentPropertyLocation {
                     index: $index,
                     name: name.to_string(),
@@ -46,6 +48,7 @@ pub(super) fn validate_component_properties(
     if properties.is_empty() {
         errors.push(ComponentPropertyError {
             message: "No properties found in component, required at least one".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: None,
         });
         // If there are no properties we are going to get other errors, but is that really useful?
@@ -160,6 +163,7 @@ pub(super) fn validate_component_properties(
                         "Required exactly one ACTION property but found {}",
                         actions.len()
                     ),
+                    severity: ICalendarErrorSeverity::Error,
                     location: None,
                 });
                 return Ok(errors);
@@ -1293,6 +1297,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "DTSTAMP", dt_stamp_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1301,6 +1306,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "UID", uid_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1309,6 +1315,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "DTSTART", dt_start_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1317,6 +1324,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "TZID", tz_id_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1327,6 +1335,7 @@ pub(super) fn validate_component_properties(
         {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1337,6 +1346,7 @@ pub(super) fn validate_component_properties(
         {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1345,6 +1355,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "ACTION", action_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1353,6 +1364,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "TRIGGER", trigger_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1363,6 +1375,7 @@ pub(super) fn validate_component_properties(
         {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1371,6 +1384,7 @@ pub(super) fn validate_component_properties(
         if let Some(message) = check_occurrence(&seen, "SUMMARY", summary_occurrence_expectation) {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1380,6 +1394,7 @@ pub(super) fn validate_component_properties(
         {
             errors.push(ComponentPropertyError {
                 message,
+                severity: ICalendarErrorSeverity::Error,
                 location: None,
             });
         }
@@ -1391,6 +1406,7 @@ pub(super) fn validate_component_properties(
                 errors.push(ComponentPropertyError {
                     message: "Both DTEND and DURATION properties are present, only one is allowed"
                         .to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: None,
                 });
             }
@@ -1400,6 +1416,7 @@ pub(super) fn validate_component_properties(
                 errors.push(ComponentPropertyError {
                     message: "Both DUE and DURATION properties are present, only one is allowed"
                         .to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: None,
                 });
             }
@@ -1408,6 +1425,7 @@ pub(super) fn validate_component_properties(
                 errors.push(ComponentPropertyError {
                     message: "DURATION property is present but no DTSTART property is present"
                         .to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: None,
                 });
             }
@@ -1416,6 +1434,7 @@ pub(super) fn validate_component_properties(
             if (has_duration && !has_repeat) || (!has_duration && has_repeat) {
                 errors.push(ComponentPropertyError {
                     message: "DURATION and REPEAT properties must be present together".to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: None,
                 });
             }
@@ -1441,6 +1460,7 @@ fn validate_duration_property(
                 {
                     errors.push(ComponentPropertyError {
                             message: "DURATION must have at least one of weeks or days when DTSTART is a date".to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index,
                                 name: "DURATION".to_string(),
@@ -1465,6 +1485,7 @@ fn validate_date_time_completed(
     if !date_time_completed_property.value.is_utc() {
         errors.push(ComponentPropertyError {
             message: "COMPLETED must be a UTC date-time".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "COMPLETED".to_string(),
@@ -1501,6 +1522,7 @@ fn validate_date_time_end(
                 if dt_start.value.is_utc() != date_time_end_property.value.is_utc() {
                     errors.push(ComponentPropertyError {
                         message: "DTEND must have the same time type as DTSTART, both UTC or both not UTC".to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "DTEND".to_string(),
@@ -1514,6 +1536,7 @@ fn validate_date_time_end(
                     errors.push(ComponentPropertyError {
                         message: "DTSTART and DTEND for FREEBUSY must be UTC date-times"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "DTEND".to_string(),
@@ -1535,6 +1558,7 @@ fn validate_date_time_end(
             Ordering::Less => {
                 errors.push(ComponentPropertyError {
                     message: "DTEND is before DTSTART".to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: Some(ComponentPropertyLocation {
                         index,
                         name: "DTEND".to_string(),
@@ -1551,6 +1575,7 @@ fn validate_date_time_end(
                     if dt_end_time < dt_start_time {
                         errors.push(ComponentPropertyError {
                             message: "DTEND is before DTSTART".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index,
                                 name: "DTEND".to_string(),
@@ -1590,6 +1615,7 @@ fn check_date_time_value_type_match(
         (Some((Value::DateTime, _)) | None, Some((Value::Date, _))) => {
             errors.push(ComponentPropertyError {
                 message: format!("DTSTART is date-time but {other_type_name} is date"),
+                severity: ICalendarErrorSeverity::Error,
                 location: Some(ComponentPropertyLocation {
                     index,
                     name: other_type_name.to_string(),
@@ -1600,6 +1626,7 @@ fn check_date_time_value_type_match(
         (Some((Value::Date, _)), Some((Value::DateTime, _)) | None) => {
             errors.push(ComponentPropertyError {
                 message: format!("DTSTART is date but {other_type_name} is date-time"),
+                severity: ICalendarErrorSeverity::Error,
                 location: Some(ComponentPropertyLocation {
                     index,
                     name: other_type_name.to_string(),
@@ -1642,6 +1669,7 @@ fn validate_date_time_due(
                         message:
                             "DUE must have the same time type as DTSTART, both UTC or both not UTC"
                                 .to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "DUE".to_string(),
@@ -1663,6 +1691,7 @@ fn validate_date_time_due(
             Ordering::Less => {
                 errors.push(ComponentPropertyError {
                     message: "DUE is before DTSTART".to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: Some(ComponentPropertyLocation {
                         index,
                         name: "DUE".to_string(),
@@ -1679,6 +1708,7 @@ fn validate_date_time_due(
                     if dt_end_time < dt_start_time {
                         errors.push(ComponentPropertyError {
                             message: "DUE is before DTSTART".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index,
                                 name: "DUE".to_string(),
@@ -1710,6 +1740,7 @@ fn validate_date_time_start(
     {
         errors.push(ComponentPropertyError {
             message: "DTSTART defaults to date-time but has a date value".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "DTSTART".to_string(),
@@ -1727,6 +1758,7 @@ fn validate_date_time_start(
             {
                 errors.push(ComponentPropertyError {
                     message: "DTSTART for FREEBUSY must be a UTC date-time".to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: Some(ComponentPropertyLocation {
                         index,
                         name: "DTSTART".to_string(),
@@ -1739,6 +1771,7 @@ fn validate_date_time_start(
             if date_time_start_property.value.is_date() || date_time_start_property.value.is_utc() {
                 errors.push(ComponentPropertyError {
                     message: "DTSTART must be a local time".to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     location: Some(ComponentPropertyLocation {
                         index,
                         name: "DTSTART".to_string(),
@@ -1766,6 +1799,7 @@ fn validate_status(
                 _ => {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid STATUS value for event: {:?}", status.value),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "STATUS".to_string(),
@@ -1783,6 +1817,7 @@ fn validate_status(
                 _ => {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid STATUS value for to-do: {:?}", status.value),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "STATUS".to_string(),
@@ -1800,6 +1835,7 @@ fn validate_status(
                 _ => {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid STATUS value for journal: {:?}", status.value),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index,
                             name: "STATUS".to_string(),
@@ -1834,6 +1870,7 @@ fn validate_free_busy_time(
     }) {
         errors.push(ComponentPropertyError {
             message: "FREEBUSY periods must be UTC".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "FREEBUSY".to_string(),
@@ -1863,6 +1900,7 @@ fn validate_free_busy_time(
     if !all_ordered {
         errors.push(ComponentPropertyError {
             message: "FREEBUSY periods should be ordered".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "FREEBUSY".to_string(),
@@ -1883,6 +1921,7 @@ fn validate_date_time_stamp(
     if !date_time_stamp_property.value.is_utc() {
         errors.push(ComponentPropertyError {
             message: "DTSTAMP must be a UTC date-time".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "DTSTAMP".to_string(),
@@ -1901,6 +1940,7 @@ fn validate_last_modified(
     if !last_modified_property.value.is_utc() {
         errors.push(ComponentPropertyError {
             message: "LAST-MODIFIED must be a UTC date-time".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index,
                 name: "LAST-MODIFIED".to_string(),

@@ -1,10 +1,10 @@
 use crate::common::RecurFreq;
-use crate::model::{
+use crate::model::property::{
     ComponentProperty, DateTimeQuery, DateTimeStartProperty, RecurRulePart, RecurrenceRule,
 };
 use crate::validate::{
-    component_property_name, ComponentPropertyError, ComponentPropertyLocation, PropertyLocation,
-    WithinPropertyLocation,
+    component_property_name, ComponentPropertyError, ComponentPropertyLocation,
+    ICalendarErrorSeverity, PropertyLocation, WithinPropertyLocation,
 };
 use std::collections::HashMap;
 
@@ -21,6 +21,7 @@ pub(super) fn validate_recurrence_rule(
     } else {
         errors.push(ComponentPropertyError {
             message: "Recurrence rule must have a DTSTART property associated with it".to_string(),
+            severity: ICalendarErrorSeverity::Error,
             location: Some(ComponentPropertyLocation {
                 index: property_index,
                 name: component_property_name(property).to_string(),
@@ -49,6 +50,7 @@ pub(super) fn validate_recurrence_rule(
                 Some((index, freq)) => {
                     errors.push(ComponentPropertyError {
                         message: "Recurrence rule must start with a frequency".to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -62,6 +64,7 @@ pub(super) fn validate_recurrence_rule(
                 None => {
                     errors.push(ComponentPropertyError {
                         message: "No frequency part found in recurrence rule, but it is required. This prevents the rest of the rule being checked".to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -87,6 +90,7 @@ pub(super) fn validate_recurrence_rule(
                 if freq_index != part_index {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated FREQ part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -100,6 +104,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated UNTIL part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -116,6 +121,7 @@ pub(super) fn validate_recurrence_rule(
                                 message: format!(
                                     "UNTIL part at index {part_index} must be a UTC time here"
                                 ),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -128,6 +134,7 @@ pub(super) fn validate_recurrence_rule(
                         (true, false) => {
                             errors.push(ComponentPropertyError {
                                     message: format!("UNTIL part at index {part_index} is a date, but the associated DTSTART property is a date-time"),
+                                severity: ICalendarErrorSeverity::Error,
                                     location: Some(ComponentPropertyLocation {
                                         index: property_index,
                                         name: component_property_name(property).to_string(),
@@ -138,6 +145,7 @@ pub(super) fn validate_recurrence_rule(
                         (false, true) => {
                             errors.push(ComponentPropertyError {
                                     message: format!("UNTIL part at index {part_index} is a date-time, but the associated DTSTART property is a date"),
+                                severity: ICalendarErrorSeverity::Error,
                                     location: Some(ComponentPropertyLocation {
                                         index: property_index,
                                         name: component_property_name(property).to_string(),
@@ -149,6 +157,7 @@ pub(super) fn validate_recurrence_rule(
                             if dt_start.is_local_time() && until.is_utc() {
                                 errors.push(ComponentPropertyError {
                                         message: format!("UNTIL part at index {part_index} must be a local time if the associated DTSTART property is a local time"),
+                                    severity: ICalendarErrorSeverity::Error,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -160,6 +169,7 @@ pub(super) fn validate_recurrence_rule(
                             {
                                 errors.push(ComponentPropertyError {
                                         message: format!("UNTIL part at index {part_index} must be a UTC time if the associated DTSTART property is a UTC time or a local time with a timezone"),
+                                    severity: ICalendarErrorSeverity::Error,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -177,6 +187,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated COUNT part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -190,6 +201,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated INTERVAL part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -203,6 +215,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYSECOND part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -214,6 +227,7 @@ pub(super) fn validate_recurrence_rule(
                 if !second_list.iter().all(|second| *second <= 60) {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYSECOND part at index {part_index}, seconds must be between 0 and 60"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -225,6 +239,7 @@ pub(super) fn validate_recurrence_rule(
                 if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYSECOND part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -238,6 +253,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYMINUTE part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -249,6 +265,7 @@ pub(super) fn validate_recurrence_rule(
                 if !minute_list.iter().all(|minute| *minute <= 59) {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYMINUTE part at index {part_index}, minutes must be between 0 and 59"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -260,6 +277,7 @@ pub(super) fn validate_recurrence_rule(
                 if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYMINUTE part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -273,6 +291,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYHOUR part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -284,6 +303,7 @@ pub(super) fn validate_recurrence_rule(
                 if !hour_list.iter().all(|hour| *hour <= 23) {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYHOUR part at index {part_index}, hours must be between 0 and 23"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -295,6 +315,7 @@ pub(super) fn validate_recurrence_rule(
                 if dt_start.value.is_date() {
                     errors.push(ComponentPropertyError {
                         message: format!("BYHOUR part at index {part_index} is not valid when the associated DTSTART property has a DATE value type"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -308,6 +329,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYDAY part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -331,6 +353,7 @@ pub(super) fn validate_recurrence_rule(
                         {
                             errors.push(ComponentPropertyError {
                                 message: format!("BYDAY part at index {part_index} has a day with an offset, but the frequency is YEARLY and a BYWEEKNO part is specified"),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -343,6 +366,7 @@ pub(super) fn validate_recurrence_rule(
                         if day_list.iter().any(|day| day.offset_weeks.is_some()) {
                             errors.push(ComponentPropertyError {
                                 message: format!("BYDAY part at index {part_index} has a day with an offset, but the frequency is not MONTHLY or YEARLY"),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -358,6 +382,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYMONTHDAY part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -372,6 +397,7 @@ pub(super) fn validate_recurrence_rule(
                 {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYMONTHDAY part at index {part_index}, days must be between 1 and 31, or -31 and -1"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -383,6 +409,7 @@ pub(super) fn validate_recurrence_rule(
                 if freq == &RecurFreq::Weekly {
                     errors.push(ComponentPropertyError {
                         message: format!("BYMONTHDAY part at index {part_index} is not valid for a WEEKLY frequency"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -396,6 +423,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYYEARDAY part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -410,6 +438,7 @@ pub(super) fn validate_recurrence_rule(
                 {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYYEARDAY part at index {part_index}, days must be between 1 and 366, or -366 and -1"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -422,6 +451,7 @@ pub(super) fn validate_recurrence_rule(
                     RecurFreq::Daily | RecurFreq::Weekly | RecurFreq::Monthly => {
                         errors.push(ComponentPropertyError {
                             message: format!("BYYEARDAY part at index {part_index} is not valid for a DAILY, WEEKLY or MONTHLY frequency"),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -437,6 +467,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYWEEKNO part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -451,6 +482,7 @@ pub(super) fn validate_recurrence_rule(
                 {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYWEEKNO part at index {part_index}, weeks must be between 1 and 53, or -53 and -1"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -462,6 +494,7 @@ pub(super) fn validate_recurrence_rule(
                 if freq != &RecurFreq::Yearly {
                     errors.push(ComponentPropertyError {
                         message: format!("BYWEEKNO part at index {part_index} is only valid for a YEARLY frequency"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -475,6 +508,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYMONTH part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -488,6 +522,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated WKST part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -525,6 +560,7 @@ pub(super) fn validate_recurrence_rule(
                 if is_redundant {
                     errors.push(ComponentPropertyError {
                         message: format!("WKST part at index {part_index} is redundant"),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -538,6 +574,7 @@ pub(super) fn validate_recurrence_rule(
                 if count > 1 {
                     errors.push(ComponentPropertyError {
                         message: format!("Repeated BYSETPOS part at index {part_index}"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -551,6 +588,7 @@ pub(super) fn validate_recurrence_rule(
                 }) {
                     errors.push(ComponentPropertyError {
                         message: format!("Invalid BYSETPOS part at index {part_index}, set positions must be between 1 and 366, or -366 and -1"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -575,6 +613,7 @@ pub(super) fn validate_recurrence_rule(
                 if !has_other_by_rule {
                     errors.push(ComponentPropertyError {
                         message: format!("BYSETPOS part at index {part_index} is not valid without another BYxxx rule part"),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),

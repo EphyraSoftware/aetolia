@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::combinator::recognize;
@@ -6,21 +8,32 @@ use nom::sequence::tuple;
 use nom::{IResult, InputIter, InputLength, InputTake};
 use std::num::NonZeroUsize;
 
-mod common;
-mod convert;
-mod model;
-mod parser;
-
-mod ops;
-mod serialize;
+/// Common types.
+pub mod common;
+/// Conversion from the parser model to the core representation.
+pub mod convert;
+/// The core representation that is used for everything except the parser.
+pub mod model;
+/// Common operations.
+pub mod ops;
+/// The iCalendar parser.
+pub mod parser;
+/// The serializer for the core representation back to the iCalendar text format.
+pub mod serialize;
 #[cfg(test)]
 mod test_utils;
-mod validate;
+/// Validation of iCalendar rules against the core representation.
+pub mod validate;
 
+/// Prelude which contains everything that's needed for most use-cases to consume this library.
 pub mod prelude {
     pub use crate::common::PropertyKind;
     pub use crate::common::*;
-    pub use crate::model::*;
+    pub use crate::model::access::*;
+    pub use crate::model::component::*;
+    pub use crate::model::object::*;
+    pub use crate::model::param::*;
+    pub use crate::model::property::*;
     pub use crate::ops::load_ical;
     pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};
     pub use crate::serialize::WriteModel;
@@ -28,7 +41,7 @@ pub mod prelude {
 }
 
 /// Streaming, single character matching the predicate
-pub fn single<F, Input, Output, Error: ParseError<Input>>(
+pub(crate) fn single<F, Input, Output, Error: ParseError<Input>>(
     cond: F,
 ) -> impl Fn(Input) -> IResult<Input, Output, Error>
 where

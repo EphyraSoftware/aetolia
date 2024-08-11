@@ -1,10 +1,11 @@
 use crate::common::PropertyKind;
-use crate::model::{CalendarProperty, ICalObject};
+use crate::model::object::ICalObject;
+use crate::model::property::CalendarProperty;
 use crate::validate::error::CalendarPropertyError;
 use crate::validate::params::validate_params;
 use crate::validate::{
     calendar_property_name, check_occurrence, CalendarInfo, CalendarPropertyLocation,
-    OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType,
+    ICalendarErrorSeverity, OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType,
 };
 use std::collections::HashMap;
 
@@ -30,6 +31,7 @@ pub(super) fn validate_calendar_properties(
                 if let Some(message) = check_occurrence(&seen, name, OccurrenceExpectation::Once) {
                     errors.push(CalendarPropertyError {
                         message,
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(CalendarPropertyLocation {
                             index,
                             name: name.to_string(),
@@ -45,6 +47,7 @@ pub(super) fn validate_calendar_properties(
                 if let Some(message) = check_occurrence(&seen, name, OccurrenceExpectation::Once) {
                     errors.push(CalendarPropertyError {
                         message,
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(CalendarPropertyLocation {
                             index,
                             name: name.to_string(),
@@ -77,6 +80,7 @@ pub(super) fn validate_calendar_properties(
                 {
                     errors.push(CalendarPropertyError {
                         message,
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(CalendarPropertyLocation {
                             index,
                             name: name.to_string(),
@@ -98,6 +102,7 @@ pub(super) fn validate_calendar_properties(
                 {
                     errors.push(CalendarPropertyError {
                         message,
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(CalendarPropertyLocation {
                             index,
                             name: name.to_string(),
@@ -117,12 +122,14 @@ pub(super) fn validate_calendar_properties(
     if let Some(message) = check_occurrence(&seen, "PRODID", OccurrenceExpectation::Once) {
         errors.push(CalendarPropertyError {
             message,
+            severity: ICalendarErrorSeverity::Error,
             location: None,
         })
     }
     if let Some(message) = check_occurrence(&seen, "VERSION", OccurrenceExpectation::Once) {
         errors.push(CalendarPropertyError {
             message,
+            severity: ICalendarErrorSeverity::Error,
             location: None,
         })
     }

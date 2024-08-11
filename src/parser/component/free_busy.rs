@@ -1,9 +1,10 @@
-use crate::parser::object::types::{CalendarComponent, ComponentProperty};
 use crate::parser::property::{
     prop_attendee, prop_comment, prop_contact, prop_date_time_end, prop_date_time_stamp,
     prop_date_time_start, prop_free_busy_time, prop_iana, prop_organizer, prop_request_status,
     prop_unique_identifier, prop_url, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::ComponentProperty;
 use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -48,7 +49,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::property::{
+    use crate::parser::types::{
         AttendeeProperty, Date, DateOrDateTime, DateTime, DateTimeEndProperty,
         DateTimeStampProperty, DateTimeStartProperty, OrganizerProperty, Time,
         UniqueIdentifierProperty,
@@ -58,7 +59,15 @@ mod tests {
 
     #[test]
     fn test_component_free_busy() {
-        let input = b"BEGIN:VFREEBUSY\r\nUID:19970901T082949Z-FA43EF@example.com\r\nORGANIZER:mailto:jane_doe@example.com\r\nATTENDEE:mailto:john_public@example.com\r\nDTSTART:19971015T050000Z\r\nDTEND:19971016T050000Z\r\nDTSTAMP:19970901T083000Z\r\nEND:VFREEBUSY\r\n";
+        let input = b"BEGIN:VFREEBUSY\r\n\
+UID:19970901T082949Z-FA43EF@example.com\r\n\
+ORGANIZER:mailto:jane_doe@example.com\r\n\
+ATTENDEE:mailto:john_public@example.com\r\n\
+DTSTART:19971015T050000Z\r\n\
+DTEND:19971016T050000Z\r\n\
+DTSTAMP:19970901T083000Z\r\n\
+END:VFREEBUSY\r\n";
+
         let (rem, component) = component_free_busy::<Error>(input).unwrap();
         check_rem(rem, 0);
         match component {

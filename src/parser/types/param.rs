@@ -1,7 +1,6 @@
-use crate::common::LanguageTag;
 use crate::common::{
-    CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Range, Related,
-    RelationshipType, Role, Value,
+    CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, ParticipationStatusUnknown, Range,
+    RelationshipType, Role, TriggerRelationship, Value,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -27,7 +26,7 @@ pub enum ParamValue<'a> {
     Encoding {
         encoding: Encoding,
     },
-    /// See https://www.rfc-editor.org/rfc/rfc4288 section 4.2
+    /// See <https://www.rfc-editor.org/rfc/rfc4288> section 4.2
     FormatType {
         type_name: String,
         sub_type_name: String,
@@ -49,7 +48,7 @@ pub enum ParamValue<'a> {
         range: Range,
     },
     Related {
-        related: Related,
+        related: TriggerRelationship,
     },
     RelationshipType {
         relationship: RelationshipType,

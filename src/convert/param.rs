@@ -1,15 +1,12 @@
 use crate::convert::{convert_string, ToModel};
-
-use crate::model::{
-    AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedToParam,
-    EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, Param as ModelParam,
-    ParticipationStatusParam, RelatedParam, RoleParam, RsvpParam, SentByParam, TimeZoneIdParam,
+use crate::model::param::{
+    AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedFromParam,
+    DelegatedToParam, DirectoryEntryReferenceParam, EncodingParam, FormatTypeParam,
+    FreeBusyTimeTypeParam, LanguageParam, MembersParam, Param as ModelParam,
+    ParticipationStatusParam, RangeParam, RelationshipTypeParam, RoleParam, RsvpParam, SentByParam,
+    TimeZoneIdParam, TriggerRelationshipParam, ValueTypeParam,
 };
-use crate::parser::ParamValue as ParserParam;
-use crate::prelude::{
-    DelegatedFromParam, DirectoryEntryReferenceParam, LanguageParam, MembersParam, RangeParam,
-    RelationshipTypeParam, ValueTypeParam,
-};
+use crate::parser::types::ParamValue as ParserParam;
 
 impl ToModel for ParserParam<'_> {
     type Model = ModelParam;
@@ -69,9 +66,11 @@ impl ToModel for ParserParam<'_> {
             ParserParam::Range { range } => ModelParam::Range(RangeParam {
                 range: range.clone(),
             }),
-            ParserParam::Related { related } => ModelParam::Related(RelatedParam {
-                related: related.clone(),
-            }),
+            ParserParam::Related { related } => {
+                ModelParam::TriggerRelationship(TriggerRelationshipParam {
+                    trigger_relationship: related.clone(),
+                })
+            }
             ParserParam::RelationshipType { relationship } => {
                 ModelParam::RelationshipType(RelationshipTypeParam {
                     relationship: relationship.clone(),

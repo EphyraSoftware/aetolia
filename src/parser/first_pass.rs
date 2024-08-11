@@ -6,6 +6,10 @@ use nom::error::ParseError;
 use nom::sequence::tuple;
 use nom::IResult;
 
+/// Recognize a content line, collapsing folded lines.
+///
+/// The Aetolia parser does not recognize folded lines, so if the icalendar input may contain them
+/// then this function should be used to preprocess the input.
 pub fn content_line_first_pass<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,

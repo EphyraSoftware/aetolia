@@ -1,10 +1,11 @@
 use crate::common::{ParticipationStatusUnknown, PropertyKind};
-use crate::model::{Param, ParticipationStatusParam, SentByParam, TimeZoneIdParam};
-use crate::parser::param::param_value_participation_status;
+use crate::model::param::{Param, ParticipationStatusParam, SentByParam, TimeZoneIdParam};
+use crate::parser::param_value_participation_status;
 use crate::parser::Error;
 use crate::validate::error::ParamError;
 use crate::validate::{
-    param_name, OccurrenceExpectation, PropertyInfo, PropertyLocation, ValueType,
+    param_name, ICalendarErrorSeverity, OccurrenceExpectation, PropertyInfo, PropertyLocation,
+    ValueType,
 };
 use std::collections::HashMap;
 
@@ -15,6 +16,7 @@ macro_rules! check_property_param_occurrence {
         if let Some(message) = $crate::validate::check_occurrence(&$seen, name, $occur.clone()) {
             $errors.push($crate::validate::ParamError {
                 index: $index,
+                severity: ICalendarErrorSeverity::Error,
                 name: name.to_string(),
                 message,
             });
@@ -90,6 +92,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                 errors.push(ParamError {
                     index,
                     name: param_name(param).to_string(),
+                    severity: ICalendarErrorSeverity::Error,
                     message: "FMTTYPE may not have multiple values".to_string(),
                 });
             }
@@ -152,6 +155,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
                         errors.push(ParamError {
                             index,
                             name: param_name(param).to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             message: "Invalid participation status (PARTSTAT) value".to_string(),
                         });
                     }
@@ -166,7 +170,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } if name == "RANGE" => {
                 validate_range_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            Param::Related { .. } => {
+            Param::TriggerRelationship { .. } => {
                 validate_related_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "RELATED" => {
@@ -269,6 +273,7 @@ fn validate_alt_rep_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Alternate text representation (ALTREP) is not allowed for this property type"
                 .to_string(),
         });
@@ -300,6 +305,7 @@ fn validate_common_name_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Common name (CN) is not allowed for this property type".to_string(),
         });
         return;
@@ -326,6 +332,7 @@ fn validate_calendar_user_type_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Calendar user type (CUTYPE) is not allowed for this property type"
                 .to_string(),
         });
@@ -352,6 +359,7 @@ fn validate_delegated_from_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Delegated from (DELEGATED-FROM) is not allowed for this property type"
                 .to_string(),
         });
@@ -378,6 +386,7 @@ fn validate_delegated_to_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Delegated to (DELEGATED-TO) is not allowed for this property type"
                 .to_string(),
         });
@@ -404,6 +413,7 @@ fn validate_dir_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Directory entry reference (DIR) is not allowed for this property type"
                 .to_string(),
         });
@@ -489,6 +499,7 @@ fn validate_member_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Group or list membership (MEMBER) is not allowed for this property type"
                 .to_string(),
         });
@@ -516,6 +527,7 @@ fn validate_part_stat_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Participation status (PARTSTAT) is not allowed for this property type"
                 .to_string(),
         });
@@ -538,6 +550,7 @@ fn validate_part_stat_param(
                     errors.push(ParamError {
                         index,
                         name: param_name(param).to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VEVENT component context"),
                     });
                 }
@@ -559,6 +572,7 @@ fn validate_part_stat_param(
                     errors.push(ParamError {
                         index,
                         name: param_name(param).to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         message: format!("Invalid participation status (PARTSTAT) value [{status:?}] in a VJOURNAL component context"),
                     });
                 }
@@ -608,6 +622,7 @@ fn validate_related_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Related (RELATED) is not allowed for this property type".to_string(),
         });
         return;
@@ -639,6 +654,7 @@ fn validate_relationship_type_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Relationship type (RELTYPE) is not allowed for this property type"
                 .to_string(),
         });
@@ -665,6 +681,7 @@ fn validate_role_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Participation role (ROLE) is not allowed for this property type".to_string(),
         });
         return;
@@ -690,6 +707,7 @@ fn validate_rsvp_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "RSVP expectation (RSVP) is not allowed for this property type".to_string(),
         });
         return;
@@ -716,6 +734,7 @@ fn validate_sent_by_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Sent by (SENT-BY) is not allowed for this property type".to_string(),
         });
         return;
@@ -725,6 +744,7 @@ fn validate_sent_by_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Sent by (SENT-BY) must be a 'mailto:' URI".to_string(),
         });
     }
@@ -752,6 +772,7 @@ fn validate_time_zone_id_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Time zone ID (TZID) is not allowed for the property value type DATE"
                 .to_string(),
         });
@@ -762,6 +783,7 @@ fn validate_time_zone_id_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: format!("Required time zone ID [{tz_id}] is not defined in the calendar"),
         });
     }
@@ -770,6 +792,7 @@ fn validate_time_zone_id_param(
         errors.push(ParamError {
             index,
             name: param_name(param).to_string(),
+            severity: ICalendarErrorSeverity::Error,
             message: "Time zone ID (TZID) cannot be specified on a property with a UTC time"
                 .to_string(),
         });

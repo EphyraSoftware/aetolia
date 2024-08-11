@@ -1,17 +1,21 @@
-pub mod alarm;
+mod alarm;
 mod daylight;
-pub mod event;
+mod event;
 mod free_busy;
-pub mod iana_component;
+mod iana_component;
 mod journal;
 mod standard;
 mod time_zone;
 mod todo;
-pub mod x_component;
+mod x_component;
 
 pub use crate::model::component::daylight::DaylightComponent;
 pub use crate::model::component::standard::StandardComponent;
-pub use alarm::AlarmComponent;
+pub use alarm::{
+    AddAlarmComponent, AlarmComponent, AudioAlarmComponentBuilder, DisplayAlarmComponentBuilder,
+    EmailAlarmComponentBuilder,
+};
+pub use event::{EventComponent, EventComponentBuilder};
 pub use free_busy::{FreeBusyComponent, FreeBusyComponentBuilder};
 pub use iana_component::{IanaComponent, IanaComponentBuilder};
 pub use journal::{JournalComponent, JournalComponentBuilder};
@@ -82,8 +86,6 @@ macro_rules! impl_other_component_properties {
 }
 
 pub(crate) use impl_other_component_properties;
-
-use crate::model::component::event::EventComponent;
 
 macro_rules! add_date_time_stamp {
     () => {
@@ -491,7 +493,7 @@ macro_rules! add_trigger {
     () => {
         pub fn add_relative_trigger(
             self,
-            value: $crate::model::Duration,
+            value: $crate::model::property::Duration,
         ) -> $crate::model::property::RelativeTriggerPropertyBuilder<Self> {
             $crate::model::property::RelativeTriggerPropertyBuilder::new(self, value)
         }
@@ -543,6 +545,6 @@ macro_rules! add_alarms {
     };
 }
 
-use crate::model::ComponentProperty;
-use crate::prelude::ComponentAccess;
+use crate::model::property::ComponentProperty;
+use crate::model::ComponentAccess;
 pub(crate) use add_alarms;

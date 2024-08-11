@@ -1,6 +1,6 @@
 use crate::convert::ToModel;
-use crate::model::RecurrenceRule;
-use crate::parser::RecurRulePart;
+use crate::model::property::RecurrenceRule;
+use crate::parser::types::RecurRulePart;
 use anyhow::Context;
 
 impl ToModel for Vec<RecurRulePart> {

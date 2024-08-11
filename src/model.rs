@@ -1,21 +1,20 @@
-mod access;
-mod component;
-mod object;
-mod param;
-mod property;
+pub(crate) mod access;
+pub mod component;
+pub mod object;
+pub mod param;
+pub mod property;
 
 pub use access::*;
-pub use component::*;
-pub use object::*;
-pub use param::*;
-pub use property::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::common::{LanguageTag, Range, RecurFreq, RelationshipType, TimeTransparency};
+    use crate::model::component::CalendarComponent;
     use crate::model::object::ICalObject;
-    use crate::model::param::OtherParamsBuilder;
+    use crate::model::param::{OtherParamsBuilder, ParticipationStatusEvent};
+    use crate::model::property::{
+        Classification, ComponentProperty, Duration, Period, StatusEvent,
+    };
     use time::Date;
 
     #[test]

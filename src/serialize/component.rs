@@ -1,9 +1,9 @@
 use crate::serialize::WriteModel;
 use std::io::Write;
 
-impl WriteModel for crate::model::CalendarComponent {
+impl WriteModel for crate::model::component::CalendarComponent {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::model::CalendarComponent;
+        use crate::model::component::CalendarComponent;
 
         match self {
             CalendarComponent::Event(component) => {

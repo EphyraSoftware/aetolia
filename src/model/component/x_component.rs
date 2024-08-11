@@ -1,10 +1,12 @@
 use crate::model::component::{
     impl_finish_component_build, impl_other_component_properties, CalendarComponent,
 };
+use crate::model::impl_component_access;
 use crate::model::object::ICalObjectBuilder;
-use crate::model::property::{AddComponentProperty, ComponentProperty, XComponentPropertyBuilder};
-use crate::model::IanaComponentPropertyBuilder;
-use crate::prelude::impl_component_access;
+use crate::model::property::{
+    AddComponentProperty, ComponentProperty, IanaComponentPropertyBuilder,
+    XComponentPropertyBuilder,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct XComponent {

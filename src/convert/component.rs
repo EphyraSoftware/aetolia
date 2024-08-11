@@ -1,17 +1,17 @@
 use crate::convert::{convert_string, ToModel};
-use crate::model::event::EventComponent;
-use crate::model::{
-    AlarmComponent, ComponentProperty, DaylightComponent, FreeBusyComponent, JournalComponent,
+use crate::model::component::{
+    AlarmComponent, DaylightComponent, EventComponent, FreeBusyComponent, JournalComponent,
     StandardComponent, TimeZoneComponent, ToDoComponent,
 };
-use crate::parser::ContentLine;
+use crate::model::property::ComponentProperty;
+use crate::parser::types::ContentLine;
 
-impl ToModel for crate::parser::CalendarComponent<'_> {
-    type Model = crate::model::CalendarComponent;
+impl ToModel for crate::parser::types::CalendarComponent<'_> {
+    type Model = crate::model::component::CalendarComponent;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match self {
-            crate::parser::CalendarComponent::Event { properties, alarms } => {
+            crate::parser::types::CalendarComponent::Event { properties, alarms } => {
                 let mut component = EventComponent::new();
                 component.properties.reserve(properties.len());
 
@@ -24,9 +24,9 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     component.alarms.push(alarm.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::Event(component))
+                Ok(crate::model::component::CalendarComponent::Event(component))
             }
-            crate::parser::CalendarComponent::ToDo { properties, alarms } => {
+            crate::parser::types::CalendarComponent::ToDo { properties, alarms } => {
                 let mut component = ToDoComponent::new();
                 component.properties.reserve(properties.len());
 
@@ -39,9 +39,9 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     component.alarms.push(alarm.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::ToDo(component))
+                Ok(crate::model::component::CalendarComponent::ToDo(component))
             }
-            crate::parser::CalendarComponent::Journal { properties } => {
+            crate::parser::types::CalendarComponent::Journal { properties } => {
                 let mut journal = JournalComponent::new();
                 journal.properties.reserve(properties.len());
 
@@ -49,9 +49,9 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     journal.properties.push(property.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::Journal(journal))
+                Ok(crate::model::component::CalendarComponent::Journal(journal))
             }
-            crate::parser::CalendarComponent::FreeBusy { properties } => {
+            crate::parser::types::CalendarComponent::FreeBusy { properties } => {
                 let mut free_busy = FreeBusyComponent::new();
                 free_busy.properties.reserve(properties.len());
 
@@ -59,9 +59,11 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     free_busy.properties.push(property.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::FreeBusy(free_busy))
+                Ok(crate::model::component::CalendarComponent::FreeBusy(
+                    free_busy,
+                ))
             }
-            crate::parser::CalendarComponent::Standard { properties } => {
+            crate::parser::types::CalendarComponent::Standard { properties } => {
                 let mut standard = StandardComponent::new();
                 standard.properties.reserve(properties.len());
 
@@ -69,9 +71,11 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     standard.properties.push(property.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::Standard(standard))
+                Ok(crate::model::component::CalendarComponent::Standard(
+                    standard,
+                ))
             }
-            crate::parser::CalendarComponent::Daylight { properties } => {
+            crate::parser::types::CalendarComponent::Daylight { properties } => {
                 let mut daylight = DaylightComponent::new();
                 daylight.properties.reserve(properties.len());
 
@@ -79,9 +83,11 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     daylight.properties.push(property.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::Daylight(daylight))
+                Ok(crate::model::component::CalendarComponent::Daylight(
+                    daylight,
+                ))
             }
-            crate::parser::CalendarComponent::TimeZone {
+            crate::parser::types::CalendarComponent::TimeZone {
                 properties,
                 components,
             } => {
@@ -97,9 +103,11 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     timezone.components.push(component.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::TimeZone(timezone))
+                Ok(crate::model::component::CalendarComponent::TimeZone(
+                    timezone,
+                ))
             }
-            crate::parser::CalendarComponent::Alarm { properties } => {
+            crate::parser::types::CalendarComponent::Alarm { properties } => {
                 let mut alarm = AlarmComponent::new();
                 alarm.properties.reserve(properties.len());
 
@@ -107,23 +115,28 @@ impl ToModel for crate::parser::CalendarComponent<'_> {
                     alarm.properties.push(property.to_model()?);
                 }
 
-                Ok(crate::model::CalendarComponent::Alarm(alarm))
+                Ok(crate::model::component::CalendarComponent::Alarm(alarm))
             }
-            crate::parser::CalendarComponent::IanaComp { name, lines } => {
-                let mut component = crate::model::IanaComponent::new(convert_string(name));
+            crate::parser::types::CalendarComponent::IanaComp { name, lines } => {
+                let mut component =
+                    crate::model::component::IanaComponent::new(convert_string(name));
                 component.properties.reserve(lines.len());
 
                 map_unknown_lines(lines, &mut component.properties)?;
 
-                Ok(crate::model::CalendarComponent::IanaComponent(component))
+                Ok(crate::model::component::CalendarComponent::IanaComponent(
+                    component,
+                ))
             }
-            crate::parser::CalendarComponent::XComp { name, lines } => {
-                let mut component = crate::model::XComponent::new(convert_string(name));
+            crate::parser::types::CalendarComponent::XComp { name, lines } => {
+                let mut component = crate::model::component::XComponent::new(convert_string(name));
                 component.properties.reserve(lines.len());
 
                 map_unknown_lines(lines, &mut component.properties)?;
 
-                Ok(crate::model::CalendarComponent::XComponent(component))
+                Ok(crate::model::component::CalendarComponent::XComponent(
+                    component,
+                ))
             }
         }
     }
@@ -136,11 +149,13 @@ fn map_unknown_lines(
     for line in lines {
         let m = line.to_model()?;
         if m.name.starts_with("X-") || m.name.starts_with("x-") {
-            component_properties.push(ComponentProperty::XProperty(crate::model::XProperty {
-                name: m.name,
-                value: m.value,
-                params: m.params,
-            }));
+            component_properties.push(ComponentProperty::XProperty(
+                crate::model::property::XProperty {
+                    name: m.name,
+                    value: m.value,
+                    params: m.params,
+                },
+            ));
         } else {
             component_properties.push(ComponentProperty::IanaProperty(m));
         }

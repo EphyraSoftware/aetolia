@@ -1,10 +1,12 @@
 use crate::parser::component::{
     component_event, component_free_busy, component_journal, component_timezone, component_todo,
 };
-use crate::parser::object::types::{CalendarComponent, CalendarProperty, ICalendar};
 use crate::parser::property::{
     prop_calendar_scale, prop_iana, prop_method, prop_product_id, prop_version, prop_x,
 };
+use crate::parser::types::CalendarComponent;
+use crate::parser::types::CalendarProperty;
+use crate::parser::types::ICalendar;
 use crate::parser::{content_line, iana_token, x_name, Error, InnerError};
 use nom::branch::alt;
 use nom::bytes::streaming::tag;
@@ -16,8 +18,9 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
-pub mod types;
-
+/// The top-level parser for an iCalendar stream.
+///
+/// This recognizes a list of [ical_object]s, separated by whitespace.
 pub fn ical_stream<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E>
 where
     E: ParseError<&'a [u8]>
@@ -40,6 +43,9 @@ where
     Ok((input, out))
 }
 
+/// The top-level parser for an iCalendar object.
+///
+/// This recognizes a single iCalendar object.
 pub fn ical_object<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E>
 where
     E: ParseError<&'a [u8]>
@@ -296,8 +302,8 @@ fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> St
 mod tests {
     use super::*;
     use crate::parser::clear_errors;
-    use crate::parser::pre::content_line_first_pass;
-    use crate::parser::property::types::VersionProperty;
+    use crate::parser::first_pass::content_line_first_pass;
+    use crate::parser::types::VersionProperty;
     use crate::test_utils::check_rem;
     use nom::combinator::complete;
     use nom::error::VerboseError;

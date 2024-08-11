@@ -1,10 +1,13 @@
-use crate::model::property::ComponentProperty;
-use crate::model::{
+use crate::model::component::{
     add_action, add_attach, add_description, add_duration, add_repeat, add_summary, add_trigger,
-    impl_component_access, impl_other_component_properties, Action, AttendeePropertyBuilder,
-    IanaComponentPropertyBuilder, ParticipationStatusEvent, XComponentPropertyBuilder,
+    impl_other_component_properties,
 };
-use crate::prelude::AddComponentProperty;
+use crate::model::impl_component_access;
+use crate::model::param::ParticipationStatusEvent;
+use crate::model::property::{
+    Action, AddComponentProperty, AttendeePropertyBuilder, ComponentProperty,
+    IanaComponentPropertyBuilder, XComponentPropertyBuilder,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct AlarmComponent {

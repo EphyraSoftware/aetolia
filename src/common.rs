@@ -1,4 +1,4 @@
-use crate::model::Duration;
+use crate::model::property::Duration;
 use std::cmp::Ordering;
 use std::ops::{Add, Sub};
 
@@ -101,7 +101,7 @@ pub enum Range {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum Related {
+pub enum TriggerRelationship {
     #[default]
     Start,
     End,

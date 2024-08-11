@@ -1,6 +1,5 @@
-use crate::parser::property::uri::{param_value_uri, Uri};
-use crate::parser::property::value_types::Date;
-use crate::parser::property::{DateTime, Duration, Period, PeriodEnd, Time, UtcOffset};
+use crate::parser::property::uri::param_value_uri;
+use crate::parser::types::{Date, DateTime, Duration, Period, PeriodEnd, Time, Uri, UtcOffset};
 use crate::parser::{read_int, Error, InnerError};
 use crate::utf8_seq;
 use nom::branch::alt;
@@ -141,7 +140,7 @@ where
     Ok((input, DateTime { date, time }))
 }
 
-pub fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
