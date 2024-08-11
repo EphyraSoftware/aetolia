@@ -10,7 +10,7 @@ use crate::parser::{ContentLine, DateOrDateTime, DateOrDateTimeOrPeriod};
 use crate::prelude::{RequestStatusPropertyValue, TriggerValue};
 use anyhow::Context;
 
-impl ToModel for crate::parser::DateTimeStampProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeStampProperty<'_> {
     type Model = crate::model::DateTimeStampProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -36,7 +36,7 @@ impl ToModel for crate::parser::DateTimeStampProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::UniqueIdentifierProperty<'_> {
+impl ToModel for crate::parser::types::UniqueIdentifierProperty<'_> {
     type Model = crate::model::UniqueIdentifierProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -47,7 +47,7 @@ impl ToModel for crate::parser::UniqueIdentifierProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DateTimeStartProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeStartProperty<'_> {
     type Model = crate::model::DateTimeStartProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -60,7 +60,7 @@ impl ToModel for crate::parser::DateTimeStartProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ClassificationProperty<'_> {
+impl ToModel for crate::parser::types::ClassificationProperty<'_> {
     type Model = crate::model::ClassificationProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -71,27 +71,27 @@ impl ToModel for crate::parser::ClassificationProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::Classification<'_> {
+impl ToModel for crate::parser::types::Classification<'_> {
     type Model = crate::model::Classification;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(match self {
-            crate::parser::Classification::Public => crate::model::Classification::Public,
-            crate::parser::Classification::Private => crate::model::Classification::Private,
-            crate::parser::Classification::Confidential => {
+            crate::parser::types::Classification::Public => crate::model::Classification::Public,
+            crate::parser::types::Classification::Private => crate::model::Classification::Private,
+            crate::parser::types::Classification::Confidential => {
                 crate::model::Classification::Confidential
             }
-            crate::parser::Classification::XName(name) => {
+            crate::parser::types::Classification::XName(name) => {
                 crate::model::Classification::XName(convert_string(name))
             }
-            crate::parser::Classification::IanaToken(token) => {
+            crate::parser::types::Classification::IanaToken(token) => {
                 crate::model::Classification::IanaToken(convert_string(token))
             }
         })
     }
 }
 
-impl ToModel for crate::parser::CreatedProperty<'_> {
+impl ToModel for crate::parser::types::CreatedProperty<'_> {
     type Model = crate::model::CreatedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -104,7 +104,7 @@ impl ToModel for crate::parser::CreatedProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DescriptionProperty<'_> {
+impl ToModel for crate::parser::types::DescriptionProperty<'_> {
     type Model = crate::model::DescriptionProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -115,7 +115,7 @@ impl ToModel for crate::parser::DescriptionProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::GeographicPositionProperty<'_> {
+impl ToModel for crate::parser::types::GeographicPositionProperty<'_> {
     type Model = crate::model::GeographicPositionProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -129,7 +129,7 @@ impl ToModel for crate::parser::GeographicPositionProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::LastModifiedProperty<'_> {
+impl ToModel for crate::parser::types::LastModifiedProperty<'_> {
     type Model = crate::model::LastModifiedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -142,7 +142,7 @@ impl ToModel for crate::parser::LastModifiedProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::LocationProperty<'_> {
+impl ToModel for crate::parser::types::LocationProperty<'_> {
     type Model = crate::model::LocationProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -153,7 +153,7 @@ impl ToModel for crate::parser::LocationProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::OrganizerProperty<'_> {
+impl ToModel for crate::parser::types::OrganizerProperty<'_> {
     type Model = crate::model::OrganizerProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -164,7 +164,7 @@ impl ToModel for crate::parser::OrganizerProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::PriorityProperty<'_> {
+impl ToModel for crate::parser::types::PriorityProperty<'_> {
     type Model = crate::model::PriorityProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -175,7 +175,7 @@ impl ToModel for crate::parser::PriorityProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::SequenceProperty<'_> {
+impl ToModel for crate::parser::types::SequenceProperty<'_> {
     type Model = crate::model::SequenceProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -186,7 +186,7 @@ impl ToModel for crate::parser::SequenceProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::StatusProperty<'_> {
+impl ToModel for crate::parser::types::StatusProperty<'_> {
     type Model = crate::model::StatusProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -197,7 +197,7 @@ impl ToModel for crate::parser::StatusProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::SummaryProperty<'_> {
+impl ToModel for crate::parser::types::SummaryProperty<'_> {
     type Model = crate::model::SummaryProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -208,7 +208,7 @@ impl ToModel for crate::parser::SummaryProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::TimeTransparencyProperty<'_> {
+impl ToModel for crate::parser::types::TimeTransparencyProperty<'_> {
     type Model = crate::model::TimeTransparencyProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -219,7 +219,7 @@ impl ToModel for crate::parser::TimeTransparencyProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::UrlProperty<'_> {
+impl ToModel for crate::parser::types::UrlProperty<'_> {
     type Model = crate::model::UrlProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -230,7 +230,7 @@ impl ToModel for crate::parser::UrlProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RecurrenceIdProperty<'_> {
+impl ToModel for crate::parser::types::RecurrenceIdProperty<'_> {
     type Model = crate::model::RecurrenceIdProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -243,7 +243,7 @@ impl ToModel for crate::parser::RecurrenceIdProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RecurrenceRuleProperty<'_> {
+impl ToModel for crate::parser::types::RecurrenceRuleProperty<'_> {
     type Model = crate::model::RecurrenceRuleProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -254,7 +254,7 @@ impl ToModel for crate::parser::RecurrenceRuleProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DateTimeEndProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeEndProperty<'_> {
     type Model = crate::model::DateTimeEndProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -267,7 +267,7 @@ impl ToModel for crate::parser::DateTimeEndProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DurationProperty<'_> {
+impl ToModel for crate::parser::types::DurationProperty<'_> {
     type Model = crate::model::DurationProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -278,13 +278,13 @@ impl ToModel for crate::parser::DurationProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::AttachProperty<'_> {
+impl ToModel for crate::parser::types::AttachProperty<'_> {
     type Model = crate::model::AttachProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         let value = match self.value {
-            crate::parser::AttachValue::Uri(uri) => convert_string(uri),
-            crate::parser::AttachValue::Binary(binary) => convert_string(binary),
+            crate::parser::types::AttachValue::Uri(uri) => convert_string(uri),
+            crate::parser::types::AttachValue::Binary(binary) => convert_string(binary),
         };
 
         Ok(crate::model::AttachProperty {
@@ -294,7 +294,7 @@ impl ToModel for crate::parser::AttachProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::AttendeeProperty<'_> {
+impl ToModel for crate::parser::types::AttendeeProperty<'_> {
     type Model = crate::model::AttendeeProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -305,7 +305,7 @@ impl ToModel for crate::parser::AttendeeProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::CategoriesProperty<'_> {
+impl ToModel for crate::parser::types::CategoriesProperty<'_> {
     type Model = crate::model::CategoriesProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -316,7 +316,7 @@ impl ToModel for crate::parser::CategoriesProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::CommentProperty<'_> {
+impl ToModel for crate::parser::types::CommentProperty<'_> {
     type Model = crate::model::CommentProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -327,7 +327,7 @@ impl ToModel for crate::parser::CommentProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ContactProperty<'_> {
+impl ToModel for crate::parser::types::ContactProperty<'_> {
     type Model = crate::model::ContactProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -338,7 +338,7 @@ impl ToModel for crate::parser::ContactProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ExceptionDateTimesProperty<'_> {
+impl ToModel for crate::parser::types::ExceptionDateTimesProperty<'_> {
     type Model = crate::model::ExceptionDateTimesProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -353,7 +353,7 @@ impl ToModel for crate::parser::ExceptionDateTimesProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RequestStatusProperty<'_> {
+impl ToModel for crate::parser::types::RequestStatusProperty<'_> {
     type Model = crate::model::RequestStatusProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -368,7 +368,7 @@ impl ToModel for crate::parser::RequestStatusProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RelatedToProperty<'_> {
+impl ToModel for crate::parser::types::RelatedToProperty<'_> {
     type Model = crate::model::RelatedToProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -379,7 +379,7 @@ impl ToModel for crate::parser::RelatedToProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ResourcesProperty<'_> {
+impl ToModel for crate::parser::types::ResourcesProperty<'_> {
     type Model = crate::model::ResourcesProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -390,7 +390,7 @@ impl ToModel for crate::parser::ResourcesProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::XProperty<'_> {
+impl ToModel for crate::parser::types::XProperty<'_> {
     type Model = crate::model::XProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -402,7 +402,7 @@ impl ToModel for crate::parser::XProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::IanaProperty<'_> {
+impl ToModel for crate::parser::types::IanaProperty<'_> {
     type Model = crate::model::IanaProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -414,7 +414,7 @@ impl ToModel for crate::parser::IanaProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RecurrenceDateTimesProperty<'_> {
+impl ToModel for crate::parser::types::RecurrenceDateTimesProperty<'_> {
     type Model = crate::model::RecurrenceDateTimesProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -478,7 +478,7 @@ impl ToModel for DateOrDateTimeOrPeriod {
     }
 }
 
-impl ToModel for crate::parser::ProductIdProperty<'_> {
+impl ToModel for crate::parser::types::ProductIdProperty<'_> {
     type Model = crate::model::ProductIdProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -489,7 +489,7 @@ impl ToModel for crate::parser::ProductIdProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::VersionProperty<'_> {
+impl ToModel for crate::parser::types::VersionProperty<'_> {
     type Model = crate::model::VersionProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -501,7 +501,7 @@ impl ToModel for crate::parser::VersionProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::CalendarScaleProperty<'_> {
+impl ToModel for crate::parser::types::CalendarScaleProperty<'_> {
     type Model = crate::model::CalendarScaleProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -512,7 +512,7 @@ impl ToModel for crate::parser::CalendarScaleProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::MethodProperty<'_> {
+impl ToModel for crate::parser::types::MethodProperty<'_> {
     type Model = crate::model::MethodProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -550,7 +550,7 @@ impl ToModel for crate::parser::CalendarProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeCompletedProperty<'_> {
     type Model = crate::model::DateTimeCompletedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -563,7 +563,7 @@ impl ToModel for crate::parser::DateTimeCompletedProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::PercentCompleteProperty<'_> {
+impl ToModel for crate::parser::types::PercentCompleteProperty<'_> {
     type Model = crate::model::PercentCompleteProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -574,7 +574,7 @@ impl ToModel for crate::parser::PercentCompleteProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::DateTimeDueProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeDueProperty<'_> {
     type Model = crate::model::DateTimeDueProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -587,7 +587,7 @@ impl ToModel for crate::parser::DateTimeDueProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::FreeBusyTimeProperty<'_> {
+impl ToModel for crate::parser::types::FreeBusyTimeProperty<'_> {
     type Model = crate::model::FreeBusyTimeProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -598,7 +598,7 @@ impl ToModel for crate::parser::FreeBusyTimeProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::TimeZoneIdProperty<'_> {
+impl ToModel for crate::parser::types::TimeZoneIdProperty<'_> {
     type Model = crate::model::TimeZoneIdProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -612,7 +612,7 @@ impl ToModel for crate::parser::TimeZoneIdProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::TimeZoneUrlProperty<'_> {
+impl ToModel for crate::parser::types::TimeZoneUrlProperty<'_> {
     type Model = crate::model::TimeZoneUrlProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -623,7 +623,7 @@ impl ToModel for crate::parser::TimeZoneUrlProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::TimeZoneOffsetProperty<'_> {
+impl ToModel for crate::parser::types::TimeZoneOffsetProperty<'_> {
     type Model = crate::model::TimeZoneOffsetToProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -647,7 +647,7 @@ impl ToModel for crate::parser::UtcOffset {
     }
 }
 
-impl ToModel for crate::parser::TimeZoneNameProperty<'_> {
+impl ToModel for crate::parser::types::TimeZoneNameProperty<'_> {
     type Model = crate::model::TimeZoneNameProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -658,7 +658,7 @@ impl ToModel for crate::parser::TimeZoneNameProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::ActionProperty<'_> {
+impl ToModel for crate::parser::types::ActionProperty<'_> {
     type Model = crate::model::ActionProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -669,35 +669,37 @@ impl ToModel for crate::parser::ActionProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::Action<'_> {
+impl ToModel for crate::parser::types::Action<'_> {
     type Model = crate::model::Action;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(match self {
-            crate::parser::Action::Audio => crate::model::Action::Audio,
-            crate::parser::Action::Display => crate::model::Action::Display,
-            crate::parser::Action::Email => crate::model::Action::Email,
-            crate::parser::Action::XName(name) => crate::model::Action::XName(convert_string(name)),
-            crate::parser::Action::IanaToken(token) => {
+            crate::parser::types::Action::Audio => crate::model::Action::Audio,
+            crate::parser::types::Action::Display => crate::model::Action::Display,
+            crate::parser::types::Action::Email => crate::model::Action::Email,
+            crate::parser::types::Action::XName(name) => {
+                crate::model::Action::XName(convert_string(name))
+            }
+            crate::parser::types::Action::IanaToken(token) => {
                 crate::model::Action::IanaToken(convert_string(token))
             }
         })
     }
 }
 
-impl ToModel for crate::parser::TriggerProperty<'_> {
+impl ToModel for crate::parser::types::TriggerProperty<'_> {
     type Model = crate::model::TriggerProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match &self.value {
-            crate::parser::DurationOrDateTime::DateTime(date_time) => {
+            crate::parser::types::DurationOrDateTime::DateTime(date_time) => {
                 let (date, time, is_utc) = date_time.try_into()?;
                 Ok(crate::model::TriggerProperty {
                     value: TriggerValue::Absolute((date, time, is_utc).into()),
                     params: self.params.to_model()?,
                 })
             }
-            crate::parser::DurationOrDateTime::Duration(duration) => {
+            crate::parser::types::DurationOrDateTime::Duration(duration) => {
                 Ok(crate::model::TriggerProperty {
                     value: TriggerValue::Relative(duration.to_model()?),
                     params: self.params.to_model()?,
@@ -707,7 +709,7 @@ impl ToModel for crate::parser::TriggerProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::RepeatCountProperty<'_> {
+impl ToModel for crate::parser::types::RepeatProperty<'_> {
     type Model = crate::model::RepeatProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {

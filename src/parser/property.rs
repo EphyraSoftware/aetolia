@@ -1,12 +1,11 @@
 pub(crate) mod component;
 pub(crate) mod recur;
-pub(crate) mod types;
 pub(crate) mod uri;
 mod value;
 pub(crate) mod value_types;
 
 use crate::parser::param::{other_params, params};
-use crate::parser::property::types::{
+use crate::parser::types::{
     CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
     XProperty,
 };
@@ -171,7 +170,7 @@ where
 mod tests {
     use super::*;
     use crate::common::Value;
-    use crate::parser::param::ParamValue;
+    use crate::parser::types::ParamValue;
     use crate::test_utils::check_rem;
 
     #[test]

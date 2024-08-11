@@ -132,9 +132,10 @@ where
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::parser::property::{
-        Date, DateOrDateTime, DateTime, DateTimeStartProperty, LastModifiedProperty, Time,
-        TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty, UtcOffset,
+    use crate::parser::property::{Date, DateOrDateTime, DateTime, Time, UtcOffset};
+    use crate::parser::types::{
+        DateTimeStartProperty, LastModifiedProperty, TimeZoneIdProperty, TimeZoneNameProperty,
+        TimeZoneOffsetProperty,
     };
     use crate::parser::Error;
     use crate::test_utils::check_rem;

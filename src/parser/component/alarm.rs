@@ -44,12 +44,11 @@ where
 mod tests {
     use super::*;
     use crate::common::Value;
-    use crate::parser::param::ParamValue;
-    use crate::parser::property::{
-        ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration, DurationOrDateTime,
-        DurationProperty, RepeatCountProperty, Time, TriggerProperty,
+    use crate::parser::types::{
+        Action, ActionProperty, AttachProperty, AttachValue, DurationOrDateTime, DurationProperty,
+        ParamValue, RepeatProperty, TriggerProperty,
     };
-    use crate::parser::{Action, Error};
+    use crate::parser::{Date, DateTime, Duration, Error, Time};
     use crate::test_utils::check_rem;
 
     #[test]
@@ -92,7 +91,7 @@ END:VALARM\r\n";
 
                 assert_eq!(
                     properties[1],
-                    ComponentProperty::RepeatCount(RepeatCountProperty {
+                    ComponentProperty::RepeatCount(RepeatProperty {
                         other_params: vec![],
                         value: 4,
                     })

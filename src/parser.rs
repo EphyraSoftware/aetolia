@@ -13,38 +13,24 @@ use std::str::FromStr;
 use std::sync::Mutex;
 
 mod component;
+mod first_pass;
 mod language_tag;
 mod object;
 pub(crate) mod param;
-mod pre;
 mod property;
+
+/// Types produced by the parser.
+///
+/// These types represent the structure of the iCalendar format.
 pub mod types;
 
+pub use first_pass::content_line_first_pass;
 pub use object::{ical_object, ical_stream};
-pub use param::ParamValue;
-pub use pre::content_line_first_pass;
-pub use property::component::{Action, AttachValue, DurationOrDateTime};
 pub use property::recur::RecurRulePart;
-pub use property::types::{
-    CalendarScaleProperty, IanaProperty, MethodProperty, ProductIdProperty, VersionProperty,
-    XProperty,
-};
 pub use property::value_types::{Duration, Period, PeriodEnd, UtcOffset};
 pub(crate) use property::*;
-pub use property::{
-    ActionProperty, AttachProperty, AttendeeProperty, CategoriesProperty, Classification,
-    ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty, Date,
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, DateTimeCompletedProperty,
-    DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
-    DescriptionProperty, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
-    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
-    PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty,
-    RecurrenceRuleProperty, RelatedToProperty, RepeatCountProperty, RequestStatusProperty,
-    ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty, Time,
-    TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
-    TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
-};
 pub use types::CalendarProperty;
+pub use types::ParamValue;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
@@ -125,7 +111,7 @@ lazy_static! {
 }
 
 #[cfg(test)]
-pub unsafe fn clear_errors() {
+pub(crate) unsafe fn clear_errors() {
     for (ptr, len) in ERROR_HOLD.lock().unwrap().drain(..) {
         unsafe { String::from_raw_parts(ptr as *mut u8, len, len) };
     }
@@ -303,7 +289,7 @@ where
     })(input)
 }
 
-fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], param::ParamValue<'a>, E>
+fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {

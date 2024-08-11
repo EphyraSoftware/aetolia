@@ -78,10 +78,10 @@ where
 mod tests {
     use super::*;
     use crate::common::{Status, Value};
-    use crate::parser::param::ParamValue;
-    use crate::parser::property::{
-        CategoriesProperty, Classification, ClassificationProperty, Date, DateOrDateTime, DateTime,
-        DateTimeDueProperty, DateTimeStampProperty, StatusProperty, SummaryProperty, Time,
+    use crate::parser::property::{Date, DateOrDateTime, DateTime, Time};
+    use crate::parser::types::{
+        CategoriesProperty, Classification, ClassificationProperty, DateTimeDueProperty,
+        DateTimeStampProperty, ParamValue, StatusProperty, SummaryProperty,
         UniqueIdentifierProperty,
     };
     use crate::parser::Error;

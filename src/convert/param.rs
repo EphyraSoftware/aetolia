@@ -5,7 +5,7 @@ use crate::model::{
     EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, Param as ModelParam,
     ParticipationStatusParam, RelatedParam, RoleParam, RsvpParam, SentByParam, TimeZoneIdParam,
 };
-use crate::parser::ParamValue as ParserParam;
+use crate::parser::types::ParamValue as ParserParam;
 use crate::prelude::{
     DelegatedFromParam, DirectoryEntryReferenceParam, LanguageParam, MembersParam, RangeParam,
     RelationshipTypeParam, ValueTypeParam,

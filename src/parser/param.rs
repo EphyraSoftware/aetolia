@@ -1,9 +1,9 @@
-mod types;
 mod values;
 
 use crate::common::Range;
 use crate::parser::language_tag::language_tag;
 use crate::parser::property::uri::param_value_uri;
+use crate::parser::types::ParamValue;
 use crate::parser::{param_name, param_value, read_string, reg_name, x_name, Error};
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
@@ -14,7 +14,6 @@ use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
 use nom::sequence::{delimited, separated_pair, tuple};
 use nom::{IResult, Parser};
-pub use types::*;
 pub use values::*;
 
 pub fn params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<'a>>, E>

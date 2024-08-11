@@ -296,8 +296,8 @@ fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> St
 mod tests {
     use super::*;
     use crate::parser::clear_errors;
-    use crate::parser::pre::content_line_first_pass;
-    use crate::parser::property::types::VersionProperty;
+    use crate::parser::first_pass::content_line_first_pass;
+    use crate::parser::types::VersionProperty;
     use crate::test_utils::check_rem;
     use nom::combinator::complete;
     use nom::error::VerboseError;

@@ -1,12 +1,24 @@
 use crate::common::{Encoding, Status, TimeTransparency, Value};
-use crate::parser::param::{other_params, params, ParamValue};
-use crate::parser::property::recur::{recur, RecurRulePart};
-use crate::parser::property::uri::{param_value_uri, Uri};
+use crate::parser::param::{other_params, params};
+use crate::parser::property::recur::recur;
+use crate::parser::property::uri::param_value_uri;
 use crate::parser::property::{
     prop_value_binary, prop_value_calendar_user_address, prop_value_date, prop_value_date_time,
     prop_value_duration, prop_value_float, prop_value_integer, prop_value_period, prop_value_text,
-    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, Period,
-    UtcOffset,
+    prop_value_utc_offset, DateOrDateTime, DateOrDateTimeOrPeriod,
+};
+use crate::parser::types::{
+    Action, ActionProperty, AttachProperty, AttachValue, AttendeeProperty, CategoriesProperty,
+    Classification, ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty,
+    DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty,
+    DateTimeStartProperty, DescriptionProperty, DurationOrDateTime, DurationProperty,
+    ExceptionDateTimesProperty, FreeBusyTimeProperty, GeographicPositionProperty,
+    LastModifiedProperty, LocationProperty, OrganizerProperty, ParamValue, PercentCompleteProperty,
+    PriorityProperty, RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty,
+    RelatedToProperty, RepeatProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty,
+    StatusProperty, SummaryProperty, TimeTransparencyProperty, TimeZoneIdProperty,
+    TimeZoneNameProperty, TimeZoneOffsetProperty, TimeZoneUrlProperty, TriggerProperty,
+    UniqueIdentifierProperty, UrlProperty,
 };
 use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
 use nom::branch::alt;
@@ -19,18 +31,6 @@ use nom::error::ParseError;
 use nom::multi::{fold_many_m_n, separated_list1};
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum AttachValue<'a> {
-    Uri(&'a [u8]),
-    Binary(&'a [u8]),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct AttachProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: AttachValue<'a>,
-}
 
 /// Parse an ATTACH property.
 ///
@@ -86,12 +86,6 @@ where
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct CategoriesProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<Vec<u8>>,
-}
-
 /// Parse a CATEGORIES property.
 ///
 /// RFC 5545, section 3.8.1.2
@@ -112,21 +106,6 @@ where
     ))(input)?;
 
     Ok((input, CategoriesProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Classification<'a> {
-    Public,
-    Private,
-    Confidential,
-    XName(&'a [u8]),
-    IanaToken(&'a [u8]),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct ClassificationProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Classification<'a>,
 }
 
 /// Parse a CLASS property.
@@ -163,12 +142,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct CommentProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a COMMENT property.
 ///
 /// RFC 5545, section 3.8.1.4
@@ -184,12 +157,6 @@ where
     ))(input)?;
 
     Ok((input, CommentProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct DescriptionProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
 }
 
 /// Parse a DESCRIPTION property.
@@ -212,13 +179,6 @@ where
     ))(input)?;
 
     Ok((input, DescriptionProperty { params, value }))
-}
-
-#[derive(Debug, PartialEq)]
-pub struct GeographicPositionProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub latitude: f64,
-    pub longitude: f64,
 }
 
 /// Parse a GEO property.
@@ -250,12 +210,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct LocationProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a LOCATION property.
 ///
 /// RFC 5545, section 3.8.1.7
@@ -271,12 +225,6 @@ where
     ))(input)?;
 
     Ok((input, LocationProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct PercentCompleteProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: u8,
 }
 
 /// Parse a PERCENT-COMPLETE property.
@@ -307,12 +255,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct PriorityProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: u8,
-}
-
 /// Parse a PRIORITY property.
 ///
 /// RFC 5545, section 3.8.1.9
@@ -339,12 +281,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ResourcesProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<Vec<u8>>,
-}
-
 /// Parse a RESOURCES property.
 ///
 /// RFC 5545, section 3.8.1.10
@@ -365,12 +301,6 @@ where
     ))(input)?;
 
     Ok((input, ResourcesProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct StatusProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Status,
 }
 
 /// Parse a STATUS property.
@@ -408,12 +338,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct SummaryProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a SUMMARY property.
 ///
 /// RFC 5545, section 3.8.1.12
@@ -429,12 +353,6 @@ where
     ))(input)?;
 
     Ok((input, SummaryProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeCompletedProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: DateTime,
 }
 
 /// Parse a COMPLETED property.
@@ -465,12 +383,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeEndProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: DateOrDateTime,
-}
-
 /// Parse a DTEND property.
 ///
 /// RFC 5545, section 3.8.2.2
@@ -496,12 +408,6 @@ where
     Ok((input, DateTimeEndProperty { params, value }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeDueProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: DateOrDateTime,
-}
-
 /// Parse a DUE property.
 ///
 /// RFC 5545, section 3.8.2.3
@@ -525,12 +431,6 @@ where
     ))(input)?;
 
     Ok((input, DateTimeDueProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeStartProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: DateOrDateTime,
 }
 
 /// Parse a DTSTART property.
@@ -560,12 +460,6 @@ where
     Ok((input, DateTimeStartProperty { params, value }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct DurationProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Duration,
-}
-
 /// Parse a DURATION property.
 ///
 /// RFC 5545, section 3.8.2.5
@@ -592,12 +486,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct FreeBusyTimeProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<Period>,
-}
-
 /// Parse a FREEBUSY property.
 ///
 /// RFC 5545, section 3.8.2.6
@@ -618,12 +506,6 @@ where
     ))(input)?;
 
     Ok((input, FreeBusyTimeProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct TimeTransparencyProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: TimeTransparency,
 }
 
 /// Parse a TRANSP property.
@@ -657,13 +539,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct TimeZoneIdProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub unique_registry_id: bool,
-    pub value: Vec<u8>,
-}
-
 /// Parse a TZID property.
 ///
 /// RFC 5545, section 3.8.3.1
@@ -691,12 +566,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct TimeZoneNameProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a TZNAME property.
 ///
 /// RFC 5545, section 3.8.3.2
@@ -712,12 +581,6 @@ where
     ))(input)?;
 
     Ok((input, TimeZoneNameProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct TimeZoneOffsetProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: UtcOffset,
 }
 
 /// Parse a TZOFFSETFROM property.
@@ -776,12 +639,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct TimeZoneUrlProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: &'a [u8],
-}
-
 /// Parse a TZURL property.
 ///
 /// RFC 5545, section 3.8.3.5
@@ -810,12 +667,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct AttendeeProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: &'a [u8],
-}
-
 /// Parse an ATTENDEE property.
 ///
 /// RFC 5545, section 3.8.4.1
@@ -838,12 +689,6 @@ where
     Ok((input, AttendeeProperty { params, value: uri }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct ContactProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a CONTACT property.
 ///
 /// RFC 5545, section 3.8.4.2
@@ -859,12 +704,6 @@ where
     ))(input)?;
 
     Ok((input, ContactProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct OrganizerProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: &'a [u8],
 }
 
 /// Parse an ORGANIZER property.
@@ -887,12 +726,6 @@ where
     ))(input)?;
 
     Ok((input, OrganizerProperty { params, value: uri }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct RecurrenceIdProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: DateOrDateTime,
 }
 
 /// Parse a RECURRENCE-ID property.
@@ -920,12 +753,6 @@ where
     Ok((input, RecurrenceIdProperty { params, value }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct RelatedToProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a RELATED-TO property.
 ///
 /// RFC 5545, section 3.8.4.5
@@ -941,12 +768,6 @@ where
     ))(input)?;
 
     Ok((input, RelatedToProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct UrlProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Uri<'a>,
 }
 
 /// Parse a URL property.
@@ -977,12 +798,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct UniqueIdentifierProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Vec<u8>,
-}
-
 /// Parse a UID property.
 ///
 /// RFC 5545, section 3.8.4.7
@@ -1009,12 +824,6 @@ where
             value,
         },
     ))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct ExceptionDateTimesProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<DateOrDateTime>,
 }
 
 /// Parse an EXDATE property.
@@ -1045,12 +854,6 @@ where
     ))(input)?;
 
     Ok((input, ExceptionDateTimesProperty { params, value }))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct RecurrenceDateTimesProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: Vec<DateOrDateTimeOrPeriod>,
 }
 
 /// Parse an RDATE property.
@@ -1084,12 +887,6 @@ where
     Ok((input, RecurrenceDateTimesProperty { params, value }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct RecurrenceRuleProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Vec<RecurRulePart>,
-}
-
 /// Parse an RRULE property.
 ///
 /// RFC 5545, section 3.8.5.3
@@ -1113,21 +910,6 @@ where
             value,
         },
     ))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Action<'a> {
-    Audio,
-    Display,
-    Email,
-    XName(&'a [u8]),
-    IanaToken(&'a [u8]),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct ActionProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: Action<'a>,
 }
 
 /// Parse an ACTION property.
@@ -1162,16 +944,10 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct RepeatCountProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: u32,
-}
-
 /// Parse a REPEAT property.
 ///
 /// RFC 5545, section 3.8.6.2
-pub fn prop_repeat_count<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RepeatCountProperty<'a>, E>
+pub fn prop_repeat_count<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RepeatProperty<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -1187,23 +963,11 @@ where
 
     Ok((
         input,
-        RepeatCountProperty {
+        RepeatProperty {
             other_params,
             value,
         },
     ))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum DurationOrDateTime {
-    Duration(Duration),
-    DateTime(DateTime),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct TriggerProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub value: DurationOrDateTime,
 }
 
 /// Parse a TRIGGER property.
@@ -1250,12 +1014,6 @@ where
     Ok((input, TriggerProperty { params, value }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct CreatedProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: DateTime,
-}
-
 /// Parse a CREATED property.
 ///
 /// RFC 5545, section 3.8.7.1
@@ -1280,12 +1038,6 @@ where
             value,
         },
     ))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct DateTimeStampProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: DateTime,
 }
 
 /// Parse a DTSTAMP property.
@@ -1316,12 +1068,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct LastModifiedProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: DateTime,
-}
-
 /// Parse a LAST-MODIFIED property.
 ///
 /// RFC 5545, section 3.8.7.3
@@ -1348,12 +1094,6 @@ where
     ))
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct SequenceProperty<'a> {
-    pub other_params: Vec<ParamValue<'a>>,
-    pub value: u32,
-}
-
 /// Parse a SEQUENCE property.
 ///
 /// RFC 5545, section 3.8.7.4
@@ -1378,14 +1118,6 @@ where
             value,
         },
     ))
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct RequestStatusProperty<'a> {
-    pub params: Vec<ParamValue<'a>>,
-    pub status_code: Vec<u32>,
-    pub status_description: Vec<u8>,
-    pub exception_data: Option<Vec<u8>>,
 }
 
 /// Parse a REQUEST-STATUS property.
@@ -1459,9 +1191,11 @@ mod tests {
     use crate::common::FreeBusyTimeType;
     use crate::common::RecurFreq;
     use crate::common::{LanguageTag, ParticipationStatusUnknown, Range, Related, Role, Value};
-    use crate::parser::param::ParamValue;
     use crate::parser::property::uri::{Authority, Host};
     use crate::parser::property::{Date, Period, PeriodEnd, Time};
+    use crate::parser::types::ParamValue;
+    use crate::parser::uri::Uri;
+    use crate::parser::{DateTime, Duration, RecurRulePart, UtcOffset};
     use crate::test_utils::check_rem;
     use base64::Engine;
 
@@ -2543,7 +2277,7 @@ RSVP to team leader."#
         check_rem(rem, 1);
         assert_eq!(
             prop,
-            RepeatCountProperty {
+            RepeatProperty {
                 other_params: vec![],
                 value: 4,
             }

@@ -11,7 +11,7 @@ use std::num::NonZeroUsize;
 mod common;
 mod convert;
 mod model;
-mod parser;
+pub mod parser;
 
 mod ops;
 mod serialize;
