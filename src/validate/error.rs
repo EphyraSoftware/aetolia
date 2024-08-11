@@ -1,8 +1,19 @@
 use std::fmt::{Display, Formatter};
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum ICalendarErrorSeverity {
+    /// Invalid according to the iCalendar specification.
+    Error,
+    /// Non-fatal issue that could be fixed but can be ignored.
+    ///
+    /// For example, redundant VALUE parameters or unnecessary WKST properties in an RRULE.
+    Warning,
+}
+
 #[derive(Clone)]
 pub struct ICalendarError {
     pub message: String,
+    pub severity: ICalendarErrorSeverity,
     pub location: Option<ICalendarLocation>,
 }
 
@@ -70,6 +81,7 @@ impl ICalendarError {
             .into_iter()
             .map(|error| ICalendarError {
                 message: error.message,
+                severity: error.severity,
                 location: error.location.map(ICalendarLocation::CalendarProperty),
             })
             .collect()
@@ -84,6 +96,7 @@ impl ICalendarError {
             .into_iter()
             .map(|error| ICalendarError {
                 message: error.message,
+                severity: error.severity,
                 location: Some(ICalendarLocation::Component(ComponentLocation {
                     index,
                     name: name.clone(),
@@ -106,6 +119,7 @@ impl ICalendarError {
             .into_iter()
             .map(|error| ICalendarError {
                 message: error.message,
+                severity: error.severity,
                 location: Some(ICalendarLocation::Component(ComponentLocation {
                     index,
                     name: name.clone(),
@@ -147,6 +161,7 @@ pub enum WithinComponentLocation {
 #[derive(Clone)]
 pub struct CalendarPropertyError {
     pub message: String,
+    pub severity: ICalendarErrorSeverity,
     pub location: Option<CalendarPropertyLocation>,
 }
 
@@ -160,6 +175,7 @@ impl CalendarPropertyError {
             .into_iter()
             .map(|error| CalendarPropertyError {
                 message: error.message,
+                severity: error.severity,
                 location: Some(CalendarPropertyLocation {
                     index,
                     name: name.clone(),
@@ -183,6 +199,7 @@ pub struct CalendarPropertyLocation {
 #[derive(Clone)]
 pub struct ComponentPropertyError {
     pub message: String,
+    pub severity: ICalendarErrorSeverity,
     pub location: Option<ComponentPropertyLocation>,
 }
 
@@ -196,6 +213,7 @@ impl ComponentPropertyError {
             .into_iter()
             .map(|error| ComponentPropertyError {
                 message: error.message,
+                severity: error.severity,
                 location: Some(ComponentPropertyLocation {
                     index,
                     name: name.clone(),
@@ -224,6 +242,7 @@ pub enum WithinPropertyLocation {
 
 pub struct ParamError {
     pub message: String,
+    pub severity: ICalendarErrorSeverity,
     pub index: usize,
     pub name: String,
 }

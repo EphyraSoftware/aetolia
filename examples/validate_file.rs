@@ -1,4 +1,5 @@
 use aetolia::prelude::*;
+use aetolia::validate::ICalendarErrorSeverity;
 
 fn main() {
     let file_path = std::env::args()
@@ -10,13 +11,22 @@ fn main() {
 
     for (index, object) in calendar.iter().enumerate() {
         let errors = validate_model(object).expect("Failed to validate iCalendar data");
-        println!("Validated object: {:?}", index);
+        println!("Ran validation on object at index: {:?}", index);
 
         for error in &errors {
-            println!("Error: {}", error);
+            if error.severity == ICalendarErrorSeverity::Warning {
+                println!("Warning: {}", error);
+            } else {
+                println!("Error: {}", error);
+            }
         }
 
-        if errors.is_empty() {
+        if errors
+            .iter()
+            .filter(|e| e.severity == ICalendarErrorSeverity::Error)
+            .count()
+            == 0
+        {
             println!("Object is valid");
         }
     }

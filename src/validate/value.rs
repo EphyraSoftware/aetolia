@@ -18,7 +18,8 @@ use crate::serialize::WriteModel;
 use crate::validate::recur::validate_recurrence_rule;
 use crate::validate::{
     component_property_name, get_declared_value_type, validate_time, validate_utc_offset,
-    ComponentPropertyError, ComponentPropertyLocation, PropertyLocation, WithinPropertyLocation,
+    ComponentPropertyError, ComponentPropertyLocation, ICalendarErrorSeverity, PropertyLocation,
+    WithinPropertyLocation,
 };
 use anyhow::Context;
 use nom::character::streaming::char;
@@ -40,6 +41,7 @@ pub(super) fn check_declared_value(
             errors.push(ComponentPropertyError {
                 message: "Redundant value specification which matches the default value"
                     .to_string(),
+                severity: ICalendarErrorSeverity::Warning,
                 location: Some(ComponentPropertyLocation {
                     index: property_index,
                     name: component_property_name(property).to_string(),
@@ -65,6 +67,7 @@ pub(super) fn check_declared_value(
 
                             errors.push(ComponentPropertyError {
                                 message: String::from_utf8_lossy(&msg).to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -83,6 +86,7 @@ pub(super) fn check_declared_value(
                 if found_encoding.is_none() {
                     errors.push(ComponentPropertyError {
                         message: "Property is declared to have a binary value but no encoding is set, must be set to BASE64".to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -95,37 +99,41 @@ pub(super) fn check_declared_value(
                     return Ok(());
                 }
 
-                let require_base64 = |v: &str| match found_encoding.expect("Always present") {
-                    Encoding::Base64 => {
-                        if !is_base64_valued(v) {
-                            errors.push(ComponentPropertyError {
+                let require_base64 = |v: &str, severity: ICalendarErrorSeverity| {
+                    match found_encoding.expect("Always present") {
+                        Encoding::Base64 => {
+                            if !is_base64_valued(v) {
+                                errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a binary value but the value is not base64".to_string(),
+                                severity,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
                                     property_location: Some(WithinPropertyLocation::Value),
                                 }),
                             });
+                            }
                         }
-                    }
-                    _ => {
-                        unreachable!("Encoding has already been checked to be Base64")
+                        _ => {
+                            unreachable!("Encoding has already been checked to be Base64")
+                        }
                     }
                 };
 
                 match property {
                     ComponentProperty::Attach(attach) => {
-                        require_base64(&attach.value);
+                        require_base64(&attach.value, ICalendarErrorSeverity::Error);
                     }
                     ComponentProperty::XProperty(x_prop) => {
-                        require_base64(&x_prop.value);
+                        require_base64(&x_prop.value, ICalendarErrorSeverity::Warning);
                     }
                     ComponentProperty::IanaProperty(iana_prop) => {
-                        require_base64(&iana_prop.value);
+                        require_base64(&iana_prop.value, ICalendarErrorSeverity::Warning);
                     }
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a binary value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -139,6 +147,7 @@ pub(super) fn check_declared_value(
                 ComponentProperty::XProperty(x_prop) if !is_boolean_valued(&x_prop.value) => {
                     errors.push(ComponentPropertyError {
                         message: "Property is declared to have a boolean value but the value is not a boolean".to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -151,6 +160,7 @@ pub(super) fn check_declared_value(
                 {
                     errors.push(ComponentPropertyError {
                             message: "Property is declared to have a boolean value but the value is not a boolean".to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -163,27 +173,40 @@ pub(super) fn check_declared_value(
                 }
             },
             Value::CalendarAddress => {
-                let mut not_mailto = false;
+                let require_mailto =
+                    |errors: &mut Vec<ComponentPropertyError>,
+                     v: &str,
+                     severity: ICalendarErrorSeverity| {
+                        if !v.starts_with("mailto:") {
+                            errors.push(ComponentPropertyError {
+                            message: "Property is declared to have a calendar address value but the value is not a mailto: URI".to_string(),
+                            severity,
+                            location: Some(ComponentPropertyLocation {
+                                index: property_index,
+                                name: component_property_name(property).to_string(),
+                                property_location: Some(WithinPropertyLocation::Value),
+                            }),
+                        });
+                        }
+                    };
+
                 match property {
                     ComponentProperty::Attendee(AttendeeProperty { value, .. })
                     | ComponentProperty::Organizer(OrganizerProperty { value, .. }) => {
                         push_redundant_error_msg(errors, property_index, property);
 
-                        if !value.starts_with("mailto:") {
-                            not_mailto = true;
-                        }
+                        require_mailto(errors, value, ICalendarErrorSeverity::Error);
                     }
-                    ComponentProperty::XProperty(x_prop) if x_prop.value.starts_with("mailto:") => {
-                        not_mailto = true;
+                    ComponentProperty::XProperty(x_prop) => {
+                        require_mailto(errors, &x_prop.value, ICalendarErrorSeverity::Warning);
                     }
-                    ComponentProperty::IanaProperty(iana_prop)
-                        if iana_prop.value.starts_with("mailto:") =>
-                    {
-                        not_mailto = true;
+                    ComponentProperty::IanaProperty(iana_prop) => {
+                        require_mailto(errors, &iana_prop.value, ICalendarErrorSeverity::Warning);
                     }
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a calendar address value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -191,17 +214,6 @@ pub(super) fn check_declared_value(
                             }),
                         });
                     }
-                }
-
-                if !not_mailto {
-                    errors.push(ComponentPropertyError {
-                        message: "Property is declared to have a calendar address value but the value is a mailto: URI".to_string(),
-                        location: Some(ComponentPropertyLocation {
-                            index: property_index,
-                            name: component_property_name(property).to_string(),
-                            property_location: None,
-                        }),
-                    });
                 }
             }
             Value::Date => {
@@ -226,6 +238,7 @@ pub(super) fn check_declared_value(
                         if date_time.is_date_time() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date value but the value is a date-time".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -241,6 +254,7 @@ pub(super) fn check_declared_value(
                         if date_times.iter().any(|dt| dt.is_date_time()) {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have date values but one of values is a date-time".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -256,6 +270,7 @@ pub(super) fn check_declared_value(
                         if date_times.iter().any(|dt| dt.is_date_time()) {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have date values but one of values is a date-time".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -271,6 +286,7 @@ pub(super) fn check_declared_value(
                         if !periods.is_empty() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value contains periods".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -288,6 +304,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a date value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -302,6 +319,7 @@ pub(super) fn check_declared_value(
                         message:
                             "Property is declared to have a date value but the value is not a date"
                                 .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -336,6 +354,7 @@ pub(super) fn check_declared_value(
                             message:
                                 "Property is declared to have a date-time value contains periods"
                                     .to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -348,6 +367,7 @@ pub(super) fn check_declared_value(
                         if dtstart.value.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -361,6 +381,7 @@ pub(super) fn check_declared_value(
                         if dt_end.value.is_date() {
                             errors.push(ComponentPropertyError {
                                 message: "Property is declared to have a date-time value but the value is a date".to_string(),
+                                severity: ICalendarErrorSeverity::Error,
                                 location: Some(ComponentPropertyLocation {
                                     index: property_index,
                                     name: component_property_name(property).to_string(),
@@ -374,6 +395,7 @@ pub(super) fn check_declared_value(
                             TriggerValue::Relative(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a date-time value but has an absolute trigger".to_string(),
+                                    severity: ICalendarErrorSeverity::Error,
                                     location: Some(ComponentPropertyLocation {
                                         index: property_index,
                                         name: component_property_name(property).to_string(),
@@ -398,6 +420,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a date-time value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -412,6 +435,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a date-time value but the value is not a date-time"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -436,6 +460,7 @@ pub(super) fn check_declared_value(
                             TriggerValue::Absolute(_) => {
                                 errors.push(ComponentPropertyError {
                                     message: "Property is declared to have a duration value but has an absolute trigger".to_string(),
+                                    severity: ICalendarErrorSeverity::Error,
                                     location: Some(ComponentPropertyLocation {
                                         index: property_index,
                                         name: component_property_name(property).to_string(),
@@ -457,6 +482,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a duration value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -471,6 +497,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a duration value but the value is not a duration"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -495,6 +522,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a float value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -509,6 +537,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a float value but the value is not a float"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -535,6 +564,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have an integer value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -549,6 +579,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have an integer value but the value is not an integer"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -572,6 +603,7 @@ pub(super) fn check_declared_value(
                             message:
                                 "Property is declared to have a period value contains date-times"
                                     .to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -588,6 +620,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a period value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -602,6 +635,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a period value but the value is not a period"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -635,6 +669,7 @@ pub(super) fn check_declared_value(
                                         "Failed to convert recurrence rule to model: {}",
                                         e
                                     ),
+                                    severity: ICalendarErrorSeverity::Warning,
                                     location: Some(ComponentPropertyLocation {
                                         index: property_index,
                                         name: component_property_name(property).to_string(),
@@ -666,6 +701,7 @@ pub(super) fn check_declared_value(
                                             "Failed to convert recurrence rule to model: {}",
                                             e
                                         ),
+                                        severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -682,6 +718,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a recurrence value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -696,6 +733,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a recurrence value but the value is not a recurrence"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -734,6 +772,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a text value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -748,6 +787,7 @@ pub(super) fn check_declared_value(
                         message:
                             "Property is declared to have a text value but the value is not a text"
                                 .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -760,7 +800,6 @@ pub(super) fn check_declared_value(
                 let mut invalid = false;
 
                 match property {
-                    // TODO Valid property types need to be listed
                     ComponentProperty::XProperty(x_prop) => match is_time_valued(&x_prop.value) {
                         Ok(times) => {
                             for (index, time) in times.iter().enumerate() {
@@ -770,6 +809,7 @@ pub(super) fn check_declared_value(
                                             "Found an invalid time at index {} - {:?}",
                                             index, e
                                         ),
+                                        severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -793,6 +833,7 @@ pub(super) fn check_declared_value(
                                                 "Found an invalid time at index {} - {:?}",
                                                 index, e
                                             ),
+                                            severity: ICalendarErrorSeverity::Warning,
                                             location: Some(ComponentPropertyLocation {
                                                 index: property_index,
                                                 name: component_property_name(property).to_string(),
@@ -812,6 +853,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a time value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -826,6 +868,7 @@ pub(super) fn check_declared_value(
                         message:
                             "Property is declared to have a time value but the value is not a time"
                                 .to_string(),
+                        severity: ICalendarErrorSeverity::Warning,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
@@ -835,37 +878,42 @@ pub(super) fn check_declared_value(
                 }
             }
             Value::Uri => {
-                let require_uri = |errors: &mut Vec<ComponentPropertyError>, v: &str| {
-                    if !is_uri_valued(v) {
-                        errors.push(ComponentPropertyError {
+                let require_uri =
+                    |errors: &mut Vec<ComponentPropertyError>,
+                     v: &str,
+                     severity: ICalendarErrorSeverity| {
+                        if !is_uri_valued(v) {
+                            errors.push(ComponentPropertyError {
                             message: "Property is declared to have a URI value but the value is not a URI".to_string(),
+                            severity,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
                                 property_location: Some(WithinPropertyLocation::Value),
                             }),
                         });
-                    }
-                };
+                        }
+                    };
 
                 match property {
                     ComponentProperty::Url(url) => {
                         push_redundant_error_msg(errors, property_index, property);
-                        require_uri(errors, &url.value);
+                        require_uri(errors, &url.value, ICalendarErrorSeverity::Error);
                     }
                     ComponentProperty::Attach(attach) => {
                         push_redundant_error_msg(errors, property_index, property);
-                        require_uri(errors, &attach.value);
+                        require_uri(errors, &attach.value, ICalendarErrorSeverity::Error);
                     }
                     ComponentProperty::XProperty(x_prop) => {
-                        require_uri(errors, &x_prop.value);
+                        require_uri(errors, &x_prop.value, ICalendarErrorSeverity::Warning);
                     }
                     ComponentProperty::IanaProperty(iana_prop) => {
-                        require_uri(errors, &iana_prop.value);
+                        require_uri(errors, &iana_prop.value, ICalendarErrorSeverity::Warning);
                     }
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a URI value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -889,6 +937,7 @@ pub(super) fn check_declared_value(
                                 if let Err(e) = validate_utc_offset(&offset) {
                                     errors.push(ComponentPropertyError {
                                         message: format!("Found an invalid UTC offset - {:?}", e),
+                                        severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -908,6 +957,7 @@ pub(super) fn check_declared_value(
                                 if let Err(e) = validate_utc_offset(&offset) {
                                     errors.push(ComponentPropertyError {
                                         message: format!("Found an invalid UTC offset - {:?}", e),
+                                        severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
                                             name: component_property_name(property).to_string(),
@@ -924,6 +974,7 @@ pub(super) fn check_declared_value(
                     _ => {
                         errors.push(ComponentPropertyError {
                             message: "Property is declared to have a UTC offset value but that is not valid for this property".to_string(),
+                            severity: ICalendarErrorSeverity::Error,
                             location: Some(ComponentPropertyLocation {
                                 index: property_index,
                                 name: component_property_name(property).to_string(),
@@ -938,6 +989,7 @@ pub(super) fn check_declared_value(
                         message:
                         "Property is declared to have a UTC offset value but the value is not a UTC offset"
                             .to_string(),
+                        severity: ICalendarErrorSeverity::Error,
                         location: Some(ComponentPropertyLocation {
                             index: property_index,
                             name: component_property_name(property).to_string(),
