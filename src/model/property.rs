@@ -2377,7 +2377,7 @@ where
         self.inner
             .params
             .push(Param::TriggerRelationship(TriggerRelationshipParam {
-                trigger_relationship: trigger_relationship,
+                trigger_relationship,
             }));
         self
     }
