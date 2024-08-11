@@ -37,7 +37,7 @@ pub mod prelude {
     pub use crate::ops::load_ical;
     pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};
     pub use crate::serialize::WriteModel;
-    pub use crate::validate::validate_model;
+    pub use crate::validate::{validate_model, ICalendarErrorSeverity};
 }
 
 /// Streaming, single character matching the predicate
