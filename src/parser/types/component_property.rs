@@ -1,8 +1,8 @@
 use crate::common::{Status, TimeTransparency};
 use crate::parser::types::{
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, IanaProperty, RecurRulePart, Uri, XProperty,
+    DateOrDateTime, DateOrDateTimeOrPeriod, DateTime, Duration, IanaProperty, ParamValue, Period,
+    RecurRulePart, Uri, UtcOffset, XProperty,
 };
-use crate::parser::{Duration, ParamValue, Period, UtcOffset};
 
 #[derive(Debug, PartialEq)]
 pub enum ComponentProperty<'a> {
@@ -10,7 +10,7 @@ pub enum ComponentProperty<'a> {
     UniqueIdentifier(UniqueIdentifierProperty<'a>),
     DateTimeStart(DateTimeStartProperty<'a>),
     Classification(ClassificationProperty<'a>),
-    DateTimeCreated(CreatedProperty<'a>),
+    DateTimeCreated(DateTimeCreatedProperty<'a>),
     Description(DescriptionProperty<'a>),
     GeographicPosition(GeographicPositionProperty<'a>),
     LastModified(LastModifiedProperty<'a>),
@@ -301,7 +301,7 @@ pub struct TriggerProperty<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct CreatedProperty<'a> {
+pub struct DateTimeCreatedProperty<'a> {
     pub other_params: Vec<ParamValue<'a>>,
     pub value: DateTime,
 }

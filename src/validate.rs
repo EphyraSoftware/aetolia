@@ -262,7 +262,7 @@ fn validate_time(time: &crate::parser::types::Time) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn validate_utc_offset(offset: &crate::parser::UtcOffset) -> anyhow::Result<()> {
+fn validate_utc_offset(offset: &crate::parser::types::UtcOffset) -> anyhow::Result<()> {
     if offset.sign < 0
         && (offset.hours == 0
             && offset.minutes == 0

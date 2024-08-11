@@ -1,5 +1,5 @@
 use crate::parser::types::component_property::ComponentProperty;
-use crate::parser::ContentLine;
+use crate::parser::types::ContentLine;
 
 #[derive(Debug, PartialEq)]
 pub enum CalendarComponent<'a> {

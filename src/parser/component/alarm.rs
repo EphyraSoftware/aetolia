@@ -1,6 +1,6 @@
 use crate::parser::property::{
     prop_action, prop_attach, prop_attendee, prop_description, prop_duration, prop_iana,
-    prop_repeat_count, prop_summary, prop_trigger, prop_x,
+    prop_repeat, prop_summary, prop_trigger, prop_x,
 };
 use crate::parser::types::CalendarComponent;
 use crate::parser::types::ComponentProperty;
@@ -25,7 +25,7 @@ where
                 prop_action.map(ComponentProperty::Action),
                 prop_trigger.map(ComponentProperty::Trigger),
                 prop_duration.map(ComponentProperty::Duration),
-                prop_repeat_count.map(ComponentProperty::RepeatCount),
+                prop_repeat.map(ComponentProperty::RepeatCount),
                 prop_attach.map(ComponentProperty::Attach),
                 prop_description.map(ComponentProperty::Description),
                 prop_summary.map(ComponentProperty::Summary),
@@ -45,10 +45,10 @@ mod tests {
     use super::*;
     use crate::common::Value;
     use crate::parser::types::{
-        Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, DurationOrDateTime,
-        DurationProperty, ParamValue, RepeatProperty, Time, TriggerProperty,
+        Action, ActionProperty, AttachProperty, AttachValue, Date, DateTime, Duration,
+        DurationOrDateTime, DurationProperty, ParamValue, RepeatProperty, Time, TriggerProperty,
     };
-    use crate::parser::{Duration, Error};
+    use crate::parser::Error;
     use crate::test_utils::check_rem;
 
     #[test]

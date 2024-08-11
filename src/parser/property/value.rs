@@ -140,7 +140,7 @@ where
     Ok((input, DateTime { date, time }))
 }
 
-pub fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
+fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {

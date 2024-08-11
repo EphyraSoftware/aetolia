@@ -101,7 +101,7 @@ pub enum Range {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub enum Related {
+pub enum TriggerRelationship {
     #[default]
     Start,
     End,

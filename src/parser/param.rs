@@ -309,8 +309,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, related)) =
-        tuple((tag_no_case("RELATED"), char('='), cut(param_value_related)))(input)?;
+    let (input, (_, _, related)) = tuple((
+        tag_no_case("RELATED"),
+        char('='),
+        cut(param_value_trigger_relationship),
+    ))(input)?;
 
     Ok((input, ParamValue::Related { related }))
 }
@@ -390,8 +393,11 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, (tz_id, unique))) =
-        tuple((tag_no_case("TZID"), char('='), cut(param_value_tz_id)))(input)?;
+    let (input, (_, _, (tz_id, unique))) = tuple((
+        tag_no_case("TZID"),
+        char('='),
+        cut(param_value_time_zone_id),
+    ))(input)?;
 
     Ok((input, ParamValue::TimeZoneId { tz_id, unique }))
 }
@@ -503,8 +509,8 @@ mod tests {
     use super::*;
     use crate::common::LanguageTag;
     use crate::common::{
-        CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, Related,
-        RelationshipType, Role, Value,
+        CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown, RelationshipType,
+        Role, TriggerRelationship, Value,
     };
     use crate::test_utils::check_rem;
 
@@ -862,7 +868,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             ParamValue::Related {
-                related: Related::Start
+                related: TriggerRelationship::Start
             },
             param
         );
@@ -874,7 +880,7 @@ mod tests {
         check_rem(rem, 1);
         assert_eq!(
             ParamValue::Related {
-                related: Related::End
+                related: TriggerRelationship::End
             },
             param
         );

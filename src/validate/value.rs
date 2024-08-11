@@ -6,7 +6,7 @@ use crate::model::{
     RecurrenceDateTimesProperty, RecurrenceDateTimesPropertyValue, RecurrenceIdProperty,
 };
 use crate::parser::param_value_uri;
-use crate::parser::recur;
+use crate::parser::prop_value_recur;
 use crate::parser::{
     prop_value_binary, prop_value_date, prop_value_date_time, prop_value_duration,
     prop_value_float, prop_value_integer, prop_value_period, prop_value_text, prop_value_time,
@@ -1041,7 +1041,7 @@ fn is_recur_valued(
     let mut content = property_value.as_bytes().to_vec();
     content.push(b'`');
 
-    let result = recur::<Error>(content.as_bytes());
+    let result = prop_value_recur::<Error>(content.as_bytes());
     match result {
         Ok((rest, rule)) if rest.len() == 1 => Ok(rule),
         _ => anyhow::bail!("Not a valid recur rule"),
@@ -1082,7 +1082,9 @@ fn is_uri_valued(property_value: &str) -> bool {
     }
 }
 
-fn is_utc_offset_valued(property_value: &String) -> anyhow::Result<crate::parser::UtcOffset> {
+fn is_utc_offset_valued(
+    property_value: &String,
+) -> anyhow::Result<crate::parser::types::UtcOffset> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 

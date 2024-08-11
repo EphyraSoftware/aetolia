@@ -13,7 +13,7 @@ use nom::multi::separated_list1;
 use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
-pub fn recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
+pub fn prop_value_recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
 where
     E: ParseError<&'a [u8]>
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn daily_rule() {
-        let (rem, rule) = recur::<Error>(b"FREQ=DAILY;COUNT=10;INTERVAL=2;").unwrap();
+        let (rem, rule) = prop_value_recur::<Error>(b"FREQ=DAILY;COUNT=10;INTERVAL=2;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,
@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn monthly_rule() {
         let (rem, rule) =
-            recur::<Error>(b"FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;").unwrap();
+            prop_value_recur::<Error>(b"FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,
@@ -401,9 +401,10 @@ mod tests {
 
     #[test]
     fn yearly_rule() {
-        let (rem, rule) =
-            recur::<Error>(b"FREQ=YEARLY;INTERVAL=2;BYMONTH=1;BYDAY=SU;BYHOUR=8,9;BYMINUTE=30;")
-                .unwrap();
+        let (rem, rule) = prop_value_recur::<Error>(
+            b"FREQ=YEARLY;INTERVAL=2;BYMONTH=1;BYDAY=SU;BYHOUR=8,9;BYMINUTE=30;",
+        )
+        .unwrap();
         check_rem(rem, 1);
         assert_eq!(
             rule,

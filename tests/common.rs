@@ -306,7 +306,7 @@ pub fn make_test_object() -> ICalObject {
         .finish_property()
         // RFC 5545: 3.8.6.3
         .add_relative_trigger(Duration::days(1, 1))
-        .add_trigger_relationship(Related::Start)
+        .add_trigger_relationship(TriggerRelationship::Start)
         .add_iana_param("trigger-test", "test")
         .add_x_param("x-trigger-test", "test")
         .finish_property()

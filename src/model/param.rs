@@ -178,7 +178,7 @@ impl_param_inner!(FreeBusyTimeTypeParam, FreeBusyTimeType);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelatedParam {
-    pub related: Related,
+    pub related: TriggerRelationship,
 }
 
 impl_param_inner!(RelatedParam, Related);
@@ -460,7 +460,7 @@ macro_rules! directory_entry_reference_param {
 
 use crate::common::{
     CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, ParticipationStatusUnknown, Range,
-    Related, RelationshipType, Role, TimeTransparency, Value,
+    RelationshipType, Role, TimeTransparency, TriggerRelationship, Value,
 };
 pub(crate) use directory_entry_reference_param;
 

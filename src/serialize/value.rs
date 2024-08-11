@@ -368,15 +368,15 @@ impl WriteModel for crate::common::FreeBusyTimeType {
     }
 }
 
-impl WriteModel for crate::common::Related {
+impl WriteModel for crate::common::TriggerRelationship {
     fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        use crate::common::Related;
+        use crate::common::TriggerRelationship;
 
         match self {
-            Related::Start => {
+            TriggerRelationship::Start => {
                 writer.write_all(b"START")?;
             }
-            Related::End => {
+            TriggerRelationship::End => {
                 writer.write_all(b"END")?;
             }
         }

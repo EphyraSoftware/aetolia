@@ -6,7 +6,7 @@ use crate::model::{
     GeographicPositionPropertyValue, Period, RecurrenceDateTimesPropertyValue,
     TimeZoneIdPropertyValue,
 };
-use crate::parser::ContentLine;
+use crate::parser::types::ContentLine;
 use crate::prelude::{RequestStatusPropertyValue, TriggerValue};
 use anyhow::Context;
 
@@ -91,7 +91,7 @@ impl ToModel for crate::parser::types::Classification<'_> {
     }
 }
 
-impl ToModel for crate::parser::types::CreatedProperty<'_> {
+impl ToModel for crate::parser::types::DateTimeCreatedProperty<'_> {
     type Model = crate::model::CreatedProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -445,7 +445,7 @@ impl ToModel for crate::parser::types::RecurrenceDateTimesProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::Duration {
+impl ToModel for crate::parser::types::Duration {
     type Model = crate::model::Duration;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -527,27 +527,27 @@ impl ToModel for crate::parser::types::MethodProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::CalendarProperty<'_> {
+impl ToModel for crate::parser::types::CalendarProperty<'_> {
     type Model = crate::model::CalendarProperty;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         match self {
-            crate::parser::CalendarProperty::ProductId(product_id) => Ok(
+            crate::parser::types::CalendarProperty::ProductId(product_id) => Ok(
                 crate::model::CalendarProperty::ProductId(product_id.to_model()?),
             ),
-            crate::parser::CalendarProperty::Version(version) => {
+            crate::parser::types::CalendarProperty::Version(version) => {
                 Ok(crate::model::CalendarProperty::Version(version.to_model()?))
             }
-            crate::parser::CalendarProperty::CalendarScale(cal_scale) => Ok(
+            crate::parser::types::CalendarProperty::CalendarScale(cal_scale) => Ok(
                 crate::model::CalendarProperty::CalendarScale(cal_scale.to_model()?),
             ),
-            crate::parser::CalendarProperty::Method(method) => {
+            crate::parser::types::CalendarProperty::Method(method) => {
                 Ok(crate::model::CalendarProperty::Method(method.to_model()?))
             }
-            crate::parser::CalendarProperty::XProperty(x_prop) => Ok(
+            crate::parser::types::CalendarProperty::XProperty(x_prop) => Ok(
                 crate::model::CalendarProperty::XProperty(x_prop.to_model()?),
             ),
-            crate::parser::CalendarProperty::IanaProperty(iana_prop) => Ok(
+            crate::parser::types::CalendarProperty::IanaProperty(iana_prop) => Ok(
                 crate::model::CalendarProperty::IanaProperty(iana_prop.to_model()?),
             ),
         }
@@ -638,7 +638,7 @@ impl ToModel for crate::parser::types::TimeZoneOffsetProperty<'_> {
     }
 }
 
-impl ToModel for crate::parser::UtcOffset {
+impl ToModel for crate::parser::types::UtcOffset {
     type Model = crate::model::TimeZoneOffset;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
@@ -887,17 +887,17 @@ impl ToModel for ContentLine<'_> {
     }
 }
 
-impl ToModel for crate::parser::Period {
+impl ToModel for crate::parser::types::Period {
     type Model = Period;
 
     fn to_model(&self) -> anyhow::Result<Self::Model> {
         Ok(Period {
             start: (&self.start).try_into()?,
             end: match &self.end {
-                crate::parser::PeriodEnd::DateTime(date_time) => {
+                crate::parser::types::PeriodEnd::DateTime(date_time) => {
                     crate::model::PeriodEnd::DateTime(date_time.try_into()?)
                 }
-                crate::parser::PeriodEnd::Duration(duration) => {
+                crate::parser::types::PeriodEnd::Duration(duration) => {
                     crate::model::PeriodEnd::Duration(duration.to_model()?)
                 }
             },

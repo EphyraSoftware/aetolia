@@ -24,17 +24,15 @@ mod property;
 /// These types represent the structure of the iCalendar format.
 pub mod types;
 
+use crate::parser::types::{ContentLine, ParamValue};
 pub use first_pass::content_line_first_pass;
 pub use object::{ical_object, ical_stream};
 pub use param::value::*;
 pub use param::{property_param, property_params};
 pub use property::component::*;
-pub use property::recur::recur;
+pub use property::recur::prop_value_recur;
 pub use property::uri::param_value_uri;
 pub use property::value::*;
-pub use types::CalendarProperty;
-pub use types::ParamValue;
-pub use types::{Duration, Period, PeriodEnd, UtcOffset};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error<'a> {
@@ -134,13 +132,6 @@ impl<'a> From<Error<'a>> for VerboseError<&'a [u8]> {
             errors: vec![(value.input, VerboseErrorKind::Context(ctx))],
         }
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct ContentLine<'a> {
-    pub(crate) property_name: &'a [u8],
-    pub(crate) params: Vec<ParamValue<'a>>,
-    pub(crate) value: Vec<u8>,
 }
 
 /// All ASCII control characters except tab (%x09).
@@ -283,7 +274,7 @@ where
     ))(input)
 }
 
-pub fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
+fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {

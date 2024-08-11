@@ -1,7 +1,7 @@
 use crate::parser::component::alarm::component_alarm;
 use crate::parser::property::{
     prop_attach, prop_attendee, prop_categories, prop_classification, prop_comment, prop_contact,
-    prop_created, prop_date_time_completed, prop_date_time_due, prop_date_time_stamp,
+    prop_date_time_completed, prop_date_time_created, prop_date_time_due, prop_date_time_stamp,
     prop_date_time_start, prop_description, prop_duration, prop_exception_date_times,
     prop_geographic_position, prop_iana, prop_last_modified, prop_location, prop_organizer,
     prop_percent_complete, prop_priority, prop_recurrence_date_times, prop_recurrence_id,
@@ -34,7 +34,7 @@ where
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
                 prop_classification.map(ComponentProperty::Classification),
                 prop_date_time_completed.map(ComponentProperty::DateTimeCompleted),
-                prop_created.map(ComponentProperty::DateTimeCreated),
+                prop_date_time_created.map(ComponentProperty::DateTimeCreated),
                 prop_description.map(ComponentProperty::Description),
                 prop_date_time_start.map(ComponentProperty::DateTimeStart),
                 prop_geographic_position.map(ComponentProperty::GeographicPosition),

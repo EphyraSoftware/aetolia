@@ -18,6 +18,9 @@ use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
+/// The top-level parser for an iCalendar stream.
+///
+/// This recognizes a list of [ical_object]s, separated by whitespace.
 pub fn ical_stream<'a, E>(mut input: &'a [u8]) -> IResult<&'a [u8], Vec<ICalendar<'a>>, E>
 where
     E: ParseError<&'a [u8]>
@@ -40,6 +43,9 @@ where
     Ok((input, out))
 }
 
+/// The top-level parser for an iCalendar object.
+///
+/// This recognizes a single iCalendar object.
 pub fn ical_object<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ICalendar<'a>, E>
 where
     E: ParseError<&'a [u8]>

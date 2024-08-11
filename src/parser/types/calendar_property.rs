@@ -1,4 +1,4 @@
-use crate::parser::ParamValue;
+use crate::parser::types::ParamValue;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum CalendarProperty<'a> {

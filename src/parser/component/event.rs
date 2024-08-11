@@ -1,12 +1,12 @@
 use crate::parser::component::alarm::component_alarm;
 use crate::parser::property::{
     prop_attach, prop_attendee, prop_categories, prop_classification, prop_comment, prop_contact,
-    prop_created, prop_date_time_end, prop_date_time_stamp, prop_date_time_start, prop_description,
-    prop_duration, prop_exception_date_times, prop_geographic_position, prop_iana,
-    prop_last_modified, prop_location, prop_organizer, prop_priority, prop_recurrence_date_times,
-    prop_recurrence_id, prop_recurrence_rule, prop_related_to, prop_request_status, prop_resources,
-    prop_sequence, prop_status, prop_summary, prop_time_transparency, prop_unique_identifier,
-    prop_url, prop_x,
+    prop_date_time_created, prop_date_time_end, prop_date_time_stamp, prop_date_time_start,
+    prop_description, prop_duration, prop_exception_date_times, prop_geographic_position,
+    prop_iana, prop_last_modified, prop_location, prop_organizer, prop_priority,
+    prop_recurrence_date_times, prop_recurrence_id, prop_recurrence_rule, prop_related_to,
+    prop_request_status, prop_resources, prop_sequence, prop_status, prop_summary,
+    prop_time_transparency, prop_unique_identifier, prop_url, prop_x,
 };
 use crate::parser::types::CalendarComponent;
 use crate::parser::types::ComponentProperty;
@@ -33,7 +33,7 @@ where
                 prop_unique_identifier.map(ComponentProperty::UniqueIdentifier),
                 prop_date_time_start.map(ComponentProperty::DateTimeStart),
                 prop_classification.map(ComponentProperty::Classification),
-                prop_created.map(ComponentProperty::DateTimeCreated),
+                prop_date_time_created.map(ComponentProperty::DateTimeCreated),
                 prop_description.map(ComponentProperty::Description),
                 prop_geographic_position.map(ComponentProperty::GeographicPosition),
                 prop_last_modified.map(ComponentProperty::LastModified),

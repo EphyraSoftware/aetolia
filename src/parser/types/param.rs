@@ -1,6 +1,6 @@
 use crate::common::{
     CalendarUserType, Encoding, FreeBusyTimeType, LanguageTag, ParticipationStatusUnknown, Range,
-    Related, RelationshipType, Role, Value,
+    RelationshipType, Role, TriggerRelationship, Value,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -48,7 +48,7 @@ pub enum ParamValue<'a> {
         range: Range,
     },
     Related {
-        related: Related,
+        related: TriggerRelationship,
     },
     RelationshipType {
         relationship: RelationshipType,

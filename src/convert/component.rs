@@ -4,7 +4,7 @@ use crate::model::{
     AlarmComponent, ComponentProperty, DaylightComponent, FreeBusyComponent, JournalComponent,
     StandardComponent, TimeZoneComponent, ToDoComponent,
 };
-use crate::parser::ContentLine;
+use crate::parser::types::ContentLine;
 
 impl ToModel for crate::parser::types::CalendarComponent<'_> {
     type Model = crate::model::CalendarComponent;

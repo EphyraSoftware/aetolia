@@ -1,6 +1,7 @@
 use crate::common::ParticipationStatusUnknown;
 use crate::common::{
-    CalendarUserType, Encoding, FreeBusyTimeType, Related, RelationshipType, Role, Value,
+    CalendarUserType, Encoding, FreeBusyTimeType, RelationshipType, Role, TriggerRelationship,
+    Value,
 };
 use crate::parser::{iana_token, param_text, read_string, x_name, Error};
 use nom::branch::alt;
@@ -55,7 +56,6 @@ where
     Ok((input, encoding))
 }
 
-/// See https://www.rfc-editor.org/rfc/rfc5545 section 3.2.9
 pub fn param_value_free_busy_time_type<'a, E>(
     input: &'a [u8],
 ) -> IResult<&'a [u8], FreeBusyTimeType, E>
@@ -119,13 +119,15 @@ where
     Ok((input, part_stat))
 }
 
-pub fn param_value_related<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Related, E>
+pub fn param_value_trigger_relationship<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], TriggerRelationship, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, related) = alt((
-        tag_no_case("START").map(|_| Related::Start),
-        tag_no_case("END").map(|_| Related::End),
+        tag_no_case("START").map(|_| TriggerRelationship::Start),
+        tag_no_case("END").map(|_| TriggerRelationship::End),
     ))(input)?;
 
     Ok((input, related))
@@ -194,7 +196,7 @@ where
     Ok((input, rsvp))
 }
 
-pub fn param_value_tz_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (String, bool), E>
+pub fn param_value_time_zone_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (String, bool), E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {

@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 
 use crate::common::{
     CalendarDateTime, CalendarUserType, Encoding, FreeBusyTimeType, ParticipationStatusUnknown,
-    Range, Related, RelationshipType, Role, Status, TimeTransparency, Value,
+    Range, RelationshipType, Role, Status, TimeTransparency, TriggerRelationship, Value,
 };
 use crate::prelude::impl_property_access;
 pub use duration::*;
@@ -2371,7 +2371,7 @@ where
         }
     }
 
-    pub fn add_trigger_relationship(mut self, related: Related) -> Self {
+    pub fn add_trigger_relationship(mut self, related: TriggerRelationship) -> Self {
         self.inner
             .params
             .push(Param::Related(RelatedParam { related }));

@@ -1,19 +1,20 @@
 use crate::common::{Encoding, Status, TimeTransparency, Value};
 use crate::parser::param::{other_params, property_params};
-use crate::parser::property::recur::recur;
+use crate::parser::property::recur::prop_value_recur;
 use crate::parser::property::uri::param_value_uri;
 use crate::parser::types::{
     Action, ActionProperty, AttachProperty, AttachValue, AttendeeProperty, CategoriesProperty,
-    Classification, ClassificationProperty, CommentProperty, ContactProperty, CreatedProperty,
-    DateOrDateTime, DateOrDateTimeOrPeriod, DateTimeCompletedProperty, DateTimeDueProperty,
-    DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty, DescriptionProperty,
-    DurationOrDateTime, DurationProperty, ExceptionDateTimesProperty, FreeBusyTimeProperty,
-    GeographicPositionProperty, LastModifiedProperty, LocationProperty, OrganizerProperty,
-    ParamValue, PercentCompleteProperty, PriorityProperty, RecurrenceDateTimesProperty,
-    RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty, RepeatProperty,
-    RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty, SummaryProperty,
-    TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty, TimeZoneOffsetProperty,
-    TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty, UrlProperty,
+    Classification, ClassificationProperty, CommentProperty, ContactProperty, DateOrDateTime,
+    DateOrDateTimeOrPeriod, DateTimeCompletedProperty, DateTimeCreatedProperty,
+    DateTimeDueProperty, DateTimeEndProperty, DateTimeStampProperty, DateTimeStartProperty,
+    DescriptionProperty, DurationOrDateTime, DurationProperty, ExceptionDateTimesProperty,
+    FreeBusyTimeProperty, GeographicPositionProperty, LastModifiedProperty, LocationProperty,
+    OrganizerProperty, ParamValue, PercentCompleteProperty, PriorityProperty,
+    RecurrenceDateTimesProperty, RecurrenceIdProperty, RecurrenceRuleProperty, RelatedToProperty,
+    RepeatProperty, RequestStatusProperty, ResourcesProperty, SequenceProperty, StatusProperty,
+    SummaryProperty, TimeTransparencyProperty, TimeZoneIdProperty, TimeZoneNameProperty,
+    TimeZoneOffsetProperty, TimeZoneUrlProperty, TriggerProperty, UniqueIdentifierProperty,
+    UrlProperty,
 };
 use crate::parser::{iana_token, read_int, x_name, Error, InnerError};
 use crate::parser::{
@@ -931,7 +932,12 @@ where
 {
     let (input, (_, (other_params, _, value, _))) = tuple((
         tag_no_case("RRULE"),
-        cut(tuple((other_params, char(':'), recur, tag("\r\n")))),
+        cut(tuple((
+            other_params,
+            char(':'),
+            prop_value_recur,
+            tag("\r\n"),
+        ))),
     ))(input)?;
 
     Ok((
@@ -978,7 +984,7 @@ where
 /// Parse a REPEAT property.
 ///
 /// RFC 5545, section 3.8.6.2
-pub fn prop_repeat_count<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RepeatProperty<'a>, E>
+pub fn prop_repeat<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RepeatProperty<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -1050,7 +1056,9 @@ where
 /// Parse a CREATED property.
 ///
 /// RFC 5545, section 3.8.7.1
-pub fn prop_created<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CreatedProperty<'a>, E>
+pub fn prop_date_time_created<'a, E>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], DateTimeCreatedProperty<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -1066,7 +1074,7 @@ where
 
     Ok((
         input,
-        CreatedProperty {
+        DateTimeCreatedProperty {
             other_params,
             value,
         },
@@ -1223,7 +1231,9 @@ mod tests {
     use super::*;
     use crate::common::FreeBusyTimeType;
     use crate::common::RecurFreq;
-    use crate::common::{LanguageTag, ParticipationStatusUnknown, Range, Related, Role, Value};
+    use crate::common::{
+        LanguageTag, ParticipationStatusUnknown, Range, Role, TriggerRelationship, Value,
+    };
     use crate::parser::types::ParamValue;
     use crate::parser::types::RecurRulePart;
     use crate::parser::types::{Authority, Host, Uri};
@@ -2267,11 +2277,12 @@ RSVP to team leader."#
 
     #[test]
     fn created() {
-        let (rem, prop) = prop_created::<Error>(b"CREATED:19980118T230000Z\r\n;").unwrap();
+        let (rem, prop) =
+            prop_date_time_created::<Error>(b"CREATED:19980118T230000Z\r\n;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             prop,
-            CreatedProperty {
+            DateTimeCreatedProperty {
                 other_params: vec![],
                 value: DateTime {
                     date: Date {
@@ -2305,7 +2316,7 @@ RSVP to team leader."#
 
     #[test]
     fn repeat() {
-        let (rem, prop) = prop_repeat_count::<Error>(b"REPEAT:4\r\n;").unwrap();
+        let (rem, prop) = prop_repeat::<Error>(b"REPEAT:4\r\n;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             prop,
@@ -2341,7 +2352,7 @@ RSVP to team leader."#
             prop,
             TriggerProperty {
                 params: vec![ParamValue::Related {
-                    related: Related::End,
+                    related: TriggerRelationship::End,
                 },],
                 value: DurationOrDateTime::Duration(Duration {
                     sign: 1,
@@ -2382,11 +2393,12 @@ RSVP to team leader."#
 
     #[test]
     fn date_time_stamp() {
-        let (rem, prop) = prop_created::<Error>(b"CREATED:19960329T133000Z\r\n;").unwrap();
+        let (rem, prop) =
+            prop_date_time_created::<Error>(b"CREATED:19960329T133000Z\r\n;").unwrap();
         check_rem(rem, 1);
         assert_eq!(
             prop,
-            CreatedProperty {
+            DateTimeCreatedProperty {
                 other_params: vec![],
                 value: DateTime {
                     date: Date {
