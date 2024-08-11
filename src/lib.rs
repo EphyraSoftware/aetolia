@@ -14,10 +14,10 @@ pub mod common;
 pub mod convert;
 /// The core representation that is used for everything except the parser.
 pub mod model;
-/// The iCalendar parser.
-pub mod parser;
 /// Common operations.
 pub mod ops;
+/// The iCalendar parser.
+pub mod parser;
 /// The serializer for the core representation back to the iCalendar text format.
 pub mod serialize;
 #[cfg(test)]
