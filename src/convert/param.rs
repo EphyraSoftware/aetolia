@@ -66,9 +66,11 @@ impl ToModel for ParserParam<'_> {
             ParserParam::Range { range } => ModelParam::Range(RangeParam {
                 range: range.clone(),
             }),
-            ParserParam::Related { related } => ModelParam::Related(TriggerRelationshipParam {
-                related: related.clone(),
-            }),
+            ParserParam::Related { related } => {
+                ModelParam::TriggerRelationship(TriggerRelationshipParam {
+                    trigger_relationship: related.clone(),
+                })
+            }
             ParserParam::RelationshipType { relationship } => {
                 ModelParam::RelationshipType(RelationshipTypeParam {
                     relationship: relationship.clone(),

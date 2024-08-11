@@ -505,7 +505,7 @@ fn param_name(param: &Param) -> &str {
         Param::Members { .. } => "MEMBER",
         Param::ParticipationStatus { .. } => "PARTSTAT",
         Param::Range { .. } => "RANGE",
-        Param::Related { .. } => "RELATED",
+        Param::TriggerRelationship { .. } => "RELATED",
         Param::RelationshipType { .. } => "RELTYPE",
         Param::Role { .. } => "ROLE",
         Param::Rsvp { .. } => "RSVP",

@@ -2373,10 +2373,12 @@ where
         }
     }
 
-    pub fn add_trigger_relationship(mut self, related: TriggerRelationship) -> Self {
+    pub fn add_trigger_relationship(mut self, trigger_relationship: TriggerRelationship) -> Self {
         self.inner
             .params
-            .push(Param::Related(TriggerRelationshipParam { related }));
+            .push(Param::TriggerRelationship(TriggerRelationshipParam {
+                trigger_relationship: trigger_relationship,
+            }));
         self
     }
 

@@ -166,7 +166,7 @@ pub(super) fn validate_params(params: &[Param], property_info: PropertyInfo) -> 
             Param::Other { name, .. } if name == "RANGE" => {
                 validate_range_param(&mut errors, &mut seen, param, index, &property_info);
             }
-            Param::Related { .. } => {
+            Param::TriggerRelationship { .. } => {
                 validate_related_param(&mut errors, &mut seen, param, index, &property_info);
             }
             Param::Other { name, .. } | Param::Others { name, .. } if name == "RELATED" => {

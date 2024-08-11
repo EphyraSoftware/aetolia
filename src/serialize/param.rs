@@ -105,7 +105,9 @@ impl WriteModel for crate::model::param::Param {
                 writer.write_all(b"FBTYPE=")?;
                 fb_type.write_model(writer)?;
             }
-            Param::Related(TriggerRelationshipParam { related }) => {
+            Param::TriggerRelationship(TriggerRelationshipParam {
+                trigger_relationship: related,
+            }) => {
                 writer.write_all(b"RELATED=")?;
                 related.write_model(writer)?;
             }
