@@ -19,7 +19,7 @@ pub enum Param {
     DelegatedFrom(DelegatedFromParam),
     RelationshipType(RelationshipTypeParam),
     FreeBusyTimeType(FreeBusyTimeTypeParam),
-    Related(RelatedParam),
+    Related(TriggerRelationshipParam),
     Other { name: String, value: String },
     Others { name: String, values: Vec<String> },
 }
@@ -177,11 +177,11 @@ pub struct FreeBusyTimeTypeParam {
 impl_param_inner!(FreeBusyTimeTypeParam, FreeBusyTimeType);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct RelatedParam {
+pub struct TriggerRelationshipParam {
     pub related: TriggerRelationship,
 }
 
-impl_param_inner!(RelatedParam, Related);
+impl_param_inner!(TriggerRelationshipParam, Related);
 
 impl Display for TimeTransparency {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {

@@ -3,8 +3,8 @@ use crate::model::param::{
     AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedFromParam,
     DelegatedToParam, DirectoryEntryReferenceParam, EncodingParam, FormatTypeParam,
     FreeBusyTimeTypeParam, LanguageParam, MembersParam, Param as ModelParam,
-    ParticipationStatusParam, RangeParam, RelatedParam, RelationshipTypeParam, RoleParam,
-    RsvpParam, SentByParam, TimeZoneIdParam, ValueTypeParam,
+    ParticipationStatusParam, RangeParam, RelationshipTypeParam, RoleParam, RsvpParam, SentByParam,
+    TimeZoneIdParam, TriggerRelationshipParam, ValueTypeParam,
 };
 use crate::parser::types::ParamValue as ParserParam;
 
@@ -66,7 +66,7 @@ impl ToModel for ParserParam<'_> {
             ParserParam::Range { range } => ModelParam::Range(RangeParam {
                 range: range.clone(),
             }),
-            ParserParam::Related { related } => ModelParam::Related(RelatedParam {
+            ParserParam::Related { related } => ModelParam::Related(TriggerRelationshipParam {
                 related: related.clone(),
             }),
             ParserParam::RelationshipType { relationship } => {

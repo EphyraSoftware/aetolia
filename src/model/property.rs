@@ -7,7 +7,8 @@ use crate::model::param::{
     add_is_utc, altrep_param, common_name_param, directory_entry_reference_param, language_param,
     sent_by_param, tz_id_param, CalendarUserTypeParam, DelegatedFromParam, DelegatedToParam,
     EncodingParam, FormatTypeParam, FreeBusyTimeTypeParam, MembersParam, ParticipationStatusParam,
-    RangeParam, RelatedParam, RelationshipTypeParam, RoleParam, RsvpParam, ValueTypeParam,
+    RangeParam, RelationshipTypeParam, RoleParam, RsvpParam, TriggerRelationshipParam,
+    ValueTypeParam,
 };
 use crate::model::param::{impl_other_component_params_builder, impl_other_params_builder, Param};
 use std::fmt::Display;
@@ -2375,7 +2376,7 @@ where
     pub fn add_trigger_relationship(mut self, related: TriggerRelationship) -> Self {
         self.inner
             .params
-            .push(Param::Related(RelatedParam { related }));
+            .push(Param::Related(TriggerRelationshipParam { related }));
         self
     }
 
