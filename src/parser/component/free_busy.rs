@@ -11,7 +11,6 @@ use nom::bytes::streaming::tag;
 use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
-use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
@@ -21,7 +20,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:VFREEBUSY\r\n"),
         cut(many0(alt((
             alt((
@@ -41,7 +40,8 @@ where
             prop_iana.map(ComponentProperty::IanaProperty),
         )))),
         tag("END:VFREEBUSY\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::FreeBusy { properties }))
 }

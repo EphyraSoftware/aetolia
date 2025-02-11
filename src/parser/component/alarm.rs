@@ -9,7 +9,6 @@ use nom::branch::alt;
 use nom::bytes::streaming::tag;
 use nom::error::ParseError;
 use nom::multi::many0;
-use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
 pub fn component_alarm<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
@@ -18,7 +17,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:VALARM\r\n"),
         many0(alt((
             alt((
@@ -35,7 +34,8 @@ where
             prop_iana.map(ComponentProperty::IanaProperty),
         ))),
         tag("END:VALARM\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::Alarm { properties }))
 }

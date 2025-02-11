@@ -12,7 +12,7 @@ use nom::character::streaming::char;
 use nom::combinator::{cut, map_res, recognize};
 use nom::error::ParseError;
 use nom::multi::{many0, separated_list1};
-use nom::sequence::{delimited, separated_pair, tuple};
+use nom::sequence::{delimited, separated_pair};
 use nom::{IResult, Parser};
 pub use value::*;
 
@@ -23,7 +23,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    many0(tuple((char(';'), cut(property_param))).map(|(_, p)| p)).parse(input)
+    many0((char(';'), cut(property_param)).map(|(_, p)| p)).parse(input)
 }
 
 /// Recognize a single parameter.
@@ -33,7 +33,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    alt((known_param, iana_param, x_param))(input)
+    alt((known_param, iana_param, x_param)).parse(input)
 }
 
 /// Parse an ALTREP param
@@ -47,11 +47,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, uri)) = tuple((
+    let (input, (_, _, uri)) = (
         tag_no_case("ALTREP"),
         char('='),
         cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::AltRep { uri }))
 }
@@ -63,7 +64,7 @@ fn param_common_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, _, value)) = tuple((tag_no_case("CN"), char('='), cut(param_value)))(input)?;
+    let (input, (_, _, value)) = (tag_no_case("CN"), char('='), cut(param_value)).parse(input)?;
 
     Ok((
         input,
@@ -82,11 +83,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, cu_type)) = tuple((
+    let (input, (_, _, cu_type)) = (
         tag_no_case("CUTYPE"),
         char('='),
         cut(param_value_calendar_user_type),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::CalendarUserType { cu_type }))
 }
@@ -100,11 +102,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, delegators)) = tuple((
+    let (input, (_, _, delegators)) = (
         tag_no_case("DELEGATED-FROM"),
         char('='),
         cut(param_value_delegated_from),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::DelegatedFrom { delegators }))
 }
@@ -120,7 +123,8 @@ where
     separated_list1(
         char(','),
         delimited(char('"'), recognize(param_value_uri), char('"')),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// Parse a DELEGATED-TO param
@@ -132,14 +136,15 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, delegates)) = tuple((
+    let (input, (_, _, delegates)) = (
         tag_no_case("DELEGATED-TO"),
         char('='),
         cut(separated_list1(
             char(','),
             delimited(char('"'), recognize(param_value_uri), char('"')),
         )),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::DelegatedTo { delegates }))
 }
@@ -153,11 +158,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, uri)) = tuple((
+    let (input, (_, _, uri)) = (
         tag_no_case("DIR"),
         char('='),
         cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::DirectoryEntryReference { uri }))
 }
@@ -171,11 +177,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, encoding)) = tuple((
+    let (input, (_, _, encoding)) = (
         tag_no_case("ENCODING"),
         char('='),
         cut(param_value_encoding),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::Encoding { encoding }))
 }
@@ -189,7 +196,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, (type_name, sub_type_name))) = tuple((
+    let (input, (_, _, (type_name, sub_type_name))) = (
         tag_no_case("FMTTYPE"),
         char('='),
         cut(separated_pair(
@@ -197,7 +204,8 @@ where
             char('/'),
             map_res(reg_name, |t| read_string(t, "FMTTYPE subtype-name")),
         )),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -217,11 +225,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, fb_type)) = tuple((
+    let (input, (_, _, fb_type)) = (
         tag_no_case("FBTYPE"),
         char('='),
         cut(param_value_free_busy_time_type),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::FreeBusyTimeType { fb_type }))
 }
@@ -236,7 +245,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, _, language)) =
-        tuple((tag_no_case("LANGUAGE"), char('='), cut(language_tag)))(input)?;
+        (tag_no_case("LANGUAGE"), char('='), cut(language_tag)).parse(input)?;
 
     Ok((input, ParamValue::Language { language }))
 }
@@ -250,14 +259,15 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, members)) = tuple((
+    let (input, (_, _, members)) = (
         tag_no_case("MEMBER"),
         char('='),
         cut(separated_list1(
             char(','),
             delimited(char('"'), recognize(param_value_uri), char('"')),
         )),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::Members { members }))
 }
@@ -271,11 +281,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, status)) = tuple((
+    let (input, (_, _, status)) = (
         tag_no_case("PARTSTAT"),
         char('='),
         cut(param_value_participation_status),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::ParticipationStatus { status }))
 }
@@ -290,7 +301,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, _, _)) =
-        tuple((tag_no_case("RANGE"), char('='), cut(tag("THISANDFUTURE"))))(input)?;
+        (tag_no_case("RANGE"), char('='), cut(tag("THISANDFUTURE"))).parse(input)?;
 
     Ok((
         input,
@@ -309,11 +320,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, related)) = tuple((
+    let (input, (_, _, related)) = (
         tag_no_case("RELATED"),
         char('='),
         cut(param_value_trigger_relationship),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::Related { related }))
 }
@@ -327,11 +339,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, relationship)) = tuple((
+    let (input, (_, _, relationship)) = (
         tag_no_case("RELTYPE"),
         char('='),
         cut(param_value_relationship_type),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::RelationshipType { relationship }))
 }
@@ -346,7 +359,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, _, role)) =
-        tuple((tag_no_case("ROLE"), char('='), cut(param_value_role)))(input)?;
+        (tag_no_case("ROLE"), char('='), cut(param_value_role)).parse(input)?;
 
     Ok((input, ParamValue::Role { role }))
 }
@@ -361,7 +374,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, _, rsvp)) =
-        tuple((tag_no_case("RSVP"), char('='), cut(param_value_rsvp)))(input)?;
+        (tag_no_case("RSVP"), char('='), cut(param_value_rsvp)).parse(input)?;
 
     Ok((input, ParamValue::Rsvp { rsvp }))
 }
@@ -375,11 +388,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, address)) = tuple((
+    let (input, (_, _, address)) = (
         tag_no_case("SENT-BY"),
         char('='),
         cut(delimited(char('"'), recognize(param_value_uri), char('"'))),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::SentBy { address }))
 }
@@ -393,11 +407,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, _, (tz_id, unique))) = tuple((
+    let (input, (_, _, (tz_id, unique))) = (
         tag_no_case("TZID"),
         char('='),
         cut(param_value_time_zone_id),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, ParamValue::TimeZoneId { tz_id, unique }))
 }
@@ -412,7 +427,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (_, _, value)) =
-        tuple((tag_no_case("VALUE"), char('='), cut(param_value_value_type)))(input)?;
+        (tag_no_case("VALUE"), char('='), cut(param_value_value_type)).parse(input)?;
 
     Ok((input, ParamValue::ValueType { value }))
 }
@@ -444,7 +459,8 @@ where
         param_sent_by,
         param_time_zone_identifier,
         param_value_type,
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, param_value))
 }
@@ -453,25 +469,28 @@ pub fn other_params<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<ParamValue<
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    many0(tuple((char(';'), other_param)).map(|(_, p)| p)).parse(input)
+    many0((char(';'), other_param))
+        .map(|v| v.into_iter().map(|(_, p)| p).collect())
+        .parse(input)
 }
 
 pub fn other_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    alt((iana_param, x_param))(input)
+    alt((iana_param, x_param)).parse(input)
 }
 
 fn iana_param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (name, _, values)) = tuple((
+    let (input, (name, _, values)) = (
         param_name,
         char('='),
         separated_list1(char(','), param_value),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -490,7 +509,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (name, _, values)) =
-        tuple((x_name, char('='), separated_list1(char(','), param_value)))(input)?;
+        (x_name, char('='), separated_list1(char(','), param_value)).parse(input)?;
 
     Ok((
         input,

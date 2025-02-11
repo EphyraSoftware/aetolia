@@ -5,14 +5,12 @@ use crate::utf8_seq;
 use nom::branch::alt;
 use nom::bytes::complete::take_while1;
 use nom::bytes::streaming::{tag, tag_no_case, take_while_m_n};
-use nom::character::is_digit;
 use nom::character::streaming::{char, one_of};
 use nom::combinator::{opt, recognize};
 use nom::error::ParseError;
 use nom::multi::{fold_many0, many0};
-use nom::sequence::tuple;
-use nom::IResult;
 use nom::Parser;
+use nom::{AsChar, IResult};
 
 #[inline]
 const fn is_base64(c: u8) -> bool {
@@ -23,13 +21,14 @@ pub fn prop_value_binary<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], 
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, content) = recognize(tuple((
+    let (input, content) = recognize((
         many0(take_while_m_n(4, 4, is_base64)),
         opt(alt((
-            tuple((take_while_m_n(2, 2, is_base64), tag("=="))),
-            tuple((take_while_m_n(3, 3, is_base64), tag("="))),
+            (take_while_m_n(2, 2, is_base64), tag("==")),
+            (take_while_m_n(3, 3, is_base64), tag("=")),
         ))),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, content))
 }
@@ -49,11 +48,12 @@ pub fn prop_value_date<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Date, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (year, month, day)) = tuple((
-        take_while_m_n(4, 4, is_digit),
-        take_while_m_n(2, 2, is_digit),
-        take_while_m_n(2, 2, is_digit),
-    ))(input)?;
+    let (input, (year, month, day)) = (
+        take_while_m_n(4, 4, AsChar::is_dec_digit),
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+    )
+        .parse(input)?;
 
     let year = std::str::from_utf8(year)
         .map_err(|e| {
@@ -101,12 +101,13 @@ pub fn prop_value_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Time, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (h, m, s, is_utc)) = tuple((
-        take_while_m_n(2, 2, is_digit),
-        take_while_m_n(2, 2, is_digit),
-        take_while_m_n(2, 2, is_digit),
+    let (input, (h, m, s, is_utc)) = (
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
         opt(char('Z')).map(|x| x.is_some()),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     let read_time = |s: &[u8]| -> Result<u8, Error> {
         std::str::from_utf8(s)
@@ -135,7 +136,7 @@ pub fn prop_value_date_time<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], DateTim
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (date, _, time)) = tuple((prop_value_date, char('T'), prop_value_time))(input)?;
+    let (input, (date, _, time)) = (prop_value_date, char('T'), prop_value_time).parse(input)?;
 
     Ok((input, DateTime { date, time }))
 }
@@ -144,7 +145,7 @@ fn duration_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, v) = take_while1(is_digit)(input)?;
+    let (input, v) = take_while1(AsChar::is_dec_digit)(input)?;
 
     let s = std::str::from_utf8(v).map_err(|e| {
         nom::Err::Error(
@@ -176,15 +177,16 @@ where
 
     match time_branch {
         'H' => {
-            let (input, (min, sec)) = tuple((
-                opt(tuple((duration_num, char('M'))).map(|(min, _)| min)),
-                opt(tuple((duration_num, char('S'))).map(|(sec, _)| sec)),
-            ))(input)?;
+            let (input, (min, sec)) = (
+                opt((duration_num, char('M')).map(|(min, _)| min)),
+                opt((duration_num, char('S')).map(|(sec, _)| sec)),
+            )
+                .parse(input)?;
 
             Ok((input, (Some(num), min, sec)))
         }
         'M' => {
-            let (input, sec) = opt(tuple((duration_num, char('S'))).map(|(sec, _)| sec))(input)?;
+            let (input, sec) = opt((duration_num, char('S')).map(|(sec, _)| sec)).parse(input)?;
 
             Ok((input, (None, Some(num), sec)))
         }
@@ -214,9 +216,9 @@ pub fn prop_value_duration<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Duration
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (sign, _)) = tuple((opt_sign, char('P')))(input)?;
+    let (input, (sign, _)) = (opt_sign, char('P')).parse(input)?;
 
-    let (input, t) = opt(char('T'))(input)?;
+    let (input, t) = opt(char('T')).parse(input)?;
 
     if t.is_some() {
         let (input, (hours, minutes, seconds)) = duration_time(input)?;
@@ -239,7 +241,9 @@ where
 
     match date_branch {
         'D' => {
-            let (input, time) = opt(tuple((char('T'), duration_time)).map(|(_, t)| t))(input)?;
+            let (input, time) = opt((char('T'), duration_time))
+                .map(|opt| opt.map(|(_, t)| t))
+                .parse(input)?;
 
             let (hours, minutes, seconds) = time.unwrap_or((None, None, None));
 
@@ -272,13 +276,14 @@ pub fn prop_value_float<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], f64, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (sign, num)) = tuple((
+    let (input, (sign, num)) = (
         opt_sign,
-        recognize(tuple((
-            take_while1(is_digit),
-            opt(tuple((char('.'), take_while1(is_digit)))),
-        ))),
-    ))(input)?;
+        recognize((
+            take_while1(AsChar::is_dec_digit),
+            opt((char('.'), take_while1(AsChar::is_dec_digit))),
+        )),
+    )
+        .parse(input)?;
 
     let num: f64 = std::str::from_utf8(num)
         .map_err(|e| {
@@ -300,7 +305,7 @@ pub fn prop_value_integer<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], i32, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (sign, num)) = tuple((opt_sign, take_while1(is_digit)))(input)?;
+    let (input, (sign, num)) = (opt_sign, take_while1(AsChar::is_dec_digit)).parse(input)?;
 
     let num: i32 = read_int(num)?;
 
@@ -311,14 +316,15 @@ pub fn prop_value_period<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Period, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (start, _, end)) = tuple((
+    let (input, (start, _, end)) = (
         prop_value_date_time,
         char('/'),
         alt((
             prop_value_duration.map(PeriodEnd::Duration),
             prop_value_date_time.map(PeriodEnd::DateTime),
         )),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, Period { start, end }))
 }
@@ -335,15 +341,15 @@ where
     let (input, r) = fold_many0(
         alt((
             // Escaped characters
-            tuple((
+            (
                 char('\\'),
                 alt((tag_no_case("n").map(|_| b'\n' as char), one_of(r#"\;,"#))),
-            ))
-            .map(|(_, c)| vec![c as u8]),
+            )
+                .map(|(_, c)| vec![c as u8]),
             // Allowed raw characters
             one_of(r#":""#).map(|c: char| vec![c as u8]),
             // Text split over multiple lines
-            tuple((tag("\r\n"), alt((char(' '), char('\t'))))).map(|_| Vec::with_capacity(0)),
+            (tag("\r\n"), alt((char(' '), char('\t')))).map(|_| Vec::with_capacity(0)),
             // UTF-8 sequence
             utf8_seq.map(|seq| seq.to_vec()),
             // Other text safe characters
@@ -354,7 +360,8 @@ where
             acc.extend_from_slice(&item);
             acc
         },
-    )(input)?;
+    )
+    .parse(input)?;
 
     Ok((input, r))
 }
@@ -363,12 +370,13 @@ pub fn prop_value_utc_offset<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], UtcOff
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (sign, h, m, s)) = tuple((
+    let (input, (sign, h, m, s)) = (
         one_of("+-"),
-        take_while_m_n(2, 2, is_digit),
-        take_while_m_n(2, 2, is_digit),
-        opt(take_while_m_n(2, 2, is_digit)),
-    ))(input)?;
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+        take_while_m_n(2, 2, AsChar::is_dec_digit),
+        opt(take_while_m_n(2, 2, AsChar::is_dec_digit)),
+    )
+        .parse(input)?;
 
     Ok((
         input,

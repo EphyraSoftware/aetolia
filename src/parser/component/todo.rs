@@ -16,7 +16,6 @@ use nom::bytes::streaming::tag;
 use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
-use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
@@ -26,7 +25,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, alarms, _)) = tuple((
+    let (input, (_, properties, alarms, _)) = (
         tag("BEGIN:VTODO\r\n"),
         cut(many0(alt((
             alt((
@@ -69,7 +68,8 @@ where
         )))),
         many0(component_alarm),
         tag("END:VTODO\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::ToDo { properties, alarms }))
 }

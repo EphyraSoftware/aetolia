@@ -14,7 +14,6 @@ use nom::character::streaming::crlf;
 use nom::combinator::{cut, eof, verify};
 use nom::error::ParseError;
 use nom::multi::{many0, many1};
-use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
@@ -52,11 +51,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, body, _)) = tuple((
+    let (input, (_, body, _)) = (
         tag("BEGIN:VCALENDAR\r\n"),
         ical_body,
         tag("END:VCALENDAR\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, body))
 }
@@ -67,7 +67,8 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (properties, components)) = tuple((many0(ical_cal_prop), many1(component)))(input)?;
+    let (input, (properties, components)) =
+        (many0(ical_cal_prop), many1(component)).parse(input)?;
 
     Ok((
         input,
@@ -109,14 +110,15 @@ where
         component_timezone,
         x_comp,
         iana_comp,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn iana_comp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, name, _, lines, _, end_name, _)) = tuple((
+    let (input, (_, name, _, lines, _, end_name, _)) = (
         tag("BEGIN:"),
         iana_token,
         crlf,
@@ -126,7 +128,8 @@ where
         tag("END:"),
         iana_token,
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     if name != end_name {
         return Err(nom::Err::Error(
@@ -145,7 +148,7 @@ fn x_comp<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, name, _, lines, _, end_name, _)) = tuple((
+    let (input, (_, name, _, lines, _, end_name, _)) = (
         tag("BEGIN:"),
         x_name,
         crlf,
@@ -153,7 +156,8 @@ where
         tag("END:"),
         x_name,
         crlf,
-    ))(input)?;
+    )
+        .parse(input)?;
 
     if name != end_name {
         return Err(nom::Err::Error(
@@ -182,9 +186,9 @@ impl ReprStr for &[u8] {
 
 // Borrowed from `nom` and modified (somewhat poorly!) to work with byte arrays rather than strings.
 #[cfg(test)]
-fn convert_error_mod<I: ReprStr>(input: I, e: nom::error::VerboseError<I>) -> String {
-    use nom::error::VerboseErrorKind;
+fn convert_error_mod<I: ReprStr>(input: I, e: nom_language::error::VerboseError<I>) -> String {
     use nom::Offset;
+    use nom_language::error::VerboseErrorKind;
     use std::fmt::Write;
 
     let mut result = String::new();
@@ -306,7 +310,6 @@ mod tests {
     use crate::parser::types::VersionProperty;
     use crate::test_utils::check_rem;
     use nom::combinator::complete;
-    use nom::error::VerboseError;
 
     #[test]
     fn minimal_ical_stream_test() {
@@ -334,7 +337,8 @@ mod tests {
         let (input, first) = content_line_first_pass::<Error>(input.as_bytes()).unwrap();
         check_rem(input, 0);
 
-        let r = complete::<_, _, VerboseError<&[u8]>, _>(ical_stream).parse(&first);
+        let r = complete::<_, _, nom_language::error::VerboseError<&[u8]>, _>(ical_stream)
+            .parse(&first);
         match r {
             Err(nom::Err::Error(e) | nom::Err::Failure(e)) => {
                 println!("fail:\n\n {}", convert_error_mod(first.as_slice(), e));

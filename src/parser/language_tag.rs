@@ -5,12 +5,10 @@ use crate::parser::Error;
 use nom::branch::alt;
 use nom::bytes::streaming::{tag, take_while_m_n};
 use nom::character::streaming::char;
-use nom::character::{is_alphabetic, is_alphanumeric, is_digit};
 use nom::combinator::{opt, peek, recognize, verify};
 use nom::error::ParseError;
 use nom::multi::{many0, many1, many_m_n};
-use nom::sequence::tuple;
-use nom::{IResult, Parser};
+use nom::{AsChar, IResult, Parser};
 
 #[inline]
 const fn is_singleton(b: u8) -> bool {
@@ -21,10 +19,11 @@ fn private_use<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    recognize(tuple((
+    recognize((
         char('x'),
-        many1(tuple((char('-'), take_while_m_n(1, 8, is_alphanumeric)))),
-    )))(input)
+        many1((char('-'), take_while_m_n(1, 8, AsChar::is_alphanum))),
+    ))
+    .parse(input)
 }
 
 pub fn language_tag<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E>
@@ -49,7 +48,8 @@ where
         tag("sgn-BE-FR"),
         tag("sgn-BE-NL"),
         tag("sgn-CH-DE"),
-    )))(input)?;
+    )))
+    .parse(input)?;
 
     if let Some(grandfathered_irregular) = grandfathered_irregular {
         let language_tag = LanguageTag {
@@ -65,7 +65,7 @@ where
         return Ok((input, language_tag));
     }
 
-    let (input, private_use) = opt(private_use)(input)?;
+    let (input, private_use) = opt(private_use).parse(input)?;
     if let Some(private_use) = private_use {
         let language_tag = LanguageTag {
             language: String::from_utf8_lossy(private_use).to_string(),
@@ -93,9 +93,10 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     peek(verify(
-        take_while_m_n(0, 1, |c| c == b'-' || is_alphanumeric(c)),
+        take_while_m_n(0, 1, |c| c == b'-' || AsChar::is_alphanum(c)),
         |m: &[u8]| m == [b'-'] || m.is_empty(),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 pub fn lang_tag<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], LanguageTag, E>
@@ -103,24 +104,25 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (language, ext_lang)) = alt((
-        tuple((
-            take_while_m_n(2, 3, is_alphabetic),
-            opt(tuple((
+        (
+            take_while_m_n(2, 3, AsChar::is_alpha),
+            opt((
                 char('-'),
-                recognize(tuple((
-                    take_while_m_n(3, 3, is_alphabetic),
+                recognize((
+                    take_while_m_n(3, 3, AsChar::is_alpha),
                     many_m_n(
                         0,
                         2,
-                        tuple((char('-'), take_while_m_n(3, 3, is_alphabetic), clip)),
+                        (char('-'), take_while_m_n(3, 3, AsChar::is_alpha), clip),
                     ),
                     clip,
-                ))),
-            ))),
-        )),
-        take_while_m_n(4, 4, is_alphabetic).map(|l| (l, None)),
-        take_while_m_n(5, 8, is_alphabetic).map(|l| (l, None)),
-    ))(input)?;
+                )),
+            )),
+        ),
+        take_while_m_n(4, 4, AsChar::is_alpha).map(|l| (l, None)),
+        take_while_m_n(5, 8, AsChar::is_alpha).map(|l| (l, None)),
+    ))
+    .parse(input)?;
 
     let mut language_tag = LanguageTag {
         language: String::from_utf8_lossy(language).to_string(),
@@ -133,40 +135,39 @@ where
     };
 
     // Find the script, if present
-    let (input, script) = opt(tuple((
-        char('-'),
-        take_while_m_n(4, 4, is_alphabetic),
-        clip,
-    )))(input)?;
+    let (input, script) =
+        opt((char('-'), take_while_m_n(4, 4, AsChar::is_alpha), clip)).parse(input)?;
 
     if let Some((_, script, _)) = script {
         language_tag.script = Some(String::from_utf8_lossy(script).to_string());
     }
 
     // Find the region, if present
-    let (input, region) = opt(tuple((
+    let (input, region) = opt((
         char('-'),
         alt((
-            tuple((take_while_m_n(2, 2, is_alphabetic), clip)),
-            tuple((take_while_m_n(3, 3, is_digit), clip)),
+            (take_while_m_n(2, 2, AsChar::is_alpha), clip),
+            (take_while_m_n(3, 3, AsChar::is_dec_digit), clip),
         )),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     if let Some((_, (region, _))) = region {
         language_tag.region = Some(String::from_utf8_lossy(region).to_string());
     }
 
     // Find variants, is present
-    let (input, variants) = many0(tuple((
+    let (input, variants) = many0((
         char('-'),
         alt((
-            take_while_m_n(5, 8, is_alphanumeric),
-            recognize(tuple((
-                take_while_m_n(1, 1, is_digit),
-                take_while_m_n(3, 3, is_alphanumeric),
-            ))),
+            take_while_m_n(5, 8, AsChar::is_alphanum),
+            recognize((
+                take_while_m_n(1, 1, AsChar::is_dec_digit),
+                take_while_m_n(3, 3, AsChar::is_alphanum),
+            )),
         )),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     if !variants.is_empty() {
         language_tag.variants = variants
@@ -176,13 +177,14 @@ where
     }
 
     // Find extensions, if present
-    let (input, extensions) = many0(tuple((
+    let (input, extensions) = many0((
         char('-'),
-        recognize(tuple((
+        recognize((
             take_while_m_n(1, 1, is_singleton),
-            many1(tuple((char('-'), take_while_m_n(2, 8, is_alphanumeric)))),
-        ))),
-    )))(input)?;
+            many1((char('-'), take_while_m_n(2, 8, AsChar::is_alphanum))),
+        )),
+    ))
+    .parse(input)?;
 
     if !extensions.is_empty() {
         language_tag.extensions = extensions
@@ -192,7 +194,7 @@ where
     }
 
     // Find private use, if present
-    let (input, private_use) = opt(tuple((char('-'), private_use)))(input)?;
+    let (input, private_use) = opt((char('-'), private_use)).parse(input)?;
 
     if let Some((_, private_use)) = private_use {
         language_tag.private_use = Some(String::from_utf8_lossy(private_use).to_string());

@@ -14,24 +14,23 @@ pub use component::*;
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case;
 use nom::bytes::streaming::tag;
-use nom::character::is_digit;
 use nom::character::streaming::char;
 use nom::combinator::{cut, recognize, verify};
 use nom::error::ParseError;
-use nom::sequence::tuple;
-use nom::{IResult, Parser};
+use nom::{AsChar, IResult, Parser};
 
 pub fn prop_product_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ProductIdProperty<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, params, _, value, _)) = (
         tag_no_case("PRODID"),
         cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -46,22 +45,35 @@ pub fn prop_version<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], VersionProperty
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, params, _, (min_ver, max_ver), _)) = tuple((
+    let (input, (_, params, _, (min_ver, max_ver), _)) = (
         tag_no_case("VERSION"),
         cut(other_params),
         char(':'),
         alt((
-            tuple((
-                recognize(tuple((single(is_digit), char('.'), single(is_digit)))),
+            (
+                recognize((
+                    single(AsChar::is_dec_digit),
+                    char('.'),
+                    single(AsChar::is_dec_digit),
+                )),
                 char(';'),
-                recognize(tuple((single(is_digit), char('.'), single(is_digit)))),
+                recognize((
+                    single(AsChar::is_dec_digit),
+                    char('.'),
+                    single(AsChar::is_dec_digit),
+                )),
+            )
+                .map(|(min_ver, _, max_ver)| (Some(min_ver), max_ver)),
+            recognize((
+                single(AsChar::is_dec_digit),
+                char('.'),
+                single(AsChar::is_dec_digit),
             ))
-            .map(|(min_ver, _, max_ver)| (Some(min_ver), max_ver)),
-            recognize(tuple((single(is_digit), char('.'), single(is_digit))))
-                .map(|v| (Option::<&[u8]>::None, v)),
+            .map(|v| (Option::<&[u8]>::None, v)),
         )),
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -79,13 +91,14 @@ pub fn prop_calendar_scale<'a, E>(
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, params, _, value, _)) = (
         tag_no_case("CALSCALE"),
         cut(other_params),
         char(':'),
         prop_value_text,
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -100,13 +113,14 @@ pub fn prop_method<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], MethodProperty<'
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, params, _, value, _)) = tuple((
+    let (input, (_, params, _, value, _)) = (
         tag_no_case("METHOD"),
         cut(other_params),
         char(':'),
         iana_token,
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -124,7 +138,7 @@ where
         + From<Error<'a>>,
 {
     let (input, (name, params, _, value, _)) =
-        tuple((x_name, cut(property_params), char(':'), value, tag("\r\n")))(input)?;
+        (x_name, cut(property_params), char(':'), value, tag("\r\n")).parse(input)?;
 
     Ok((
         input,
@@ -142,7 +156,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (name, params, _, value, _)) = tuple((
+    let (input, (name, params, _, value, _)) = (
         verify(iana_token, |t: &[u8]| {
             // Not ideal, but in order to avoid IANA names colliding with ical structure, filter these values out
             t != b"BEGIN" && t != b"END"
@@ -151,7 +165,8 @@ where
         char(':'),
         value,
         tag("\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,

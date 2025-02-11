@@ -9,7 +9,6 @@ use nom::bytes::complete::tag_no_case;
 use nom::character::streaming::char;
 use nom::combinator::{map_res, opt};
 use nom::error::ParseError;
-use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
@@ -39,7 +38,8 @@ where
                 "CUTYPE iana-token",
             )?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, cu_type))
 }
@@ -51,7 +51,8 @@ where
     let (input, encoding) = alt((
         tag_no_case("8BIT").map(|_| Encoding::EightBit),
         tag_no_case("BASE64").map(|_| Encoding::Base64),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, encoding))
 }
@@ -81,7 +82,8 @@ where
                 "FBTYPE iana-token",
             )?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, fb_type))
 }
@@ -114,7 +116,8 @@ where
                 "PARTSTAT iana-token",
             )?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, part_stat))
 }
@@ -128,7 +131,8 @@ where
     let (input, related) = alt((
         tag_no_case("START").map(|_| TriggerRelationship::Start),
         tag_no_case("END").map(|_| TriggerRelationship::End),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, related))
 }
@@ -157,7 +161,8 @@ where
                 "RELTYPE iana-token",
             )?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, rel_type))
 }
@@ -179,7 +184,8 @@ where
         map_res(iana_token, |iana_token| {
             Ok(Role::IanaToken(read_string(iana_token, "ROLE iana-token")?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, role))
 }
@@ -191,7 +197,8 @@ where
     let (input, rsvp) = alt((
         tag_no_case("TRUE").map(|_| true),
         tag_no_case("FALSE").map(|_| false),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, rsvp))
 }
@@ -200,7 +207,8 @@ pub fn param_value_time_zone_id<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], (St
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (unique, tz_id)) = tuple((opt(char('/')).map(|p| p.is_some()), param_text))(input)?;
+    let (input, (unique, tz_id)) =
+        (opt(char('/')).map(|p| p.is_some()), param_text).parse(input)?;
 
     Ok((input, (read_string(tz_id, "TZID")?, unique)))
 }
@@ -235,7 +243,8 @@ where
                 "VALUE iana-token",
             )?))
         }),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, value))
 }
