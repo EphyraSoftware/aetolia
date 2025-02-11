@@ -762,7 +762,7 @@ impl WriteModel for String {
             if matches!(c as u8, b';' | b'\\' | b',') {
                 out.extend_from_slice(&[b'\\', c as u8]);
             } else if c == '\n' {
-                out.extend_from_slice(&[b'\\', b'n']);
+                out.extend_from_slice(b"\\n");
             } else {
                 out.push(c as u8);
             }

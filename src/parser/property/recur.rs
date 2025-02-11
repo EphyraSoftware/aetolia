@@ -6,12 +6,10 @@ use nom::branch::alt;
 use nom::bytes::complete::{take_while1, take_while_m_n};
 use nom::bytes::streaming::tag;
 use nom::character::streaming::char;
-use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt};
 use nom::error::ParseError;
 use nom::multi::separated_list1;
-use nom::sequence::tuple;
-use nom::{IResult, Parser};
+use nom::{AsChar, IResult, Parser};
 
 pub fn prop_value_recur<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<RecurRulePart>, E>
 where
@@ -19,7 +17,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    separated_list1(char(';'), recur_rule_part)(input)
+    separated_list1(char(';'), recur_rule_part).parse(input)
 }
 
 fn recur_rule_part<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], RecurRulePart, E>
@@ -28,7 +26,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (name, _)) = tuple((take_while1(is_alphabetic), char('=')))(input)?;
+    let (input, (name, _)) = (take_while1(AsChar::is_alpha), char('=')).parse(input)?;
 
     match std::str::from_utf8(name).map_err(|e| {
         nom::Err::Error(
@@ -79,7 +77,8 @@ where
         tag("WEEKLY").map(|_| RecurFreq::Weekly),
         tag("MONTHLY").map(|_| RecurFreq::Monthly),
         tag("YEARLY").map(|_| RecurFreq::Yearly),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, freq))
 }
@@ -89,7 +88,7 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     let (input, (date, opt_time)) =
-        tuple((prop_value_date, opt(tuple((char('T'), prop_value_time)))))(input)?;
+        (prop_value_date, opt((char('T'), prop_value_time))).parse(input)?;
 
     let time = opt_time.map(|(_, time)| time);
 
@@ -106,7 +105,7 @@ fn read_num<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u64, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, c) = take_while1(is_digit)(input)?;
+    let (input, c) = take_while1(AsChar::is_dec_digit)(input)?;
 
     let v = std::str::from_utf8(c).map_err(|e| {
         nom::Err::Error(
@@ -129,7 +128,7 @@ where
 {
     separated_list1(
         char(','),
-        map_res(take_while_m_n(1, 2, is_digit), |s| {
+        map_res(take_while_m_n(1, 2, AsChar::is_dec_digit), |s| {
             std::str::from_utf8(s)
                 .map_err(|e| {
                     nom::Err::Error(
@@ -143,7 +142,8 @@ where
                 .parse()
                 .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into()))
         }),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn weekday<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Weekday, E>
@@ -158,7 +158,8 @@ where
         tag("FR").map(|_| Weekday::Friday),
         tag("SA").map(|_| Weekday::Saturday),
         tag("SU").map(|_| Weekday::Sunday),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn recur_by_weekday_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<OffsetWeekday>, E>
@@ -169,9 +170,9 @@ where
 {
     separated_list1(
         char(','),
-        tuple((
+        (
             opt(map_res(
-                tuple((
+                (
                     opt(alt((char('+'), char('-')))).map(|opt_sign| {
                         if let Some('-') = opt_sign {
                             -1i8
@@ -179,8 +180,8 @@ where
                             1
                         }
                     }),
-                    take_while_m_n(1, 2, is_digit),
-                )),
+                    take_while_m_n(1, 2, AsChar::is_dec_digit),
+                ),
                 |(sign, num)| {
                     std::str::from_utf8(num)
                         .map_err(|e| {
@@ -200,7 +201,7 @@ where
                 },
             )),
             weekday,
-        )),
+        ),
     )
     .map(|values| {
         values
@@ -223,11 +224,11 @@ where
     separated_list1(
         char(','),
         map_res(
-            tuple((
+            (
                 opt(alt((char('+'), char('-'))))
                     .map(|sign| if let Some('-') = sign { -1i8 } else { 1 }),
-                take_while_m_n(1, 2, is_digit),
-            )),
+                take_while_m_n(1, 2, AsChar::is_dec_digit),
+            ),
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
@@ -246,7 +247,8 @@ where
                     .map(|num| sign * num)
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn recur_by_year_day_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i16>, E>
@@ -258,11 +260,11 @@ where
     separated_list1(
         char(','),
         map_res(
-            tuple((
+            (
                 opt(alt((char('+'), char('-'))))
                     .map(|sign| if let Some('-') = sign { -1i16 } else { 1 }),
-                take_while_m_n(1, 3, is_digit),
-            )),
+                take_while_m_n(1, 3, AsChar::is_dec_digit),
+            ),
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
@@ -281,7 +283,8 @@ where
                     .map(|num| sign * num)
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn recur_by_week_number<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<i8>, E>
@@ -293,11 +296,11 @@ where
     separated_list1(
         char(','),
         map_res(
-            tuple((
+            (
                 opt(alt((char('+'), char('-'))))
                     .map(|sign| if let Some('-') = sign { -1i8 } else { 1 }),
-                take_while_m_n(1, 2, is_digit),
-            )),
+                take_while_m_n(1, 2, AsChar::is_dec_digit),
+            ),
             |(sign, num)| {
                 std::str::from_utf8(num)
                     .map_err(|e| {
@@ -316,7 +319,8 @@ where
                     .map(|num| sign * num)
             },
         ),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn recur_by_month_list<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -327,7 +331,7 @@ where
 {
     separated_list1(
         char(','),
-        map_res(take_while_m_n(1, 2, is_digit), |num| {
+        map_res(take_while_m_n(1, 2, AsChar::is_dec_digit), |num| {
             std::str::from_utf8(num)
                 .map_err(|e| {
                     nom::Err::Error(
@@ -341,7 +345,8 @@ where
                 .parse::<u8>()
                 .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidRecurNum).into()))
         }),
-    )(input)
+    )
+    .parse(input)
 }
 
 #[cfg(test)]

@@ -11,7 +11,6 @@ use nom::bytes::streaming::tag;
 use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
-use nom::sequence::tuple;
 use nom::IResult;
 use nom::Parser;
 
@@ -27,7 +26,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:VTIMEZONE\r\n"),
         cut(many0(alt((
             alt((
@@ -51,7 +50,8 @@ where
                 .map(PropertyOrComponent::Property),
         )))),
         tag("END:VTIMEZONE\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     let (properties, components): (Vec<PropertyOrComponent>, Vec<PropertyOrComponent>) = properties
         .into_iter()
@@ -84,11 +84,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:STANDARD\r\n"),
         cut(tz_props),
         tag("END:STANDARD\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::Standard { properties }))
 }
@@ -99,11 +100,12 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:DAYLIGHT\r\n"),
         cut(tz_props),
         tag("END:DAYLIGHT\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::Daylight { properties }))
 }
@@ -126,7 +128,8 @@ where
         )),
         prop_x.map(ComponentProperty::XProperty),
         prop_iana.map(ComponentProperty::IanaProperty),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 #[cfg(test)]

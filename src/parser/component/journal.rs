@@ -14,7 +14,6 @@ use nom::bytes::streaming::tag;
 use nom::combinator::cut;
 use nom::error::ParseError;
 use nom::multi::many0;
-use nom::sequence::tuple;
 use nom::{IResult, Parser};
 
 pub fn component_journal<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], CalendarComponent<'a>, E>
@@ -23,7 +22,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (_, properties, _)) = tuple((
+    let (input, (_, properties, _)) = (
         tag("BEGIN:VJOURNAL\r\n"),
         cut(many0(alt((
             alt((
@@ -57,7 +56,8 @@ where
             prop_iana.map(ComponentProperty::IanaProperty),
         )))),
         tag("END:VJOURNAL\r\n"),
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((input, CalendarComponent::Journal { properties }))
 }

@@ -3,8 +3,8 @@ use nom::bytes::streaming::{tag, take_until};
 use nom::character::streaming::one_of;
 use nom::combinator::opt;
 use nom::error::ParseError;
-use nom::sequence::tuple;
 use nom::IResult;
+use nom::Parser;
 
 /// Recognize a content line, collapsing folded lines.
 ///
@@ -25,7 +25,7 @@ where
             break;
         }
 
-        match tuple((tag("\r\n"), opt(one_of(" \t"))))(input) {
+        match (tag("\r\n"), opt(one_of(" \t"))).parse(input) {
             Ok((i, (lb, sp))) => {
                 if sp.is_none() {
                     out.extend_from_slice(lb);

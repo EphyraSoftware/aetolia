@@ -4,8 +4,7 @@ use crate::parser::Error;
 use nom::branch::alt;
 use nom::combinator::recognize;
 use nom::error::ParseError;
-use nom::sequence::tuple;
-use nom::{IResult, InputIter, InputLength, InputTake};
+use nom::{IResult, Input, Parser};
 use std::num::NonZeroUsize;
 
 /// Common types.
@@ -41,15 +40,15 @@ pub mod prelude {
 }
 
 /// Streaming, single character matching the predicate
-pub(crate) fn single<F, Input, Output, Error: ParseError<Input>>(
+pub(crate) fn single<F, In, Output, Error: ParseError<In>>(
     cond: F,
-) -> impl Fn(Input) -> IResult<Input, Output, Error>
+) -> impl Fn(In) -> IResult<In, Output, Error>
 where
-    Input: InputIter<Item = Output> + InputLength + InputTake,
-    F: Fn(<Input as InputIter>::Item) -> bool,
+    In: Input<Item = Output>,
+    F: Fn(<In as Input>::Item) -> bool,
     Output: Copy,
 {
-    move |i: Input| {
+    move |i: In| {
         match i.iter_elements().next() {
             Some(c) if cond(c) => {
                 let (input, v) = i.take_split(1);
@@ -73,55 +72,56 @@ where
 {
     let (input, seq) = alt((
         // Utf-8 2-byte sequence
-        recognize(tuple((
+        recognize((
             single(|b| matches!(b, b'\xC2'..=b'\xDF')),
             single(|b| matches!(b, b'\x80'..=b'\xBF')),
-        ))),
+        )),
         // Utf-8 3-byte sequence
         alt((
-            recognize(tuple((
+            recognize((
                 single(|b| b == b'\xE0'),
                 single(|b| matches!(b, b'\xA0'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
-            recognize(tuple((
+            )),
+            recognize((
                 single(|b| matches!(b, b'\xE1'..=b'\xEC')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
-            recognize(tuple((
+            )),
+            recognize((
                 single(|b| b == b'\xED'),
                 single(|b| matches!(b, b'\x80'..=b'\x9F')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
-            recognize(tuple((
+            )),
+            recognize((
                 single(|b| matches!(b, b'\xEE'..=b'\xEF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
+            )),
         )),
         // Utf-8 4-byte sequence
         alt((
-            recognize(tuple((
+            recognize((
                 single(|b| b == b'\xF0'),
                 single(|b| matches!(b, b'\x90'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
-            recognize(tuple((
+            )),
+            recognize((
                 single(|b| matches!(b, b'\xF1'..=b'\xF3')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
-            recognize(tuple((
+            )),
+            recognize((
                 single(|b| b == b'\xF4'),
                 single(|b| matches!(b, b'\x80'..=b'\x8F')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
                 single(|b| matches!(b, b'\x80'..=b'\xBF')),
-            ))),
+            )),
         )),
-    ))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, seq))
 }
@@ -142,7 +142,7 @@ mod tests {
     fn invalid_utf8() {
         let mut input = "👍👌".as_bytes().to_vec();
         input.extend_from_slice(&[1, 3, 4, 5, 2, 1]);
-        let (rem, seq) = many1(utf8_seq::<Error>)(input.as_slice()).unwrap();
+        let (rem, seq) = many1(utf8_seq::<Error>).parse(input.as_slice()).unwrap();
         test_utils::check_rem(rem, 6);
         assert_eq!(
             seq.into_iter().flatten().cloned().collect::<Vec<_>>(),

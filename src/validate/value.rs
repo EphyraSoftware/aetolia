@@ -25,6 +25,7 @@ use anyhow::Context;
 use nom::character::streaming::char;
 use nom::multi::separated_list1;
 use nom::AsBytes;
+use nom::Parser;
 
 pub(super) fn check_declared_value(
     errors: &mut Vec<ComponentPropertyError>,
@@ -1026,7 +1027,7 @@ fn is_date_valued(property_value: &String) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_date::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_date::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1037,7 +1038,8 @@ fn is_date_time_valued(property_value: &String) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_date_time::<Error>)(content.as_bytes());
+    let result =
+        separated_list1(char(','), prop_value_date_time::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1048,7 +1050,7 @@ fn is_duration_valued(property_value: &String) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_duration::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_duration::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1059,7 +1061,7 @@ fn is_float_valued(property_value: &String) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_float::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_float::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1070,7 +1072,7 @@ fn is_integer_valued(property_value: &String) -> bool {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_integer::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_integer::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1106,7 +1108,7 @@ fn is_text_valued(property_value: &String) -> bool {
     content.push(b'\r');
     content.push(b'\n');
 
-    let result = separated_list1(char(','), prop_value_text::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_text::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, _)) => rest.len() == 1,
         _ => false,
@@ -1117,7 +1119,7 @@ fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
-    let result = separated_list1(char(','), prop_value_time::<Error>)(content.as_bytes());
+    let result = separated_list1(char(','), prop_value_time::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, times)) if rest.len() == 1 => Ok(times),
         _ => anyhow::bail!("Not a valid time"),

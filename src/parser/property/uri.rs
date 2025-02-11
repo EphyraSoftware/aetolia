@@ -4,12 +4,10 @@ use crate::single;
 use nom::branch::alt;
 use nom::bytes::streaming::{tag, take_while, take_while1, take_while_m_n};
 use nom::character::streaming::char;
-use nom::character::{is_alphabetic, is_digit};
 use nom::combinator::{map_res, opt, recognize, verify};
 use nom::error::ParseError;
 use nom::multi::{fold_many0, fold_many1, many0, many1, separated_list0};
-use nom::sequence::tuple;
-use nom::{IResult, Parser};
+use nom::{AsChar, IResult, Parser};
 use std::fmt::{Display, Formatter, Write};
 use std::net::{Ipv4Addr, Ipv6Addr};
 
@@ -20,17 +18,18 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, (scheme, _, (authority, path), query, fragment)) = tuple((
+    let (input, (scheme, _, (authority, path), query, fragment)) = (
         scheme,
         char(':'),
         alt((
-            tuple((tag("//"), authority, opt(path_absolute_empty))).map(|(_, a, b)| (Some(a), b)),
+            (tag("//"), authority, opt(path_absolute_empty)).map(|(_, a, b)| (Some(a), b)),
             path_absolute.map(|p| (None, Some(p))),
             path_rootless.map(|p| (None, Some(p))),
         )),
-        opt(tuple((char('?'), query_or_fragment)).map(|(_, v)| v)),
-        opt(tuple((char('#'), query_or_fragment)).map(|(_, v)| v)),
-    ))(input)?;
+        opt((char('?'), query_or_fragment).map(|(_, v)| v)),
+        opt((char('#'), query_or_fragment).map(|(_, v)| v)),
+    )
+        .parse(input)?;
 
     Ok((
         input,
@@ -54,8 +53,9 @@ where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
     verify(take_while1(is_scheme_char), |sch: &[u8]| {
-        is_alphabetic(sch[0])
-    })(input)
+        AsChar::is_alpha(sch[0])
+    })
+    .parse(input)
 }
 
 #[inline]
@@ -77,15 +77,15 @@ fn pct_encoded<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    tuple((
+    (
         char('%'),
         take_while_m_n(2, 2, is_hex_digit_upper).map(|v| {
             // TODO do without a dep here?
             hex::decode(v).unwrap()
         }),
-    ))
-    .map(|(_, v)| v)
-    .parse(input)
+    )
+        .map(|(_, v)| v)
+        .parse(input)
 }
 
 #[inline]
@@ -102,17 +102,17 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    tuple((
-        opt(tuple((user_info, char('@'))).map(|(u, _)| u)),
+    (
+        opt((user_info, char('@')).map(|(u, _)| u)),
         host,
-        opt(tuple((char(':'), port)).map(|(_, p)| p)),
-    ))
-    .map(|(user_info, host, port)| Authority {
-        user_info,
-        host,
-        port,
-    })
-    .parse(input)
+        opt((char(':'), port).map(|(_, p)| p)),
+    )
+        .map(|(user_info, host, port)| Authority {
+            user_info,
+            host,
+            port,
+        })
+        .parse(input)
 }
 
 fn port<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u16, E>
@@ -121,7 +121,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    map_res(take_while(is_digit), |c| {
+    map_res(take_while(AsChar::is_dec_digit), |c| {
         std::str::from_utf8(c)
             .map_err(|e| {
                 nom::Err::Error(
@@ -154,7 +154,8 @@ where
             acc.extend(item);
             acc
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn host<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Host, E>
@@ -169,7 +170,8 @@ where
             .map(|ip| IpAddr::V4(Ipv4Addr::from(ip)))
             .map(Host::IpAddr),
         reg_name.map(Host::RegName),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn ip_literal<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], IpAddr, E>
@@ -178,23 +180,23 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    tuple((
+    (
         tag("["),
         alt((
             ip_v6_addr.map(IpAddr::V6),
             ip_v_future_addr.map(|ip| IpAddr::VFuture(ip.to_vec())),
         )),
         tag("]"),
-    ))
-    .map(|(_, v, _)| v)
-    .parse(input)
+    )
+        .map(|(_, v, _)| v)
+        .parse(input)
 }
 
-fn ip_v_future_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E>
+fn ip_v_future_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    recognize(tuple((
+    recognize((
         char('v').map(|a| a as u8),
         take_while1(is_hex_digit),
         char('.'),
@@ -203,7 +205,8 @@ where
             single(is_sub_delim),
             char(':').map(|c| c as u8),
         ))),
-    )))(input)
+    ))
+    .parse(input)
 }
 
 fn ip_v6_addr<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Ipv6Addr, E>
@@ -212,7 +215,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    let (input, prefix_parts) = separated_list0(char(':'), h_16)(input)?;
+    let (input, prefix_parts) = separated_list0(char(':'), h_16).parse(input)?;
 
     if prefix_parts.len() > 7 {
         return Err(nom::Err::Error(
@@ -220,10 +223,10 @@ where
         ));
     }
 
-    let (input, found_collapse) = opt(tag("::"))(input)?;
+    let (input, found_collapse) = opt(tag("::")).parse(input)?;
     let fill_zeroes = found_collapse.is_some();
 
-    let (input, suffix_parts) = separated_list0(char(':'), h_16)(input)?;
+    let (input, suffix_parts) = separated_list0(char(':'), h_16).parse(input)?;
 
     if suffix_parts.len() > 8 {
         return Err(nom::Err::Error(
@@ -231,7 +234,7 @@ where
         ));
     }
 
-    let (input, ipv4_post) = opt(tuple((char(':'), ip_v4_addr)))(input)?;
+    let (input, ipv4_post) = opt((char(':'), ip_v4_addr)).parse(input)?;
 
     let mut content = [0u8; 16];
 
@@ -295,7 +298,7 @@ where
         + nom::error::FromExternalError<&'a [u8], nom::Err<E>>
         + From<Error<'a>>,
 {
-    tuple((
+    (
         dec_octet,
         char('.'),
         dec_octet,
@@ -303,9 +306,9 @@ where
         dec_octet,
         char('.'),
         dec_octet,
-    ))
-    .map(|(a, _, b, _, c, _, d)| [a, b, c, d])
-    .parse(input)
+    )
+        .map(|(a, _, b, _, c, _, d)| [a, b, c, d])
+        .parse(input)
 }
 
 fn dec_octet<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], u8, E>
@@ -315,7 +318,7 @@ where
         + From<Error<'a>>,
 {
     map_res(
-        verify(take_while_m_n(1, 3, is_digit), |b: &[u8]| {
+        verify(take_while_m_n(1, 3, AsChar::is_dec_digit), |b: &[u8]| {
             // May not have a 0 prefix
             if b.len() == 2 {
                 b[0] != b'0'
@@ -335,7 +338,8 @@ where
                 .parse::<u8>()
                 .map_err(|_| nom::Err::Error(Error::new(input, InnerError::InvalidOctet).into()))
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn reg_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -353,28 +357,29 @@ where
             acc.extend(item);
             acc
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn path_absolute_empty<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    recognize(many0(tuple((char('/'), segment))))(input)
+    recognize(many0((char('/'), segment))).parse(input)
 }
 
 fn path_absolute<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    recognize(tuple((segment_nz, path_absolute_empty)))(input)
+    recognize((segment_nz, path_absolute_empty)).parse(input)
 }
 
 fn path_rootless<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    recognize(tuple((segment_nz, many0(tuple((char('/'), segment))))))(input)
+    recognize((segment_nz, many0((char('/'), segment)))).parse(input)
 }
 
 fn segment<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -384,7 +389,8 @@ where
     fold_many0(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
-    })(input)
+    })
+    .parse(input)
 }
 
 fn segment_nz<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -394,10 +400,11 @@ where
     fold_many1(p_char, Vec::new, |mut acc, item| {
         acc.extend(item);
         acc
-    })(input)
+    })
+    .parse(input)
 }
 
-fn query_or_fragment<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &[u8], E>
+fn query_or_fragment<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
@@ -405,7 +412,8 @@ where
         p_char,
         tag("/").map(|c: &[u8]| c.to_vec()),
         tag("?").map(|c: &[u8]| c.to_vec()),
-    ))))(input)
+    ))))
+    .parse(input)
 }
 
 fn p_char<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -418,7 +426,8 @@ where
         single(is_sub_delim).map(|c| vec![c]),
         tag(":").map(|c: &[u8]| c.to_vec()),
         tag("@").map(|c: &[u8]| c.to_vec()),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 impl Display for Uri<'_> {

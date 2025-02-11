@@ -5,10 +5,11 @@ use nom::bytes::complete::{take_while, take_while1, take_while_m_n};
 use nom::bytes::streaming::tag_no_case;
 use nom::character::streaming::{char, crlf};
 use nom::combinator::{cut, recognize};
-use nom::error::{ErrorKind, FromExternalError, ParseError, VerboseError, VerboseErrorKind};
+use nom::error::{ErrorKind, FromExternalError, ParseError};
 use nom::multi::{fold_many0, many0, separated_list1};
-use nom::sequence::{separated_pair, tuple};
+use nom::sequence::separated_pair;
 use nom::{AsChar, IResult, Parser};
+use nom_language::error::{VerboseError, VerboseErrorKind};
 use std::str::FromStr;
 use std::sync::Mutex;
 
@@ -151,7 +152,7 @@ fn quoted_string<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (_, content, _)) = tuple((char('"'), cut(safe_char), char('"')))(input)?;
+    let (input, (_, content, _)) = (char('"'), cut(safe_char), char('"')).parse(input)?;
 
     Ok((input, content))
 }
@@ -160,7 +161,7 @@ fn param_value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, value) = alt((quoted_string, param_text))(input)?;
+    let (input, value) = alt((quoted_string, param_text)).parse(input)?;
 
     Ok((input, value))
 }
@@ -183,10 +184,11 @@ fn x_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, x_name) = recognize(tuple((
+    let (input, x_name) = recognize((
         tag_no_case("X-"),
         cut(take_while1(|c: u8| c.is_alphanum() || c == b'-')),
-    )))(input)?;
+    ))
+    .parse(input)?;
 
     Ok((input, x_name))
 }
@@ -195,14 +197,14 @@ fn name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    alt((iana_token, x_name))(input)
+    alt((iana_token, x_name)).parse(input)
 }
 
 fn param_name<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], &'a [u8], E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    alt((iana_token, x_name))(input)
+    alt((iana_token, x_name)).parse(input)
 }
 
 #[inline]
@@ -259,7 +261,8 @@ where
     let (input, v) = fold_many0(value_char, Vec::new, |mut acc, item| {
         acc.extend_from_slice(&item);
         acc
-    })(input)?;
+    })
+    .parse(input)?;
 
     Ok((input, v))
 }
@@ -271,7 +274,8 @@ where
     alt((
         single(|b| matches!(b, b' ' | b'\t' | b'\x21'..=b'\x7E')).map(|c| vec![c]),
         utf8_seq.map(|c| c.to_vec()),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn value<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], Vec<u8>, E>
@@ -281,7 +285,8 @@ where
     fold_many0(value_char, Vec::new, |mut acc, item| {
         acc.extend_from_slice(&item);
         acc
-    })(input)
+    })
+    .parse(input)
 }
 
 fn param<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ParamValue<'a>, E>
@@ -292,7 +297,8 @@ where
         param_name,
         char('='),
         cut(separated_list1(char(','), param_value)),
-    )(input)?;
+    )
+    .parse(input)?;
 
     Ok((
         input,
@@ -311,13 +317,14 @@ fn content_line<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], ContentLine<'a>, E>
 where
     E: ParseError<&'a [u8]> + From<Error<'a>>,
 {
-    let (input, (property_name, params, _, value, _)) = tuple((
+    let (input, (property_name, params, _, value, _)) = (
         name,
-        many0(tuple((char(';'), cut(param))).map(|(_, p)| p)),
+        many0((char(';'), cut(param))).map(|v| v.into_iter().map(|(_, p)| p).collect()),
         char(':'),
         cut(line_value),
         crlf,
-    ))(input)?;
+    )
+        .parse(input)?;
 
     Ok((
         input,

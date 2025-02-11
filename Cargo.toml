@@ -7,7 +7,8 @@ license = "MPL-2.0"
 repository = "https://github.com/EphyraSoftware/aetolia"
 
 [dependencies]
-nom = "7.1"
+nom = "8.0"
+nom-language = "0.1.0"
 base64 = "0.22"
 hex = "0.4"
 lazy_static = "1.4"
