@@ -9,20 +9,27 @@ use std::num::NonZeroUsize;
 
 /// Common types.
 pub mod common;
+
 /// Conversion from the parser model to the core representation.
 pub mod convert;
+
 /// The core representation that is used for everything except the parser.
 pub mod model;
+
 /// Common operations.
 pub mod ops;
+
 /// The iCalendar parser.
 pub mod parser;
+
 /// The serializer for the core representation back to the iCalendar text format.
 pub mod serialize;
-#[cfg(test)]
-mod test_utils;
+
 /// Validation of iCalendar rules against the core representation.
 pub mod validate;
+
+#[cfg(test)]
+mod test_utils;
 
 /// Prelude which contains everything that's needed for most use-cases to consume this library.
 pub mod prelude {
@@ -33,7 +40,7 @@ pub mod prelude {
     pub use crate::model::object::*;
     pub use crate::model::param::*;
     pub use crate::model::property::*;
-    pub use crate::ops::load_ical;
+    pub use crate::ops::{load_ical, read_ical};
     pub use crate::parser::{content_line_first_pass, ical_object, ical_stream};
     pub use crate::serialize::WriteModel;
     pub use crate::validate::{validate_model, ICalendarErrorSeverity};

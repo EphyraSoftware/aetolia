@@ -20,7 +20,7 @@ build such applications.
 use aetolia::prelude::*;
 
 let calendar_file = std::fs::File::open("sample.ics").unwrap();
-let parsed = load_ical(calendar_file).unwrap();
+let parsed = read_ical(calendar_file).unwrap();
 
 println!("Loaded calendar with {} objects", parsed.len());
 ```

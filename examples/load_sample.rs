@@ -2,7 +2,7 @@ use aetolia::prelude::*;
 
 fn main() {
     let input = std::fs::File::open("sample.ics").unwrap();
-    let ical = load_ical(input).unwrap();
+    let ical = read_ical(input).unwrap();
     println!("Loaded iCal document with {} object", ical.len());
 
     for component in &ical[0].components {
