@@ -1,5 +1,6 @@
 use crate::common::{Encoding, Value};
 use crate::convert::ToModel;
+use crate::error::{AetoliaError, AetoliaResult};
 use crate::model::param::{EncodingParam, Param};
 use crate::model::property::{
     AttendeeProperty, ComponentProperty, DateTimeDueProperty, DateTimeEndProperty,
@@ -21,7 +22,6 @@ use crate::validate::{
     ComponentPropertyError, ComponentPropertyLocation, ICalendarErrorSeverity, PropertyLocation,
     WithinPropertyLocation,
 };
-use anyhow::Context;
 use nom::character::streaming::char;
 use nom::multi::separated_list1;
 use nom::AsBytes;
@@ -32,7 +32,7 @@ pub(super) fn check_declared_value(
     maybe_dt_start: Option<&DateTimeStartProperty>,
     property: &ComponentProperty,
     property_index: usize,
-) -> anyhow::Result<()> {
+) -> AetoliaResult<()> {
     let declared_value_type = get_declared_value_type(property);
 
     let push_redundant_error_msg =
@@ -61,9 +61,11 @@ pub(super) fn check_declared_value(
 
                         if *encoding != Encoding::Base64 {
                             let mut msg = b"Property is declared to have a binary value but the encoding is set to ".to_vec();
-                            encoding
-                                .write_model(&mut msg)
-                                .context("Failed to write encoding to model")?;
+                            encoding.write_model(&mut msg).map_err(|e| {
+                                AetoliaError::other(format!(
+                                    "Failed to write encoding to model: {e}"
+                                ))
+                            })?;
                             msg.extend_from_slice(", instead of BASE64".as_bytes());
 
                             errors.push(ComponentPropertyError {
@@ -807,7 +809,7 @@ pub(super) fn check_declared_value(
                                 if let Err(e) = validate_time(time) {
                                     errors.push(ComponentPropertyError {
                                         message: format!(
-                                            "Found an invalid time at index {} - {:?}",
+                                            "Found an invalid time at index {} - {}",
                                             index, e
                                         ),
                                         severity: ICalendarErrorSeverity::Warning,
@@ -831,7 +833,7 @@ pub(super) fn check_declared_value(
                                     if let Err(e) = validate_time(time) {
                                         errors.push(ComponentPropertyError {
                                             message: format!(
-                                                "Found an invalid time at index {} - {:?}",
+                                                "Found an invalid time at index {} - {}",
                                                 index, e
                                             ),
                                             severity: ICalendarErrorSeverity::Warning,
@@ -937,7 +939,7 @@ pub(super) fn check_declared_value(
                             Ok(offset) => {
                                 if let Err(e) = validate_utc_offset(&offset) {
                                     errors.push(ComponentPropertyError {
-                                        message: format!("Found an invalid UTC offset - {:?}", e),
+                                        message: format!("Found an invalid UTC offset - {e}"),
                                         severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
@@ -957,7 +959,7 @@ pub(super) fn check_declared_value(
                             Ok(offset) => {
                                 if let Err(e) = validate_utc_offset(&offset) {
                                     errors.push(ComponentPropertyError {
-                                        message: format!("Found an invalid UTC offset - {:?}", e),
+                                        message: format!("Found an invalid UTC offset - {e}"),
                                         severity: ICalendarErrorSeverity::Warning,
                                         location: Some(ComponentPropertyLocation {
                                             index: property_index,
@@ -1092,14 +1094,14 @@ fn is_period_valued(property_value: &String) -> bool {
 
 fn is_recur_valued(
     property_value: &String,
-) -> anyhow::Result<Vec<crate::parser::types::RecurRulePart>> {
+) -> AetoliaResult<Vec<crate::parser::types::RecurRulePart>> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b'`');
 
     let result = prop_value_recur::<Error>(content.as_bytes());
     match result {
         Ok((rest, rule)) if rest.len() == 1 => Ok(rule),
-        _ => anyhow::bail!("Not a valid recur rule"),
+        _ => Err(AetoliaError::other("Not a valid recur rule")),
     }
 }
 
@@ -1115,14 +1117,14 @@ fn is_text_valued(property_value: &String) -> bool {
     }
 }
 
-fn is_time_valued(property_value: &String) -> anyhow::Result<Vec<crate::parser::types::Time>> {
+fn is_time_valued(property_value: &String) -> AetoliaResult<Vec<crate::parser::types::Time>> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
     let result = separated_list1(char(','), prop_value_time::<Error>).parse(content.as_bytes());
     match result {
         Ok((rest, times)) if rest.len() == 1 => Ok(times),
-        _ => anyhow::bail!("Not a valid time"),
+        _ => Err(AetoliaError::other("Not a valid time")),
     }
 }
 
@@ -1137,15 +1139,13 @@ fn is_uri_valued(property_value: &str) -> bool {
     }
 }
 
-fn is_utc_offset_valued(
-    property_value: &String,
-) -> anyhow::Result<crate::parser::types::UtcOffset> {
+fn is_utc_offset_valued(property_value: &String) -> AetoliaResult<crate::parser::types::UtcOffset> {
     let mut content = property_value.as_bytes().to_vec();
     content.push(b';');
 
     let result = prop_value_utc_offset::<Error>(content.as_bytes());
     match result {
         Ok((rest, offset)) if rest.len() == 1 => Ok(offset),
-        _ => anyhow::bail!("Not a valid UTC offset"),
+        _ => Err(AetoliaError::other("Not a valid UTC offset")),
     }
 }

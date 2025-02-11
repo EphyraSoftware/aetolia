@@ -1,3 +1,5 @@
+use crate::error::AetoliaResult;
+
 mod component;
 mod object;
 mod param;
@@ -7,7 +9,7 @@ mod property;
 pub trait ToModel {
     type Model;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model>;
+    fn to_model(&self) -> AetoliaResult<Self::Model>;
 }
 
 impl<T> ToModel for Vec<T>
@@ -16,7 +18,7 @@ where
 {
     type Model = Vec<T::Model>;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         self.iter().map(ToModel::to_model).collect()
     }
 }

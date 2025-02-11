@@ -1,8 +1,9 @@
+use crate::error::AetoliaResult;
 use crate::serialize::WriteModel;
 use std::io::Write;
 
 impl WriteModel for crate::model::object::ICalObject {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         writer.write_all(b"BEGIN:VCALENDAR")?;
         for property in &self.properties {
             writer.write_all(b"\r\n")?;
@@ -19,7 +20,7 @@ impl WriteModel for crate::model::object::ICalObject {
 }
 
 impl WriteModel for crate::model::property::CalendarProperty {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::property::CalendarProperty;
 
         match self {

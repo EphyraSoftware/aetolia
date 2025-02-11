@@ -16,9 +16,11 @@ use crate::validate::component_properties::validate_component_properties;
 use crate::validate::params::validate_params;
 use std::collections::{HashMap, HashSet};
 
+use crate::error::AetoliaResult;
+use crate::prelude::AetoliaError;
 pub use error::*;
 
-pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarError>> {
+pub fn validate_model(ical_object: &ICalObject) -> AetoliaResult<Vec<ICalendarError>> {
     let mut errors = Vec::new();
 
     let time_zone_ids = ical_object
@@ -59,7 +61,7 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
                            alarms: &[CalendarComponent],
                            index: usize,
                            name: &str|
-     -> anyhow::Result<()> {
+     -> AetoliaResult<()> {
         for (alarm_index, alarm) in alarms.iter().enumerate() {
             errors.extend_from_slice(
                 ICalendarError::many_from_nested_component_property_errors(
@@ -249,33 +251,35 @@ pub fn validate_model(ical_object: &ICalObject) -> anyhow::Result<Vec<ICalendarE
     Ok(errors)
 }
 
-fn validate_time(time: &crate::parser::types::Time) -> anyhow::Result<()> {
+fn validate_time(time: &crate::parser::types::Time) -> AetoliaResult<()> {
     if time.hour > 23 {
-        anyhow::bail!("Hour must be between 0 and 23");
+        return Err(AetoliaError::other("Hour must be between 0 and 23"));
     }
 
     if time.minute > 59 {
-        anyhow::bail!("Minute must be between 0 and 59");
+        return Err(AetoliaError::other("Minute must be between 0 and 59"));
     }
 
     if time.second > 60 {
-        anyhow::bail!("Second must be between 0 and 60");
+        return Err(AetoliaError::other("Second must be between 0 and 60"));
     }
 
     Ok(())
 }
 
-fn validate_utc_offset(offset: &crate::parser::types::UtcOffset) -> anyhow::Result<()> {
+fn validate_utc_offset(offset: &crate::parser::types::UtcOffset) -> AetoliaResult<()> {
     if offset.sign < 0
         && (offset.hours == 0
             && offset.minutes == 0
             && (offset.seconds.is_none() || offset.seconds == Some(0)))
     {
-        anyhow::bail!("UTC offset must have a non-zero value if it is negative");
+        return Err(AetoliaError::other(
+            "UTC offset must have a non-zero value if it is negative",
+        ));
     }
 
     if offset.minutes > 59 {
-        anyhow::bail!("Minutes must be between 0 and 59");
+        return Err(AetoliaError::other("Minutes must be between 0 and 59"));
     }
 
     Ok(())

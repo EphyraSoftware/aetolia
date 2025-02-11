@@ -28,6 +28,8 @@ pub mod serialize;
 /// Validation of iCalendar rules against the core representation.
 pub mod validate;
 
+mod error;
+
 #[cfg(test)]
 mod test_utils;
 
@@ -35,6 +37,7 @@ mod test_utils;
 pub mod prelude {
     pub use crate::common::PropertyKind;
     pub use crate::common::*;
+    pub use crate::error::{AetoliaError, AetoliaResult};
     pub use crate::model::access::*;
     pub use crate::model::component::*;
     pub use crate::model::object::*;

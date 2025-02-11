@@ -1,10 +1,11 @@
 use crate::common::LanguageTag;
+use crate::error::AetoliaResult;
 use crate::serialize::WriteModel;
 use std::io::Write;
 use std::ops::Add;
 
 impl WriteModel for (time::Date, time::Time, bool) {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         self.0.write_model(writer)?;
         writer.write_all(b"T")?;
         self.1.write_model(writer)?;
@@ -17,7 +18,7 @@ impl WriteModel for (time::Date, time::Time, bool) {
 }
 
 impl WriteModel for (time::Date, Option<time::Time>, bool) {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         match self.1 {
             Some(time) => {
                 (self.0, time, self.2).write_model(writer)?;
@@ -32,7 +33,7 @@ impl WriteModel for (time::Date, Option<time::Time>, bool) {
 }
 
 impl WriteModel for time::Date {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         let year = self.year();
         write!(writer, "{:0>4}", year)?;
         write!(writer, "{:0>2}", self.month() as u8)?;
@@ -43,7 +44,7 @@ impl WriteModel for time::Date {
 }
 
 impl WriteModel for time::Time {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         match self.hour() {
             h @ 10..=23 => {
                 write!(writer, "{}", h)?;
@@ -76,13 +77,13 @@ impl WriteModel for time::Time {
 }
 
 impl WriteModel for crate::common::CalendarDateTime {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         (*self.date(), self.time_opt().cloned(), self.is_utc()).write_model(writer)
     }
 }
 
 impl WriteModel for crate::common::Value {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Value;
 
         match self {
@@ -141,7 +142,7 @@ impl WriteModel for crate::common::Value {
 }
 
 impl WriteModel for LanguageTag {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         writer.write_all(self.language.as_bytes())?;
         if let Some(ext_lang) = &self.ext_lang {
             writer.write_all(b"-")?;
@@ -172,7 +173,7 @@ impl WriteModel for LanguageTag {
 }
 
 impl WriteModel for crate::common::Range {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Range;
 
         match self {
@@ -186,7 +187,7 @@ impl WriteModel for crate::common::Range {
 }
 
 impl WriteModel for crate::common::Encoding {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Encoding;
 
         match self {
@@ -203,7 +204,7 @@ impl WriteModel for crate::common::Encoding {
 }
 
 impl WriteModel for crate::common::CalendarUserType {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::CalendarUserType;
 
         match self {
@@ -235,7 +236,7 @@ impl WriteModel for crate::common::CalendarUserType {
 }
 
 impl WriteModel for crate::common::Role {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Role;
 
         match self {
@@ -264,7 +265,7 @@ impl WriteModel for crate::common::Role {
 }
 
 impl WriteModel for crate::common::ParticipationStatusUnknown {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::ParticipationStatusUnknown;
 
         match self {
@@ -302,7 +303,7 @@ impl WriteModel for crate::common::ParticipationStatusUnknown {
 }
 
 impl WriteModel for bool {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         if *self {
             writer.write_all(b"TRUE")?;
         } else {
@@ -314,7 +315,7 @@ impl WriteModel for bool {
 }
 
 impl WriteModel for crate::common::RelationshipType {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::RelationshipType;
 
         match self {
@@ -340,7 +341,7 @@ impl WriteModel for crate::common::RelationshipType {
 }
 
 impl WriteModel for crate::common::FreeBusyTimeType {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::FreeBusyTimeType;
 
         match self {
@@ -369,7 +370,7 @@ impl WriteModel for crate::common::FreeBusyTimeType {
 }
 
 impl WriteModel for crate::common::TriggerRelationship {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::TriggerRelationship;
 
         match self {
@@ -386,7 +387,7 @@ impl WriteModel for crate::common::TriggerRelationship {
 }
 
 impl WriteModel for crate::model::property::Classification {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::property::Classification;
 
         match self {
@@ -412,7 +413,7 @@ impl WriteModel for crate::model::property::Classification {
 }
 
 impl WriteModel for crate::common::TimeTransparency {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::TimeTransparency;
 
         match self {
@@ -429,7 +430,7 @@ impl WriteModel for crate::common::TimeTransparency {
 }
 
 impl WriteModel for crate::model::property::RecurrenceRule {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::property::RecurRulePart;
 
         for part in &self.parts {
@@ -508,7 +509,7 @@ impl WriteModel for crate::model::property::RecurrenceRule {
 }
 
 impl WriteModel for crate::common::RecurFreq {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::RecurFreq;
 
         match self {
@@ -540,7 +541,7 @@ impl WriteModel for crate::common::RecurFreq {
 }
 
 impl<T: Add<Output = T> + std::fmt::Display> WriteModel for Vec<T> {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         if let Some(value) = self.first() {
             write!(writer, "{}", value)?;
         }
@@ -553,7 +554,7 @@ impl<T: Add<Output = T> + std::fmt::Display> WriteModel for Vec<T> {
 }
 
 impl WriteModel for crate::common::OffsetWeekday {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         if let Some(offset_weeks) = &self.offset_weeks {
             write!(writer, "{}", offset_weeks)?;
         }
@@ -565,7 +566,7 @@ impl WriteModel for crate::common::OffsetWeekday {
 }
 
 impl WriteModel for crate::common::Weekday {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Weekday;
 
         match self {
@@ -597,7 +598,7 @@ impl WriteModel for crate::common::Weekday {
 }
 
 impl WriteModel for time::Month {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         write!(writer, "{}", (*self) as u8)?;
 
         Ok(())
@@ -605,8 +606,8 @@ impl WriteModel for time::Month {
 }
 
 impl WriteModel for crate::model::property::Duration {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        let write_time: fn(&mut W, &crate::model::property::Duration) -> anyhow::Result<()> =
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
+        let write_time: fn(&mut W, &crate::model::property::Duration) -> AetoliaResult<()> =
             |writer, duration| {
                 if duration.hours.is_some()
                     || duration.minutes.is_some()
@@ -660,7 +661,7 @@ impl WriteModel for crate::model::property::Duration {
 }
 
 impl WriteModel for crate::common::Status {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::common::Status;
 
         match self {
@@ -695,7 +696,7 @@ impl WriteModel for crate::common::Status {
 }
 
 impl WriteModel for crate::model::property::Period {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         self.start.write_model(writer)?;
         writer.write_all(b"/")?;
         match &self.end {
@@ -712,7 +713,7 @@ impl WriteModel for crate::model::property::Period {
 }
 
 impl WriteModel for crate::model::property::TimeZoneOffset {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         if self.sign < 0 {
             writer.write_all(b"-")?;
         } else {
@@ -730,7 +731,7 @@ impl WriteModel for crate::model::property::TimeZoneOffset {
 }
 
 impl WriteModel for crate::model::property::Action {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::property::Action;
 
         match self {
@@ -756,7 +757,7 @@ impl WriteModel for crate::model::property::Action {
 }
 
 impl WriteModel for String {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         let mut out = Vec::with_capacity(self.len());
         for c in self.chars() {
             if matches!(c as u8, b';' | b'\\' | b',') {

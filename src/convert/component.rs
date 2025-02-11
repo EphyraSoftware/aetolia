@@ -1,4 +1,5 @@
 use crate::convert::{convert_string, ToModel};
+use crate::error::AetoliaResult;
 use crate::model::component::{
     AlarmComponent, DaylightComponent, EventComponent, FreeBusyComponent, JournalComponent,
     StandardComponent, TimeZoneComponent, ToDoComponent,
@@ -9,7 +10,7 @@ use crate::parser::types::ContentLine;
 impl ToModel for crate::parser::types::CalendarComponent<'_> {
     type Model = crate::model::component::CalendarComponent;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         match self {
             crate::parser::types::CalendarComponent::Event { properties, alarms } => {
                 let mut component = EventComponent::new();
@@ -145,7 +146,7 @@ impl ToModel for crate::parser::types::CalendarComponent<'_> {
 fn map_unknown_lines(
     lines: &Vec<ContentLine>,
     component_properties: &mut Vec<ComponentProperty>,
-) -> anyhow::Result<()> {
+) -> AetoliaResult<()> {
     for line in lines {
         let m = line.to_model()?;
         if m.name.starts_with("X-") || m.name.starts_with("x-") {

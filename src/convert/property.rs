@@ -1,32 +1,32 @@
 use crate::common::CalendarDateTime;
 use crate::convert::{convert_string, ToModel};
+use crate::error::{AetoliaError, AetoliaResult};
 use crate::model::property::{
     GeographicPositionPropertyValue, Period, RecurrenceDateTimesPropertyValue,
     RequestStatusPropertyValue, TimeZoneIdPropertyValue, TriggerValue,
 };
 use crate::parser::types::ContentLine;
-use anyhow::Context;
 
 mod recur;
 
 impl ToModel for crate::parser::types::DateTimeStampProperty<'_> {
     type Model = crate::model::property::DateTimeStampProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::DateTimeStampProperty {
             value: (
                 time::Date::from_calendar_date(
                     self.value.date.year as i32,
-                    time::Month::try_from(self.value.date.month).context("Invalid month")?,
+                    time::Month::try_from(self.value.date.month).map_err(AetoliaError::time)?,
                     self.value.date.day,
                 )
-                .context("Invalid date")?,
+                .map_err(AetoliaError::time)?,
                 time::Time::from_hms(
                     self.value.time.hour,
                     self.value.time.minute,
                     self.value.time.second,
                 )
-                .context("Invalid time")?,
+                .map_err(AetoliaError::time)?,
                 self.value.time.is_utc,
             )
                 .into(),
@@ -38,7 +38,7 @@ impl ToModel for crate::parser::types::DateTimeStampProperty<'_> {
 impl ToModel for crate::parser::types::UniqueIdentifierProperty<'_> {
     type Model = crate::model::property::UniqueIdentifierProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::UniqueIdentifierProperty {
             value: convert_string(&self.value),
             params: self.other_params.to_model()?,
@@ -49,7 +49,7 @@ impl ToModel for crate::parser::types::UniqueIdentifierProperty<'_> {
 impl ToModel for crate::parser::types::DateTimeStartProperty<'_> {
     type Model = crate::model::property::DateTimeStartProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let dt = self.value.to_model()?;
 
         Ok(crate::model::property::DateTimeStartProperty {
@@ -62,7 +62,7 @@ impl ToModel for crate::parser::types::DateTimeStartProperty<'_> {
 impl ToModel for crate::parser::types::ClassificationProperty<'_> {
     type Model = crate::model::property::ClassificationProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ClassificationProperty {
             value: self.value.to_model()?,
             params: self.other_params.to_model()?,
@@ -73,7 +73,7 @@ impl ToModel for crate::parser::types::ClassificationProperty<'_> {
 impl ToModel for crate::parser::types::Classification<'_> {
     type Model = crate::model::property::Classification;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(match self {
             crate::parser::types::Classification::Public => {
                 crate::model::property::Classification::Public
@@ -97,7 +97,7 @@ impl ToModel for crate::parser::types::Classification<'_> {
 impl ToModel for crate::parser::types::DateTimeCreatedProperty<'_> {
     type Model = crate::model::property::CreatedProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::property::CreatedProperty {
@@ -110,7 +110,7 @@ impl ToModel for crate::parser::types::DateTimeCreatedProperty<'_> {
 impl ToModel for crate::parser::types::DescriptionProperty<'_> {
     type Model = crate::model::property::DescriptionProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::DescriptionProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -121,7 +121,7 @@ impl ToModel for crate::parser::types::DescriptionProperty<'_> {
 impl ToModel for crate::parser::types::GeographicPositionProperty<'_> {
     type Model = crate::model::property::GeographicPositionProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::GeographicPositionProperty {
             value: GeographicPositionPropertyValue {
                 latitude: self.latitude,
@@ -135,7 +135,7 @@ impl ToModel for crate::parser::types::GeographicPositionProperty<'_> {
 impl ToModel for crate::parser::types::LastModifiedProperty<'_> {
     type Model = crate::model::property::LastModifiedProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::property::LastModifiedProperty {
@@ -148,7 +148,7 @@ impl ToModel for crate::parser::types::LastModifiedProperty<'_> {
 impl ToModel for crate::parser::types::LocationProperty<'_> {
     type Model = crate::model::property::LocationProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::LocationProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -159,7 +159,7 @@ impl ToModel for crate::parser::types::LocationProperty<'_> {
 impl ToModel for crate::parser::types::OrganizerProperty<'_> {
     type Model = crate::model::property::OrganizerProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::OrganizerProperty {
             value: convert_string(self.value),
             params: self.params.to_model()?,
@@ -170,7 +170,7 @@ impl ToModel for crate::parser::types::OrganizerProperty<'_> {
 impl ToModel for crate::parser::types::PriorityProperty<'_> {
     type Model = crate::model::property::PriorityProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::PriorityProperty {
             value: self.value,
             params: self.other_params.to_model()?,
@@ -181,7 +181,7 @@ impl ToModel for crate::parser::types::PriorityProperty<'_> {
 impl ToModel for crate::parser::types::SequenceProperty<'_> {
     type Model = crate::model::property::SequenceProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::SequenceProperty {
             value: self.value,
             params: self.other_params.to_model()?,
@@ -192,7 +192,7 @@ impl ToModel for crate::parser::types::SequenceProperty<'_> {
 impl ToModel for crate::parser::types::StatusProperty<'_> {
     type Model = crate::model::property::StatusProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::StatusProperty {
             value: self.value.clone(),
             params: self.other_params.to_model()?,
@@ -203,7 +203,7 @@ impl ToModel for crate::parser::types::StatusProperty<'_> {
 impl ToModel for crate::parser::types::SummaryProperty<'_> {
     type Model = crate::model::property::SummaryProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::SummaryProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -214,7 +214,7 @@ impl ToModel for crate::parser::types::SummaryProperty<'_> {
 impl ToModel for crate::parser::types::TimeTransparencyProperty<'_> {
     type Model = crate::model::property::TimeTransparencyProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeTransparencyProperty {
             value: self.value.clone(),
             params: self.other_params.to_model()?,
@@ -225,7 +225,7 @@ impl ToModel for crate::parser::types::TimeTransparencyProperty<'_> {
 impl ToModel for crate::parser::types::UrlProperty<'_> {
     type Model = crate::model::property::UrlProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::UrlProperty {
             value: self.value.to_string(),
             params: self.other_params.to_model()?,
@@ -236,7 +236,7 @@ impl ToModel for crate::parser::types::UrlProperty<'_> {
 impl ToModel for crate::parser::types::RecurrenceIdProperty<'_> {
     type Model = crate::model::property::RecurrenceIdProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let dt = self.value.to_model()?;
 
         Ok(crate::model::property::RecurrenceIdProperty {
@@ -249,7 +249,7 @@ impl ToModel for crate::parser::types::RecurrenceIdProperty<'_> {
 impl ToModel for crate::parser::types::RecurrenceRuleProperty<'_> {
     type Model = crate::model::property::RecurrenceRuleProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::RecurrenceRuleProperty {
             value: self.value.to_model()?,
             params: self.other_params.to_model()?,
@@ -260,7 +260,7 @@ impl ToModel for crate::parser::types::RecurrenceRuleProperty<'_> {
 impl ToModel for crate::parser::types::DateTimeEndProperty<'_> {
     type Model = crate::model::property::DateTimeEndProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let dt = self.value.to_model()?;
 
         Ok(crate::model::property::DateTimeEndProperty {
@@ -273,7 +273,7 @@ impl ToModel for crate::parser::types::DateTimeEndProperty<'_> {
 impl ToModel for crate::parser::types::DurationProperty<'_> {
     type Model = crate::model::property::DurationProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::DurationProperty {
             value: self.value.to_model()?,
             params: self.other_params.to_model()?,
@@ -284,7 +284,7 @@ impl ToModel for crate::parser::types::DurationProperty<'_> {
 impl ToModel for crate::parser::types::AttachProperty<'_> {
     type Model = crate::model::property::AttachProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let value = match self.value {
             crate::parser::types::AttachValue::Uri(uri) => convert_string(uri),
             crate::parser::types::AttachValue::Binary(binary) => convert_string(binary),
@@ -300,7 +300,7 @@ impl ToModel for crate::parser::types::AttachProperty<'_> {
 impl ToModel for crate::parser::types::AttendeeProperty<'_> {
     type Model = crate::model::property::AttendeeProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::AttendeeProperty {
             value: convert_string(self.value),
             params: self.params.to_model()?,
@@ -311,7 +311,7 @@ impl ToModel for crate::parser::types::AttendeeProperty<'_> {
 impl ToModel for crate::parser::types::CategoriesProperty<'_> {
     type Model = crate::model::property::CategoriesProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::CategoriesProperty {
             value: self.value.iter().map(|v| convert_string(v)).collect(),
             params: self.params.to_model()?,
@@ -322,7 +322,7 @@ impl ToModel for crate::parser::types::CategoriesProperty<'_> {
 impl ToModel for crate::parser::types::CommentProperty<'_> {
     type Model = crate::model::property::CommentProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::CommentProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -333,7 +333,7 @@ impl ToModel for crate::parser::types::CommentProperty<'_> {
 impl ToModel for crate::parser::types::ContactProperty<'_> {
     type Model = crate::model::property::ContactProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ContactProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -344,7 +344,7 @@ impl ToModel for crate::parser::types::ContactProperty<'_> {
 impl ToModel for crate::parser::types::ExceptionDateTimesProperty<'_> {
     type Model = crate::model::property::ExceptionDateTimesProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ExceptionDateTimesProperty {
             value: self
                 .value
@@ -359,7 +359,7 @@ impl ToModel for crate::parser::types::ExceptionDateTimesProperty<'_> {
 impl ToModel for crate::parser::types::RequestStatusProperty<'_> {
     type Model = crate::model::property::RequestStatusProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::RequestStatusProperty {
             value: RequestStatusPropertyValue {
                 status_code: self.status_code.clone(),
@@ -374,7 +374,7 @@ impl ToModel for crate::parser::types::RequestStatusProperty<'_> {
 impl ToModel for crate::parser::types::RelatedToProperty<'_> {
     type Model = crate::model::property::RelatedToProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::RelatedToProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -385,7 +385,7 @@ impl ToModel for crate::parser::types::RelatedToProperty<'_> {
 impl ToModel for crate::parser::types::ResourcesProperty<'_> {
     type Model = crate::model::property::ResourcesProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ResourcesProperty {
             value: self.value.iter().map(|v| convert_string(v)).collect(),
             params: self.params.to_model()?,
@@ -396,7 +396,7 @@ impl ToModel for crate::parser::types::ResourcesProperty<'_> {
 impl ToModel for crate::parser::types::XProperty<'_> {
     type Model = crate::model::property::XProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::XProperty {
             name: convert_string(self.name),
             value: convert_string(&self.value),
@@ -408,7 +408,7 @@ impl ToModel for crate::parser::types::XProperty<'_> {
 impl ToModel for crate::parser::types::IanaProperty<'_> {
     type Model = crate::model::property::IanaProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::IanaProperty {
             name: convert_string(self.name),
             value: convert_string(&self.value),
@@ -420,7 +420,7 @@ impl ToModel for crate::parser::types::IanaProperty<'_> {
 impl ToModel for crate::parser::types::RecurrenceDateTimesProperty<'_> {
     type Model = crate::model::property::RecurrenceDateTimesProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let date_times = self.value.to_model()?;
 
         let (date_times, periods) = if date_times.iter().all(|dt| dt.0.is_some()) {
@@ -434,7 +434,7 @@ impl ToModel for crate::parser::types::RecurrenceDateTimesProperty<'_> {
                 date_times.iter().map(|dt| dt.1.clone().unwrap()).collect(),
             )
         } else {
-            return Err(anyhow::anyhow!("Invalid recurrence date-times"));
+            return Err(AetoliaError::other("Invalid recurrence date-times"));
         };
 
         Ok(crate::model::property::RecurrenceDateTimesProperty {
@@ -451,7 +451,7 @@ impl ToModel for crate::parser::types::RecurrenceDateTimesProperty<'_> {
 impl ToModel for crate::parser::types::Duration {
     type Model = crate::model::property::Duration;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::Duration {
             sign: self.sign,
             weeks: self.weeks,
@@ -469,7 +469,7 @@ impl ToModel for crate::parser::types::DateOrDateTimeOrPeriod {
         Option<Period>,
     );
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         match self {
             crate::parser::types::DateOrDateTimeOrPeriod::Date(date) => {
                 Ok((Some((date.try_into()?, None, false)), None))
@@ -488,7 +488,7 @@ impl ToModel for crate::parser::types::DateOrDateTimeOrPeriod {
 impl ToModel for crate::parser::types::ProductIdProperty<'_> {
     type Model = crate::model::property::ProductIdProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ProductIdProperty {
             value: convert_string(&self.value),
             params: self.other_params.to_model()?,
@@ -499,7 +499,7 @@ impl ToModel for crate::parser::types::ProductIdProperty<'_> {
 impl ToModel for crate::parser::types::VersionProperty<'_> {
     type Model = crate::model::property::VersionProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::VersionProperty {
             min_version: self.min_version.map(convert_string),
             max_version: convert_string(self.max_version),
@@ -511,7 +511,7 @@ impl ToModel for crate::parser::types::VersionProperty<'_> {
 impl ToModel for crate::parser::types::CalendarScaleProperty<'_> {
     type Model = crate::model::property::CalendarScaleProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::CalendarScaleProperty {
             value: convert_string(&self.value),
             params: self.other_params.to_model()?,
@@ -522,7 +522,7 @@ impl ToModel for crate::parser::types::CalendarScaleProperty<'_> {
 impl ToModel for crate::parser::types::MethodProperty<'_> {
     type Model = crate::model::property::MethodProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::MethodProperty {
             value: convert_string(self.value),
             params: self.other_params.to_model()?,
@@ -533,7 +533,7 @@ impl ToModel for crate::parser::types::MethodProperty<'_> {
 impl ToModel for crate::parser::types::CalendarProperty<'_> {
     type Model = crate::model::property::CalendarProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         match self {
             crate::parser::types::CalendarProperty::ProductId(product_id) => Ok(
                 crate::model::property::CalendarProperty::ProductId(product_id.to_model()?),
@@ -560,7 +560,7 @@ impl ToModel for crate::parser::types::CalendarProperty<'_> {
 impl ToModel for crate::parser::types::DateTimeCompletedProperty<'_> {
     type Model = crate::model::property::DateTimeCompletedProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let (date, time, is_utc) = (&self.value).try_into()?;
 
         Ok(crate::model::property::DateTimeCompletedProperty {
@@ -573,7 +573,7 @@ impl ToModel for crate::parser::types::DateTimeCompletedProperty<'_> {
 impl ToModel for crate::parser::types::PercentCompleteProperty<'_> {
     type Model = crate::model::property::PercentCompleteProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::PercentCompleteProperty {
             value: self.value,
             params: self.other_params.to_model()?,
@@ -584,7 +584,7 @@ impl ToModel for crate::parser::types::PercentCompleteProperty<'_> {
 impl ToModel for crate::parser::types::DateTimeDueProperty<'_> {
     type Model = crate::model::property::DateTimeDueProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let dt = self.value.to_model()?;
 
         Ok(crate::model::property::DateTimeDueProperty {
@@ -597,7 +597,7 @@ impl ToModel for crate::parser::types::DateTimeDueProperty<'_> {
 impl ToModel for crate::parser::types::FreeBusyTimeProperty<'_> {
     type Model = crate::model::property::FreeBusyTimeProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::FreeBusyTimeProperty {
             value: self.value.to_model()?,
             params: self.params.to_model()?,
@@ -608,7 +608,7 @@ impl ToModel for crate::parser::types::FreeBusyTimeProperty<'_> {
 impl ToModel for crate::parser::types::TimeZoneIdProperty<'_> {
     type Model = crate::model::property::TimeZoneIdProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeZoneIdProperty {
             value: TimeZoneIdPropertyValue {
                 id: convert_string(&self.value),
@@ -622,7 +622,7 @@ impl ToModel for crate::parser::types::TimeZoneIdProperty<'_> {
 impl ToModel for crate::parser::types::TimeZoneUrlProperty<'_> {
     type Model = crate::model::property::TimeZoneUrlProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeZoneUrlProperty {
             value: convert_string(self.value),
             params: self.other_params.to_model()?,
@@ -633,7 +633,7 @@ impl ToModel for crate::parser::types::TimeZoneUrlProperty<'_> {
 impl ToModel for crate::parser::types::TimeZoneOffsetProperty<'_> {
     type Model = crate::model::property::TimeZoneOffsetToProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeZoneOffsetToProperty {
             value: self.value.to_model()?,
             params: self.other_params.to_model()?,
@@ -644,7 +644,7 @@ impl ToModel for crate::parser::types::TimeZoneOffsetProperty<'_> {
 impl ToModel for crate::parser::types::UtcOffset {
     type Model = crate::model::property::TimeZoneOffset;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeZoneOffset {
             sign: self.sign,
             hours: self.hours as u8,
@@ -657,7 +657,7 @@ impl ToModel for crate::parser::types::UtcOffset {
 impl ToModel for crate::parser::types::TimeZoneNameProperty<'_> {
     type Model = crate::model::property::TimeZoneNameProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::TimeZoneNameProperty {
             value: convert_string(&self.value),
             params: self.params.to_model()?,
@@ -668,7 +668,7 @@ impl ToModel for crate::parser::types::TimeZoneNameProperty<'_> {
 impl ToModel for crate::parser::types::ActionProperty<'_> {
     type Model = crate::model::property::ActionProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::ActionProperty {
             value: self.value.to_model()?,
             params: self.other_params.to_model()?,
@@ -679,7 +679,7 @@ impl ToModel for crate::parser::types::ActionProperty<'_> {
 impl ToModel for crate::parser::types::Action<'_> {
     type Model = crate::model::property::Action;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(match self {
             crate::parser::types::Action::Audio => crate::model::property::Action::Audio,
             crate::parser::types::Action::Display => crate::model::property::Action::Display,
@@ -697,7 +697,7 @@ impl ToModel for crate::parser::types::Action<'_> {
 impl ToModel for crate::parser::types::TriggerProperty<'_> {
     type Model = crate::model::property::TriggerProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         match &self.value {
             crate::parser::types::DurationOrDateTime::DateTime(date_time) => {
                 let (date, time, is_utc) = date_time.try_into()?;
@@ -719,7 +719,7 @@ impl ToModel for crate::parser::types::TriggerProperty<'_> {
 impl ToModel for crate::parser::types::RepeatProperty<'_> {
     type Model = crate::model::property::RepeatProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::RepeatProperty {
             value: self.value,
             params: self.other_params.to_model()?,
@@ -730,7 +730,7 @@ impl ToModel for crate::parser::types::RepeatProperty<'_> {
 impl ToModel for crate::parser::types::ComponentProperty<'_> {
     type Model = crate::model::property::ComponentProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         match self {
             crate::parser::types::ComponentProperty::DateTimeStamp(date_time_stamp) => {
                 Ok(crate::model::property::ComponentProperty::DateTimeStamp(
@@ -907,7 +907,7 @@ impl ToModel for crate::parser::types::ComponentProperty<'_> {
 impl ToModel for ContentLine<'_> {
     type Model = crate::model::property::IanaProperty;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(crate::model::property::IanaProperty {
             name: convert_string(self.property_name),
             value: convert_string(&self.value),
@@ -919,7 +919,7 @@ impl ToModel for ContentLine<'_> {
 impl ToModel for crate::parser::types::Period {
     type Model = Period;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(Period {
             start: (&self.start).try_into()?,
             end: match &self.end {
@@ -937,7 +937,7 @@ impl ToModel for crate::parser::types::Period {
 impl ToModel for crate::parser::types::DateOrDateTime {
     type Model = CalendarDateTime;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(match self {
             crate::parser::types::DateOrDateTime::Date(date) => {
                 (date.try_into()?, None, false).into()
@@ -951,26 +951,26 @@ impl ToModel for crate::parser::types::DateOrDateTime {
 }
 
 impl TryFrom<&crate::parser::types::Date> for time::Date {
-    type Error = anyhow::Error;
+    type Error = AetoliaError;
 
     fn try_from(value: &crate::parser::types::Date) -> Result<Self, Self::Error> {
         time::Date::from_calendar_date(
             value.year as i32,
-            time::Month::try_from(value.month).context("Invalid month")?,
+            time::Month::try_from(value.month).map_err(AetoliaError::time)?,
             value.day,
         )
-        .context("Invalid date")
+        .map_err(AetoliaError::time)
     }
 }
 
 impl TryFrom<&crate::parser::types::DateTime> for (time::Date, time::Time, bool) {
-    type Error = anyhow::Error;
+    type Error = AetoliaError;
 
     fn try_from(value: &crate::parser::types::DateTime) -> Result<Self, Self::Error> {
         Ok((
             time::Date::try_from(&value.date)?,
             time::Time::from_hms(value.time.hour, value.time.minute, value.time.second)
-                .context("Invalid time")?,
+                .map_err(AetoliaError::time)?,
             value.time.is_utc,
         ))
     }

@@ -1,4 +1,5 @@
 use crate::convert::ToModel;
+use crate::error::{AetoliaError, AetoliaResult};
 use crate::model::object::ICalObject;
 use crate::parser::{content_line_first_pass, ical_stream, Error};
 use std::io::Read;
@@ -13,17 +14,17 @@ use std::io::Read;
 /// you want to ensure that the data is reasonably correct. If you plan to ingest the data into
 /// another system, you should validate the result of this function because the parser
 /// and model permit a lot of inputs that could confuse other systems.
-pub fn load_ical(input: impl AsRef<[u8]>) -> anyhow::Result<Vec<ICalObject>> {
+pub fn load_ical(input: impl AsRef<[u8]>) -> AetoliaResult<Vec<ICalObject>> {
     let (rem, content) = content_line_first_pass::<Error>(input.as_ref())
-        .map_err(|e| anyhow::anyhow!("First pass failed: {:?}", e))?;
+        .map_err(|e| AetoliaError::other(format!("First pass failed: {e}")))?;
     if !rem.is_empty() {
-        return Err(anyhow::anyhow!("Trailing data after first pass"));
+        return Err(AetoliaError::other("Trailing data after first pass"));
     }
 
     let (rem, stream) = ical_stream::<Error>(&content)
-        .map_err(|e| anyhow::anyhow!("Stream parsing failed: {:?}", e))?;
+        .map_err(|e| AetoliaError::other(format!("Stream parsing failed: {e}")))?;
     if !rem.is_empty() {
-        return Err(anyhow::anyhow!("Trailing data after stream"));
+        return Err(AetoliaError::other("Trailing data after stream"));
     }
 
     let model = stream.to_model()?;
@@ -34,7 +35,7 @@ pub fn load_ical(input: impl AsRef<[u8]>) -> anyhow::Result<Vec<ICalObject>> {
 /// Convenience function to load iCalendar data from a readable source.
 ///
 /// The data is read to the end and then passed to [load_ical].
-pub fn read_ical<R: Read>(mut input: R) -> anyhow::Result<Vec<ICalObject>> {
+pub fn read_ical<R: Read>(mut input: R) -> AetoliaResult<Vec<ICalObject>> {
     let mut buffer = Vec::new();
     input.read_to_end(&mut buffer)?;
 

@@ -1,4 +1,5 @@
 use crate::convert::{convert_string, ToModel};
+use crate::error::AetoliaResult;
 use crate::model::param::{
     AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedFromParam,
     DelegatedToParam, DirectoryEntryReferenceParam, EncodingParam, FormatTypeParam,
@@ -11,7 +12,7 @@ use crate::parser::types::ParamValue as ParserParam;
 impl ToModel for ParserParam<'_> {
     type Model = ModelParam;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         Ok(match self {
             ParserParam::AltRep { uri } => ModelParam::AltRep(AlternateRepresentationParam {
                 uri: convert_string(uri),
