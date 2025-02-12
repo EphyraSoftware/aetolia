@@ -4,10 +4,11 @@ mod param;
 mod property;
 mod value;
 
+use crate::error::AetoliaResult;
 use std::io::Write;
 
 pub trait WriteModel {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()>;
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()>;
 }
 
 #[cfg(test)]

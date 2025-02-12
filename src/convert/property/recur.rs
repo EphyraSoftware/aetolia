@@ -1,12 +1,12 @@
 use crate::convert::ToModel;
+use crate::error::{AetoliaError, AetoliaResult};
 use crate::model::property::RecurrenceRule;
 use crate::parser::types::RecurRulePart;
-use anyhow::Context;
 
 impl ToModel for Vec<RecurRulePart> {
     type Model = RecurrenceRule;
 
-    fn to_model(&self) -> anyhow::Result<Self::Model> {
+    fn to_model(&self) -> AetoliaResult<Self::Model> {
         let mut rule = RecurrenceRule::empty_with_capacity(self.len());
         for part in self.iter() {
             match part {
@@ -48,8 +48,8 @@ impl ToModel for Vec<RecurRulePart> {
                     rule = rule.set_by_month(
                         month
                             .iter()
-                            .map(|m| time::Month::try_from(*m).context("Invalid month"))
-                            .collect::<anyhow::Result<Vec<_>>>()?,
+                            .map(|m| time::Month::try_from(*m).map_err(AetoliaError::time))
+                            .collect::<AetoliaResult<Vec<_>>>()?,
                     );
                 }
                 RecurRulePart::BySetPos(by_set_pos) => {

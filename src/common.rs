@@ -1,3 +1,4 @@
+use crate::error::{AetoliaError, AetoliaResult};
 use crate::model::property::Duration;
 use std::cmp::Ordering;
 use std::ops::{Add, Sub};
@@ -241,7 +242,7 @@ impl From<(time::Date, Option<time::Time>, bool)> for CalendarDateTime {
 }
 
 impl CalendarDateTime {
-    pub fn add(&self, duration: &Duration) -> anyhow::Result<Self> {
+    pub fn add(&self, duration: &Duration) -> AetoliaResult<Self> {
         match self.time {
             Some(time) => {
                 // TODO otherwise you have to account for daylight changes. Not yet supported
@@ -362,8 +363,8 @@ impl CalendarDateTime {
                         utc: self.utc,
                     })
                 } else {
-                    Err(anyhow::anyhow!(
-                        "Duration is a time, but the calendar date time is just a date"
+                    Err(AetoliaError::other(
+                        "Duration is a time, but the calendar date time is just a date",
                     ))
                 }
             }

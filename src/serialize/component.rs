@@ -1,8 +1,9 @@
+use crate::error::AetoliaResult;
 use crate::serialize::WriteModel;
 use std::io::Write;
 
 impl WriteModel for crate::model::component::CalendarComponent {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::component::CalendarComponent;
 
         match self {

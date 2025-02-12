@@ -1,4 +1,5 @@
 use crate::common::RecurFreq;
+use crate::error::AetoliaResult;
 use crate::model::property::{
     ComponentProperty, DateTimeQuery, DateTimeStartProperty, RecurRulePart, RecurrenceRule,
 };
@@ -15,7 +16,7 @@ pub(super) fn validate_recurrence_rule(
     maybe_dt_start: Option<&DateTimeStartProperty>,
     property_location: PropertyLocation,
     property_index: usize,
-) -> anyhow::Result<()> {
+) -> AetoliaResult<()> {
     let dt_start = if let Some(dt_start) = maybe_dt_start {
         dt_start
     } else {

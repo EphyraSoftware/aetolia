@@ -17,6 +17,7 @@ use std::marker::PhantomData;
 mod duration;
 mod recur;
 
+use crate::error::AetoliaResult;
 use crate::model::impl_property_access;
 pub use duration::*;
 pub use recur::*;
@@ -1877,7 +1878,7 @@ impl Period {
         }
     }
 
-    pub fn expand(&self) -> anyhow::Result<Option<(CalendarDateTime, CalendarDateTime)>> {
+    pub fn expand(&self) -> AetoliaResult<Option<(CalendarDateTime, CalendarDateTime)>> {
         if self.start.2 {
             Ok(Some((
                 self.start.into(),

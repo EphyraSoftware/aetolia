@@ -1,9 +1,10 @@
+use crate::error::AetoliaResult;
 use crate::model::property::RecurrenceDateTimesPropertyValue;
 use crate::serialize::WriteModel;
 use std::io::Write;
 
 impl WriteModel for crate::model::property::ComponentProperty {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::property::ComponentProperty;
 
         match self {
@@ -345,7 +346,7 @@ impl WriteModel for crate::model::property::ComponentProperty {
 }
 
 impl WriteModel for &[crate::model::param::Param] {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         for param in self.iter() {
             writer.write_all(b";")?;
             param.write_model(writer)?;

@@ -1,3 +1,4 @@
+use crate::error::AetoliaResult;
 use crate::model::param::{
     AlternateRepresentationParam, CalendarUserTypeParam, CommonNameParam, DelegatedFromParam,
     DelegatedToParam, DirectoryEntryReferenceParam, EncodingParam, FormatTypeParam,
@@ -9,7 +10,7 @@ use crate::serialize::WriteModel;
 use std::io::Write;
 
 impl WriteModel for crate::model::param::Param {
-    fn write_model<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+    fn write_model<W: Write>(&self, writer: &mut W) -> AetoliaResult<()> {
         use crate::model::param::Param;
 
         match self {

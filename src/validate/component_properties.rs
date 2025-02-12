@@ -1,4 +1,5 @@
 use crate::common::{PropertyKind, Status, Value};
+use crate::error::AetoliaResult;
 use crate::model::param::Param;
 use crate::model::property::{
     Action, ComponentProperty, DateTimeCompletedProperty, DateTimeDueProperty, DateTimeEndProperty,
@@ -42,7 +43,7 @@ pub(super) fn validate_component_properties(
     calendar_info: &CalendarInfo,
     property_location: PropertyLocation,
     properties: &[ComponentProperty],
-) -> anyhow::Result<Vec<ComponentPropertyError>> {
+) -> AetoliaResult<Vec<ComponentPropertyError>> {
     let mut errors = Vec::new();
 
     if properties.is_empty() {
@@ -1860,7 +1861,7 @@ fn validate_free_busy_time(
     errors: &mut Vec<ComponentPropertyError>,
     free_busy_time_property: &FreeBusyTimeProperty,
     index: usize,
-) -> anyhow::Result<()> {
+) -> AetoliaResult<()> {
     if !free_busy_time_property.value.iter().all(|p| {
         p.start.2
             && match p.end {
@@ -1883,7 +1884,7 @@ fn validate_free_busy_time(
         .value
         .iter()
         .map(|p| p.expand().map(|v| v.unwrap()))
-        .collect::<anyhow::Result<Vec<_>>>()?;
+        .collect::<AetoliaResult<Vec<_>>>()?;
     let all_ordered = date_times.windows(2).all(|w| {
         let (s1, e1) = &w[0];
         let (s2, e2) = &w[1];
